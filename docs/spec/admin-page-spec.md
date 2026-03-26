@@ -17,8 +17,8 @@ top-level tab bar** (mirroring `/officer`), built on the ERPSYS design
 baseline: calm, confident, Apple-style materials and motion (`design.md` §2,
 §4.8).
 
-**Core model:** this page *configures* the system; students and officers
-*consume* it. Most edits are **live** — a saved change is immediately visible
+**Core model:** this page _configures_ the system; students and officers
+_consume_ it. Most edits are **live** — a saved change is immediately visible
 to students (requirements list, profiling form link, chatbot doc). The page
 is deliberately not an operations surface: no verification queues, no queue
 processing (those live on `/officer` and `/instructor`, which admins reach
@@ -40,12 +40,13 @@ role lever is **promoting/demoting students ↔ SBO officers** (§6.2).
 ## 2. Goals & Non-Goals
 
 ### Goals
+
 - **G1 — Configure everything in one place.** Every system-level setting the
   roles depend on lives on this page: users, departments, mapping, years,
   requirements, form link, chatbot doc.
 - **G2 — Consequences are legible.** Role changes and year activation are
   irreversible-feeling acts; each carries a confirm dialog that states what
-  the change *does* (access granted, stamps retained, steps reset).
+  the change _does_ (access granted, stamps retained, steps reset).
 - **G3 — Live edits, honest freshness.** Student-facing content updates
   immediately (edit = live); the page shows updated-by/time so concurrent
   admin work is visible.
@@ -57,6 +58,7 @@ role lever is **promoting/demoting students ↔ SBO officers** (§6.2).
   self-demotion are guarded.
 
 ### Non-Goals (v1)
+
 - **NG1 —** No student lookup (search a student, see their step status) —
   explicit decision; student data lives on officer surfaces (§11.3).
 - **NG2 —** No notification bell — explicit decision, mirrors the instructor
@@ -74,9 +76,9 @@ role lever is **promoting/demoting students ↔ SBO officers** (§6.2).
 
 ## 3. Users & Access
 
-| Who | Access |
-|---|---|
-| **Admin** (`role: ADMIN`) | Full admin page. |
+| Who                                              | Access             |
+| ------------------------------------------------ | ------------------ |
+| **Admin** (`role: ADMIN`)                        | Full admin page.   |
 | Student / SBO Officer / Instructor / outside-org | Route-guarded out. |
 
 Route: **`/admin`**. Role guard requires `ADMIN`; otherwise redirect to the
@@ -139,6 +141,7 @@ Tab order is fixed (above). **Tab bar behavior** (mirrors officers/instructor):
 ## 5. Layout & Surfaces
 
 ### 5.1 Page shell
+
 - Content sits under the existing app `Header`; the admin page adds the tab
   bar (translucent, `backdrop-filter` blur, no hard divider — scroll-edge
   fade mask per `design.md` §5.10).
@@ -152,6 +155,7 @@ Tab order is fixed (above). **Tab bar behavior** (mirrors officers/instructor):
   padding ~10px.
 
 ### 5.2 Overview tab
+
 Four stat cards in a responsive grid (2–4 per row at 1440px), then a recent-
 activity strip:
 
@@ -178,6 +182,7 @@ type. Source: `AdminActionLog` (§11.8). Empty state: quiet line — "No admin
 actions yet."
 
 ### 5.3 First-run banner (guided, blocking)
+
 When no `AcademicYear` is active:
 
 - A prominent but calm banner at the top of the **Overview tab** (and
@@ -197,24 +202,26 @@ When no `AcademicYear` is active:
 ## 6. Core Interactions
 
 ### 6.1 Users tab — the list
+
 Server-side search + filter + pagination (no client-side list assembly —
 the user base can exceed thousands).
 
-| Element | Detail |
-|---|---|
-| Search | Debounced (~300ms) query across **name, student number, email**; placeholder "Search by name, student number, or email" |
-| Filters | Role (All / Student / SBO Officer / Instructor / Admin) + Outside org (All / Inside / Outside) — segmented or select controls, state in the URL (`?role=`, `?outside=`) |
-| Table columns | Checkbox (bulk), Avatar (initial-based, navy-on-dirty-white), Name (ink), Student number (`tabular-nums`, "—" when unset), Email (muted), Role chip, Outside-org badge, Joined (relative + absolute on hover), Actions |
-| Role chip | `STUDENT` gray · `SBO OFFICER` navy · `INSTRUCTOR` navy-outlined with an "(auto)" tooltip ("Derived from email domain") · `ADMIN` ink — the instructor/admin chips render **no action button** (roles are domain/env-derived) |
-| Outside-org badge | Amber chip ("outside org") — same tint as the student page banner |
-| Rows | 52–56px, hairline dividers (neutral-gray at low opacity — not black), hover = subtle dirty-white lift, selected row = navy-tinted background |
-| Pagination | Server-side; default 50/page, options 25/50/100; total shown ("1,204 users") |
-| Sort | Student number / joined / name; default joined newest-first |
+| Element           | Detail                                                                                                                                                                                                                        |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Search            | Debounced (~300ms) query across **name, student number, email**; placeholder "Search by name, student number, or email"                                                                                                       |
+| Filters           | Role (All / Student / SBO Officer / Instructor / Admin) + Outside org (All / Inside / Outside) — segmented or select controls, state in the URL (`?role=`, `?outside=`)                                                       |
+| Table columns     | Checkbox (bulk), Avatar (initial-based, navy-on-dirty-white), Name (ink), Student number (`tabular-nums`, "—" when unset), Email (muted), Role chip, Outside-org badge, Joined (relative + absolute on hover), Actions        |
+| Role chip         | `STUDENT` gray · `SBO OFFICER` navy · `INSTRUCTOR` navy-outlined with an "(auto)" tooltip ("Derived from email domain") · `ADMIN` ink — the instructor/admin chips render **no action button** (roles are domain/env-derived) |
+| Outside-org badge | Amber chip ("outside org") — same tint as the student page banner                                                                                                                                                             |
+| Rows              | 52–56px, hairline dividers (neutral-gray at low opacity — not black), hover = subtle dirty-white lift, selected row = navy-tinted background                                                                                  |
+| Pagination        | Server-side; default 50/page, options 25/50/100; total shown ("1,204 users")                                                                                                                                                  |
+| Sort              | Student number / joined / name; default joined newest-first                                                                                                                                                                   |
 
 Loading: skeleton rows (no spinner flash). Errors: inline banner with Retry,
 toast for action failures.
 
 ### 6.2 Users tab — role changes
+
 **The only role lever: student ↔ SBO officer.** (Advisers and admins are
 domain/env-derived; the UI renders no affordance for them — §11.1.)
 
@@ -222,12 +229,12 @@ domain/env-derived; the UI renders no affordance for them — §11.1.)
   keyboard focus; always visible for clarity on small lists).
 - **Confirm dialog with consequences** (explicit decision — heavier than the
   design baseline's undo-toast default; role changes grant PII access):
-  - *Promote*: "Promote `<name>` to SBO Officer?" + "This grants access to
+  - _Promote_: "Promote `<name>` to SBO Officer?" + "This grants access to
     student verification data (evidence, stamps, mugshots)." Buttons:
-    *Cancel* / **Promote**.
-  - *Demote*: "Demote `<name>` to Student?" + "Officer access is removed.
+    _Cancel_ / **Promote**.
+  - _Demote_: "Demote `<name>` to Student?" + "Officer access is removed.
     Their past stamps remain attributed to them in the audit trail."
-    Buttons: *Cancel* / **Demote**.
+    Buttons: _Cancel_ / **Demote**.
 - **Bulk actions** (explicit decision — useful at term start): checkbox
   column + "select all on page"; a floating action bar appears with selected
   count — **"Promote N to officer"** / **"Demote N to student"** → same
@@ -246,6 +253,7 @@ domain/env-derived; the UI renders no affordance for them — §11.1.)
   (`damping 1.0, response 0.4`). `aria-live="polite"` announces the result.
 
 ### 6.3 Departments tab
+
 A table of departments: name, code, status (Active navy / Inactive gray
 chip), mapping count, actions.
 
@@ -256,23 +264,24 @@ chip), mapping count, actions.
   model's `Department.isActive`):
   - Deactivate → confirm dialog: "Deactivate `<name>`?" + "Students can no
     longer join this department's queue. Queued students and past
-    verifications are unaffected." Buttons: *Cancel* / **Deactivate**.
+    verifications are unaffected." Buttons: _Cancel_ / **Deactivate**.
   - Activate → immediate, no confirm (nothing at stake).
   - **No hard delete in v1** — a deactivated department is hidden from
     student/queue surfaces but its history stays intact (§11.5).
 - Departments shown to students at step 6 come from this list (seeded once,
-    admin-editable — `erpsys-spec.md` §14).
+  admin-editable — `erpsys-spec.md` §14).
 
 ### 6.4 Academic Years tab
+
 A table of years: label, semester label, status chip (`Active` navy /
 `Past` gray), created, actions.
 
-| Action | Behavior |
-|---|---|
-| **Create** | Inline/in-modal form: year label ("2027-2028"), semester label ("1st Semester"), optional **"Activate immediately"** checkbox. Creating without activating leaves it as a future year. |
-| **Activate** | Only on a non-active year. Opens the **consequences-preview confirm** (§ below). |
-| **Edit** | Current (active) year only — label + semester, inline. Past years are read-only (history). |
-| **Delete** | **Empty years only** (no `StepVerification`s, no queue entries, no `ProfilingForm`). Years with data show a disabled button with tooltip "Cannot delete — contains records". Deleting asks a plain confirm. |
+| Action       | Behavior                                                                                                                                                                                                    |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Create**   | Inline/in-modal form: year label ("2027-2028"), semester label ("1st Semester"), optional **"Activate immediately"** checkbox. Creating without activating leaves it as a future year.                      |
+| **Activate** | Only on a non-active year. Opens the **consequences-preview confirm** (§ below).                                                                                                                            |
+| **Edit**     | Current (active) year only — label + semester, inline. Past years are read-only (history).                                                                                                                  |
+| **Delete**   | **Empty years only** (no `StepVerification`s, no queue entries, no `ProfilingForm`). Years with data show a disabled button with tooltip "Cannot delete — contains records". Deleting asks a plain confirm. |
 
 **Activation confirm — consequences preview** (the page's heaviest moment):
 
@@ -281,7 +290,7 @@ A table of years: label, semester label, status chip (`Active` navy /
   - "**N students**' steps reset to pending for the new year."
   - "Previous years' stamps remain in records (archived)."
   - "Queues are cleared; students redo steps 1–6."
-- Buttons: *Cancel* / **Activate year** (navy). The N is the live count of
+- Buttons: _Cancel_ / **Activate year** (navy). The N is the live count of
   students with verifications in the current year (server-derived at dialog
   open).
 - On activation: toast "AY 2027-2028 is now active"; the header's AY label
@@ -290,6 +299,7 @@ A table of years: label, semester label, status chip (`Active` navy /
   surface's concern — `student-page-spec.md` §7.4).
 
 ### 6.5 Adviser Mapping tab (per-adviser editor)
+
 Advisers are the users whose email domain is `@buksu.edu.ph` (they derive
 the role at sign-in). This tab assigns their **departments**.
 
@@ -310,6 +320,7 @@ the role at sign-in). This tab assigns their **departments**.
   no-departments state. The confirm dialog says exactly that.
 
 ### 6.6 Requirements tab (step-1 list)
+
 `RequirementItem` rows, in display order (the order students see at step 1):
 
 - **Reorder:** up/down buttons per row (drag is optional polish; up/down is
@@ -326,6 +337,7 @@ the role at sign-in). This tab assigns their **departments**.
   cache.
 
 ### 6.7 Profiling Form tab (shared with officers)
+
 Mirrors the officer surface's Profiling Form tab (`sbo-officers-page-spec.md`
 §6.6) — both mutate the same per-year `ProfilingForm` record; the component
 is shared, not duplicated:
@@ -343,6 +355,7 @@ is shared, not duplicated:
 - Edit = live: students see the new link immediately.
 
 ### 6.8 Chatbot Knowledge tab
+
 The `ChatbotKnowledge.content` markdown document that grounds the Groq
 chatbot (injected into the prompt — `erpsys-spec.md` §8):
 
@@ -354,7 +367,7 @@ chatbot (injected into the prompt — `erpsys-spec.md` §8):
   content.
 - **Meta line:** last updated by `<name>` · `<relative time>` · version N.
 - **Unsaved-changes guard:** switching tabs/leaving with unsaved edits →
-  confirm "Discard unsaved changes?" (*Cancel* / **Discard**).
+  confirm "Discard unsaved changes?" (_Cancel_ / **Discard**).
 - Word count (small, muted) to sanity-check document size.
 - No version-history UI in v1 (NG3); the version field is server-side
   bookkeeping (§11.7).
@@ -366,12 +379,13 @@ chatbot (injected into the prompt — `erpsys-spec.md` §8):
 ## 7. System-wide Decisions
 
 ### 7.1 Color language — 60 / 20 / 10 + 10 (same as all other surfaces)
-| Share | Role | Tailwind tokens |
-|---|---|---|
-| 60% | **White / dirty white** — background, surfaces, cards | `--color-surface`, `--color-surface-raised` (`#f7f6f3`-family) |
-| 20% | **Navy blue** — primary actions, active tab, chips, links, focus rings, active-year chip, open status | `--color-primary` (`#1e3a5f`-family) |
-| 10% | **Black** — primary text | `--color-ink` |
-| 10% | **Neutral gray** — secondary text, dividers, disabled chrome, past chips | `--color-muted`, `--color-border` |
+
+| Share | Role                                                                                                  | Tailwind tokens                                                |
+| ----- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 60%   | **White / dirty white** — background, surfaces, cards                                                 | `--color-surface`, `--color-surface-raised` (`#f7f6f3`-family) |
+| 20%   | **Navy blue** — primary actions, active tab, chips, links, focus rings, active-year chip, open status | `--color-primary` (`#1e3a5f`-family)                           |
+| 10%   | **Black** — primary text                                                                              | `--color-ink`                                                  |
+| 10%   | **Neutral gray** — secondary text, dividers, disabled chrome, past chips                              | `--color-muted`, `--color-border`                              |
 
 Semantic on top: `error` (red) for destructive actions and failures;
 `warning` (amber) for the outside-org badge and consequence emphasis in
@@ -380,19 +394,21 @@ confirm dialogs. **No green in the status language** (discipline,
 of this spec's scope).
 
 ### 7.2 Status language
-| State | Expression |
-|---|---|
+
+| State                                         | Expression                                                                                    |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | Role — Student / Officer / Instructor / Admin | Gray / navy / navy-outlined (+ "(auto)") / ink chips; instructor & admin chips have no action |
-| Outside-org user | Amber chip in the user row |
-| Active year | Navy chip "Active" |
-| Past year | Gray chip "Past" (read-only) |
-| Department active / inactive | Navy "Active" / gray "Inactive" |
-| Requirement active / inactive | Switch on/off |
+| Outside-org user                              | Amber chip in the user row                                                                    |
+| Active year                                   | Navy chip "Active"                                                                            |
+| Past year                                     | Gray chip "Past" (read-only)                                                                  |
+| Department active / inactive                  | Navy "Active" / gray "Inactive"                                                               |
+| Requirement active / inactive                 | Switch on/off                                                                                 |
 
 Motion never carries information alone — every state is color + shape +
 label (`design.md` §4 Craft).
 
 ### 7.3 Typography
+
 - System font stack (`system-ui`); `design.md` §5.11: negative tracking on
   headings (`-0.02em`), body near `0`; tightened leading in tables.
 - **`tabular-nums`** everywhere numbers must align/read: student numbers,
@@ -400,6 +416,7 @@ label (`design.md` §4 Craft).
 - All spacing `rem`/`em` — layout scales with the user's text-size setting.
 
 ### 7.4 Data freshness
+
 - **No polling on admin lists** (explicit — config data is static; polling
   would be noise). Every list uses `refetchOnWindowFocus` + a manual refresh
   button (spins while fetching).
@@ -411,12 +428,14 @@ label (`design.md` §4 Craft).
   banner with Retry; action failures: toast.
 
 ### 7.5 Notifications — none (explicit decision)
+
 **No bell on the admin page** (mirrors the instructor page, NG2). The
 overview stats and tab content carry everything the admin needs; a bell
 would duplicate the page's own surface. The generic notification component
 for student/officer surfaces stays untouched.
 
 ### 7.6 Chrome & keyboard (mirrors officers, full set)
+
 - **AY label** in the page header (right-aligned, quiet, display-only) —
   same as `sbo-officers-page-spec.md` §4.
 - **Shortcuts** (documented in the `?` popover, one-time hint on first
@@ -426,6 +445,7 @@ for student/officer surfaces stays untouched.
 - Focus ring: navy, 2px offset, never removed (`design.md` §4 Craft).
 
 ### 7.7 Theme
+
 - **Default: light, always** (same rule as every other surface). Dark mode =
   opt-in preference in Settings; no in-page toggle.
 - Honor `design.md` §5.13: `prefers-reduced-motion` (cross-fades, no
@@ -434,6 +454,7 @@ for student/officer surfaces stays untouched.
 - No abrupt brightness jumps on theme change.
 
 ### 7.8 Accessibility
+
 - Contrast: navy on dirty-white ≥ 4.5:1; muted ≥ 4.5:1 at token time
   (verify).
 - Confirm dialogs: focus-trapped, `aria-modal`, Esc + backdrop click
@@ -449,6 +470,7 @@ for student/officer surfaces stays untouched.
 - Motion never carries information alone (§7.2).
 
 ### 7.9 Performance
+
 - Animate only `transform`/`opacity`; `will-change` only where motion is
   imminent (`design.md` §5.9).
 - Server-side pagination/search on the user list (never ship the whole user
@@ -460,16 +482,16 @@ for student/officer surfaces stays untouched.
 
 ## 8. Motion Table (values are authoritative)
 
-| Interaction | Spring / easing | Values |
-|---|---|---|
-| Tab indicator, stat cards (entry), chips, badge/count changes | critically damped | `damping 1.0`, `response 0.3–0.4` |
-| Confirm dialogs (enter/exit) | modal scrim + spring | `damping 1.0`, `response 0.3`; cross-fade under reduced motion |
-| Toasts (role change, activate, save, delete) | reposition | `damping 1.0`, `response 0.4`, anchored bottom/top; no bounce |
-| Popovers (shortcuts `?`) | reposition | `damping 1.0`, `response 0.4`, anchored to trigger |
-| First-run banner arrival | cross-fade | 200ms opacity |
-| Press states | CSS transition | `transform: scale(0.97)`, 100ms ease-out, pointer-down |
-| Empty states / static reveals | cross-fade | 200ms opacity |
-| Reduced motion | all of the above → | short opacity cross-fades only |
+| Interaction                                                   | Spring / easing      | Values                                                         |
+| ------------------------------------------------------------- | -------------------- | -------------------------------------------------------------- |
+| Tab indicator, stat cards (entry), chips, badge/count changes | critically damped    | `damping 1.0`, `response 0.3–0.4`                              |
+| Confirm dialogs (enter/exit)                                  | modal scrim + spring | `damping 1.0`, `response 0.3`; cross-fade under reduced motion |
+| Toasts (role change, activate, save, delete)                  | reposition           | `damping 1.0`, `response 0.4`, anchored bottom/top; no bounce  |
+| Popovers (shortcuts `?`)                                      | reposition           | `damping 1.0`, `response 0.4`, anchored to trigger             |
+| First-run banner arrival                                      | cross-fade           | 200ms opacity                                                  |
+| Press states                                                  | CSS transition       | `transform: scale(0.97)`, 100ms ease-out, pointer-down         |
+| Empty states / static reveals                                 | cross-fade           | 200ms opacity                                                  |
+| Reduced motion                                                | all of the above →   | short opacity cross-fades only                                 |
 
 Bounce appears **only** where the user's action carried momentum — and this
 page has no gesture-driven surfaces. Nothing decorative bounces
@@ -533,7 +555,7 @@ the **AY label slot** (reused from the officer layout).
 1. **Role model vs `erpsys-spec.md` §3.** The user clarified the adviser
    role: **anyone signing in with `@buksu.edu.ph` automatically becomes an
    Enrollment Adviser (Instructor)** — no admin assignment needed; and the
-   admin's *only* role lever is student ↔ SBO officer. Admin promotion stays
+   admin's _only_ role lever is student ↔ SBO officer. Admin promotion stays
    env/bootstrap (`ADMIN_EMAILS`). The system spec's "Admins manage
    promotions" wording should be reconciled to this domain-derived model.
 2. **Confirm-with-consequences vs undo-toast.** The design baseline
@@ -550,7 +572,7 @@ the **AY label slot** (reused from the officer layout).
    §6.2 enforced server-side.
 5. **Department soft-deactivate only** (explicit). No hard delete in v1;
    system spec's `Department.isActive` already supports it. Behavior for
-   students *already queued* under a deactivated department is a data-model
+   students _already queued_ under a deactivated department is a data-model
    question: recommended — they stay queued and are still served; only new
    joins stop. Flagged.
 6. **Adviser mapping only for signed-in users.** Users are created at
@@ -563,7 +585,7 @@ the **AY label slot** (reused from the officer layout).
    exists in `erpsys-spec.md` §6. Flagged: a lightweight
    `AdminActionLog` (actorId, action, targetRef, at) or reuse of
    `updatedBy`/`verifiedBy` fields. Also: whether the strip should include
-   *officer* stamp actions or only admin actions — v1: admin actions only.
+   _officer_ stamp actions or only admin actions — v1: admin actions only.
 9. **Bulk selection is current-page-only** in v1 (cross-page selection
    needs a stable selection store — later option).
 10. **Requirements reorder is a new semantic.** System spec has no ordering

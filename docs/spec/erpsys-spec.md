@@ -25,6 +25,7 @@ a separate university system.
 ## 2. Goals & Non-Goals
 
 ### Goals
+
 - Replace the physical stamping flow with a verifiable digital trail (who
   verified what, when).
 - Reduce SBO-office crowding: profiling, uploads, and queueing happen online;
@@ -38,6 +39,7 @@ a separate university system.
   document.
 
 ### Non-Goals (v1)
+
 - No rejection-with-reason flow: a step is simply **unverified** until stamped
   (explicit decision).
 - No COR generation — external university system.
@@ -52,12 +54,12 @@ a separate university system.
 Four roles. Base role is **derived from the Google account email domain**;
 role is fixed except where an Admin explicitly changes it.
 
-| Role | Email domain | Can do |
-|---|---|---|
-| **Student** | `@student.buksu.edu.ph` | Complete steps 1–5, upload evidence, complete the step-3 Google Form, join department queue, see own progress, use chatbot. |
-| **SBO Officer** | `@student.buksu.edu.ph` (promoted by Admin) | Verify/stamp steps 1–5, capture mugshots, review uploaded evidence, manage the step-3 Google Form link (set/edit/remove per academic year). |
-| **Enrollment Adviser** | `@buksu.edu.ph` | Toggle queue availability for their department(s), process the FIFO queue, finalize enrollment. |
-| **Admin** | any (bootstrapped) | Change student↔officer roles, manage departments, adviser↔department mapping, step-3 Google Form link, step-1 requirements list, academic years, chatbot knowledge doc. |
+| Role                   | Email domain                                | Can do                                                                                                                                                                  |
+| ---------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Student**            | `@student.buksu.edu.ph`                     | Complete steps 1–5, upload evidence, complete the step-3 Google Form, join department queue, see own progress, use chatbot.                                             |
+| **SBO Officer**        | `@student.buksu.edu.ph` (promoted by Admin) | Verify/stamp steps 1–5, capture mugshots, review uploaded evidence, manage the step-3 Google Form link (set/edit/remove per academic year).                             |
+| **Enrollment Adviser** | `@buksu.edu.ph`                             | Toggle queue availability for their department(s), process the FIFO queue, finalize enrollment.                                                                         |
+| **Admin**              | any (bootstrapped)                          | Change student↔officer roles, manage departments, adviser↔department mapping, step-3 Google Form link, step-1 requirements list, academic years, chatbot knowledge doc. |
 
 **Outside-organization accounts** (any other Google domain): allowed to sign
 in, get the **Student** experience, and complete all steps, but every surface
@@ -69,6 +71,7 @@ still be promoted to officer by an Admin.
 promotions.
 
 ### Auth decisions
+
 - Primary sign-in: **Google OAuth** (Better-Auth `google` plugin; creds already
   in `apps/web/.env`).
 - Existing email/password auth: keep enabled for development/testing; decide at
@@ -83,14 +86,14 @@ promotions.
 Cycle reset: **per academic year**. A new `AcademicYear` is activated by an
 Admin; verifications from the previous year do not carry over.
 
-| # | Step | Who acts | Mechanism |
-|---|---|---|---|
-| 1 | **Assessment** | Student applies → SBO officer | Student taps "Apply for assessment" (shows the requirements/payments list, managed by Admin). Officer checks SIMS manually, stamps verified when no balance remains. Unstamped = still pending (no rejection reason). |
-| 2 | **Social media** | Student uploads → SBO officer | App lists the FB pages to like/follow (COT SBO, SSC, etc. — same list shown to everyone). Student uploads a **screenshot** as proof; officer opens/checks and stamps. |
-| 3 | **Profiling** | Student submits via Google Form → SBO officer | **Google Form integration**. SBO Officers (and Admins) manage the active form link — one form per academic year — and can add, edit, or remove it. The form is configured to **collect the respondent's Google account email**. Student opens the form from the app, completes it, then uploads a **screenshot of the success page** ("Your response has been recorded") as proof. Officer cross-checks the Google Sheet response against the screenshot and stamps. |
-| 4 | **Mugshot** | Officer captures **or** student uploads | Either: officer captures via office webcam (preferred) or student uploads a photo. Photo stored via UploadThing. Officer stamps. |
-| 5 | **Parent consent + medical form** | Student uploads → SBO officer | Student uploads a scan/photo of the signed physical papers. Officer reviews the upload and stamps. |
-| 6 | **Enrollment** | Student queues → Enrollment Adviser | See §5. Requires steps 1–5 all verified in the current academic year. |
+| #   | Step                              | Who acts                                      | Mechanism                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --- | --------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Assessment**                    | Student applies → SBO officer                 | Student taps "Apply for assessment" (shows the requirements/payments list, managed by Admin). Officer checks SIMS manually, stamps verified when no balance remains. Unstamped = still pending (no rejection reason).                                                                                                                                                                                                                                                |
+| 2   | **Social media**                  | Student uploads → SBO officer                 | App lists the FB pages to like/follow (COT SBO, SSC, etc. — same list shown to everyone). Student uploads a **screenshot** as proof; officer opens/checks and stamps.                                                                                                                                                                                                                                                                                                |
+| 3   | **Profiling**                     | Student submits via Google Form → SBO officer | **Google Form integration**. SBO Officers (and Admins) manage the active form link — one form per academic year — and can add, edit, or remove it. The form is configured to **collect the respondent's Google account email**. Student opens the form from the app, completes it, then uploads a **screenshot of the success page** ("Your response has been recorded") as proof. Officer cross-checks the Google Sheet response against the screenshot and stamps. |
+| 4   | **Mugshot**                       | Officer captures **or** student uploads       | Either: officer captures via office webcam (preferred) or student uploads a photo. Photo stored via UploadThing. Officer stamps.                                                                                                                                                                                                                                                                                                                                     |
+| 5   | **Parent consent + medical form** | Student uploads → SBO officer                 | Student uploads a scan/photo of the signed physical papers. Officer reviews the upload and stamps.                                                                                                                                                                                                                                                                                                                                                                   |
+| 6   | **Enrollment**                    | Student queues → Enrollment Adviser           | See §5. Requires steps 1–5 all verified in the current academic year.                                                                                                                                                                                                                                                                                                                                                                                                |
 
 **Step status model:** binary — `PENDING` (not yet stamped) or `VERIFIED`.
 No rejection reasons in v1. The student dashboard shows the status of all six
@@ -101,6 +104,7 @@ steps plus, on step 1, the requirements/payments checklist.
 ## 5. Enrollment Queue (Step 6)
 
 ### Flow
+
 1. **Prerequisite:** all steps 1–5 `VERIFIED` for the current `AcademicYear`.
 2. Student opens step 6 → sees the **department list** (exact COT list TBD —
    user will supply; seed BSIT, BSEMC, BS Food Tech as examples) with each
@@ -119,12 +123,13 @@ steps plus, on step 1, the requirements/payments checklist.
    `verifiedById` = adviser, `verifiedAt` = now) — the official enrollment
    record. (The adviser generates the COR in the separate university system in
    parallel.) The student sees a **confetti success screen** with a message:
-   *"You are now enrolled in `<Department name>`, `<semester> <academic
-   year>`"* (e.g., "1st Semester 2026-2027").
+   _"You are now enrolled in `<Department name>`, `<semester> <academic
+year>`"_ (e.g., "1st Semester 2026-2027").
 7. A completed enrollment sends an in-app notification and the queue position
    is cleared.
 
 ### Rules
+
 - One queue entry per student per academic year (`@@unique`).
 - Multiple advisers per department; one adviser may serve multiple departments
   (mapping managed by Admin).
@@ -144,6 +149,7 @@ schemas (`schema.prisma` for domain models, `auth.prisma` for auth models),
 MongoDB relations use join collections where needed.
 
 ### Enums
+
 ```prisma
 enum Role { STUDENT SBO_OFFICER ENROLLMENT_ADVISER ADMIN }
 enum StepCode { ASSESSMENT SOCIAL_MEDIA PROFILING MUGSHOT CONSENT ENROLLMENT }
@@ -160,38 +166,44 @@ StudentProfile?`. (Student number is NOT on User — it lives on the profile;
 see below.)
 
 **Department**
+
 - `id, name, code, isActive`
 - Adviser mapping via join: **AdviserDepartment** `{ adviserId → User,
-  departmentId → Department }`, `@@unique([adviserId, departmentId])`.
+departmentId → Department }`, `@@unique([adviserId, departmentId])`.
 
 **AcademicYear**
+
 - `id, label ("2026-2027"), semesterLabel ("1st Semester"), isActive`
 - One active year at a time; gates all step verifications and queue joins.
 
 **StudentProfile**
+
 - `id, userId (unique → User), studentNumber (unique), academicYearId
-  (first-registered year), createdAt`
+(first-registered year), createdAt`
 - Student number is captured at **first login via a mini profile form**
   (name prefilled from Google).
 
 **ProfilingForm** (step-3 Google Form config)
+
 - `id, academicYearId (unique → AcademicYear), formUrl, updatedById → User?,
-  updatedAt`
+updatedAt`
 - One form per academic year, managed by SBO Officers and Admins (set/edit/
   remove). Answers live in Google Sheets — the app stores only the URL and the
   per-student submitted/verified state; no answer mirroring. No form entry →
   step 3 shows "form not yet set up" instead of the link.
 
 **Step** (seeded constant data)
+
 - `id, code StepCode, name, order` — six rows, created at seed.
 
 **StepVerification** — the digital stamp
+
 - `id, studentProfileId, stepId, academicYearId, status StepStatus
-  @default(PENDING), appliedAt DateTime? (step 1), verifiedById → User?,
-  verifiedAt DateTime?, evidence Json? (kind-specific payload, see below)`
+@default(PENDING), appliedAt DateTime? (step 1), verifiedById → User?,
+verifiedAt DateTime?, evidence Json? (kind-specific payload, see below)`
 - `@@unique([studentProfileId, stepId, academicYearId])`
 - Evidence payloads: step 2 → `{ uploadIds: [Upload] }`; step 3 → `{
-  uploadIds: [Upload] }` (success-page screenshot, `PROFILING_SCREENSHOT`);
+uploadIds: [Upload] }` (success-page screenshot, `PROFILING_SCREENSHOT`);
   step 4 → `{ mugshotUploadId? }`; step 5 → `{ consentUploadId? }`; step 1 →
   `{}` (appliedAt is the record).
 - `verifiedById`/`verifiedAt` provide the audit trail.
@@ -202,32 +214,38 @@ see below.)
   1–5 are stamped by SBO officers.
 
 **Upload**
+
 - `id, fileKey, fileUrl, kind UploadKind, uploadedById → User, studentProfileId,
-  createdAt` — records every UploadThing file (screenshot, mugshot, consent
+createdAt` — records every UploadThing file (screenshot, mugshot, consent
   scan, profiling screenshot) so evidence is traceable.
 
 **RequirementItem** (step-1 checklist shown to students)
+
 - `id, label, order, isActive` — managed by Admin.
 
 **EnrollmentQueue**
+
 - `id, departmentId, studentProfileId, academicYearId, joinedAt, status
-  QueueStatus @default(WAITING), servedById → User?, completedAt DateTime?`
+QueueStatus @default(WAITING), servedById → User?, completedAt DateTime?`
 - `@@unique([studentProfileId, academicYearId])`; position = order by
   `joinedAt`; index on `[departmentId, academicYearId, status]`.
 
 **AdviserAvailability**
+
 - `id, adviserId → User, departmentId, academicYearId, isOpen Boolean,
-  openedAt DateTime?, closedAt DateTime?`
+openedAt DateTime?, closedAt DateTime?`
 - `@@unique([adviserId, departmentId, academicYearId])`
 - Department queue "open" state is **derived**: any adviser of that department
   with `isOpen = true`.
 
 **Notification** (in-app only)
+
 - `id, userId → User, type String, title, body, readAt DateTime?, createdAt`
 - Events: step verified, queue joined, adviser opened/closed queue, enrollment
   completed.
 
 **ChatbotKnowledge**
+
 - `id, version Int, content String (markdown), updatedAt` — the
   enrollment-process document injected into the Groq prompt (user will supply
   the doc). Admin can edit/update.
@@ -274,6 +292,7 @@ return only the caller's own data except where the role allows it.
 ## 8. Integrations
 
 ### Google Forms (step 3 — Profiling)
+
 - **Link management:** SBO officers (and Admins) create the Google Form and
   paste its URL into the app — add, edit, or remove per academic year; one
   active form per year (`ProfilingForm`). No in-app form builder.
@@ -289,6 +308,7 @@ return only the caller's own data except where the role allows it.
   cross-checks the sheet before stamping.
 
 ### Groq AI chatbot
+
 - **Placement:** student page (and the same component usable on any page).
 - **Purpose:** process FAQ assistant — steps, requirements, how things work.
 - **No personal data access** — prompt contains only the knowledge document
@@ -303,6 +323,7 @@ return only the caller's own data except where the role allows it.
   option.
 
 ### UploadThing
+
 - **Files:** mugshot photo, social-media screenshot, profiling success-page
   screenshot, consent/medical scan —
   all images (`image/jpeg`, `image/png`, `image/webp`), max ~10 MB each.
