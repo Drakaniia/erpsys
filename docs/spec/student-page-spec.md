@@ -34,6 +34,7 @@ a one-time manual prompt instead (§5.3).
 ## 2. Goals & Non-Goals
 
 ### Goals
+
 - **G1 — Know where you are instantly.** A student opening the page can tell
   in one glance what's done, what's pending, and what to do next (header
   progress pill + bar, per-card status chips, one-line action hints).
@@ -52,6 +53,7 @@ a one-time manual prompt instead (§5.3).
   responses.
 
 ### Non-Goals (v1)
+
 - **NG1 —** No officer-side features (stamping, review queues, mugshot
   capture, profiling-form management) — `sbo-officers-page-spec.md`.
 - **NG2 —** No adviser/admin surfaces — `erpsys-spec.md` §3, §9.
@@ -69,11 +71,11 @@ a one-time manual prompt instead (§5.3).
 
 ## 3. Users & Access
 
-| Who | Access |
-|---|---|
-| **Student** (`role: STUDENT`) | Full student page. |
+| Who                                                                          | Access                                                                               |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **Student** (`role: STUDENT`)                                                | Full student page.                                                                   |
 | **Outside-org user** (any Google domain, derived `STUDENT` + `isOutsideOrg`) | Same page + persistent notice banner (§5.2) + one-time student-number prompt (§5.3). |
-| SBO Officer / Adviser / Admin | Route-guarded out — they land on their own surfaces. |
+| SBO Officer / Adviser / Admin                                                | Route-guarded out — they land on their own surfaces.                                 |
 
 Route: the existing `/dashboard` route serves the student page. Role guard:
 `STUDENT` only; officers/advisers/admins redirect to their own dashboards with
@@ -116,6 +118,7 @@ me-card.
 ## 5. Layout & Surfaces
 
 ### 5.1 Shell & breakpoints
+
 - Mobile-first: the page is designed for a ~360–430px viewport. Content
   column `max-width: 560px`, centered — the same column on desktop keeps the
   mobile layout (bottom tabs, sheets) rather than reflowing into a wide
@@ -125,6 +128,7 @@ me-card.
 - All interactive targets ≥ 44×44px; primary actions ≥ 48px tall.
 
 ### 5.2 Outside-org banner
+
 - **Non-dismissible** thin strip (24–28px) directly under the header, above
   the tab content, on every screen of the student surface.
 - Copy: "You are outside the organization — some steps may differ."
@@ -133,6 +137,7 @@ me-card.
   no motion. It is a state, not a notification.
 
 ### 5.3 Student number (identity)
+
 - **Institutional accounts:** the student number is parsed from the email
   local-part (`2401117078@student.buksu.edu.ph` → `2401117078`). Displayed
   read-only, tabular-nums, next to the name in the progress header area.
@@ -146,14 +151,15 @@ me-card.
   but re-appears until saved.
 
 ### 5.4 The checklist (Progress tab)
+
 Six step cards, vertical stack, full-bleed within the column:
 
-| Card element | Detail |
-|---|---|
-| Step number + name | "1 · Assessment", "2 · Social Media", … (navy number, ink name) |
-| Status chip | `Pending` (gray), `Applied` (navy — step 1 only), `Returned` (amber), `Verified` (navy checkmark) (§7.2) |
-| Action hint | One line, muted: "Apply for assessment", "Upload screenshot", "Complete the form", "Upload photo", "Upload signed papers", "Join the queue" |
-| Chevron | Right, muted; opens the step sheet |
+| Card element       | Detail                                                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Step number + name | "1 · Assessment", "2 · Social Media", … (navy number, ink name)                                                                             |
+| Status chip        | `Pending` (gray), `Applied` (navy — step 1 only), `Returned` (amber), `Verified` (navy checkmark) (§7.2)                                    |
+| Action hint        | One line, muted: "Apply for assessment", "Upload screenshot", "Complete the form", "Upload photo", "Upload signed papers", "Join the queue" |
+| Chevron            | Right, muted; opens the step sheet                                                                                                          |
 
 - Card height ~64–72px; hairline dividers (neutral-gray, low opacity — not
   black); press feedback `scale(0.97)` on pointer-down (`design.md` §5.1).
@@ -193,6 +199,7 @@ declares the student may queue:
   §6.8 already delivered the moment).
 
 ### 5.5 Progress summary (header)
+
 - **Pill:** "3/6" — compact navy-on-dirty-white count in the header, right
   of the app title. Text updates on change; a spring scale
   (`damping 1.0, response 0.4`) draws attention on increment (a step
@@ -206,6 +213,7 @@ declares the student may queue:
 - No year label anywhere (§7.5).
 
 ### 5.6 Bottom sheets (detail presentation)
+
 Every step interaction opens a **bottom sheet** (`design.md` §5.3 sheet
 values: `damping 0.8, response 0.3`):
 
@@ -230,6 +238,7 @@ values: `damping 0.8, response 0.3`):
 ## 6. Core Interactions
 
 ### 6.1 Step sheet anatomy (shared)
+
 Header: step number + name, status chip, close (X). Body is step-specific
 (§6.2–§6.5). Verified sheets additionally show the **stamp** (§6.7) + verified-
 by line. Returned sheets show the officer's reply chips/note at the top of
@@ -238,11 +247,12 @@ when the step needs one (Apply / Upload / Join queue); verified/returned
 sheets have no action bar unless re-upload applies.
 
 ### 6.2 Step 1 — Assessment
+
 - **Not applied:** requirements/payments checklist (from `RequirementItem`,
   admin-managed) rendered read-only, then primary **"Apply for assessment"**.
 - **Apply flow (confirm dialog):** tap Apply → dialog listing the
   requirements/payments again + explanation ("Officer checks your SIMS
-  balance before stamping") → *Cancel* / **Apply**. Confirm → status flips to
+  balance before stamping") → _Cancel_ / **Apply**. Confirm → status flips to
   `Applied`, toast "Application received — awaiting officer review", dialog
   closes. Feedback on pointer-down (`design.md` §5.1); confirm is the second
   beat.
@@ -256,6 +266,7 @@ sheets have no action bar unless re-upload applies.
 - **Verified:** stamp display (§6.7) + verified-by line. No action bar.
 
 ### 6.3 Steps 2 / 4 / 5 — Evidence uploads (Social media, Mugshot, Consent)
+
 Shared **evidence slot** UX (instant upload on selection):
 
 1. Empty slot: dashed rounded placeholder, muted icon, label ("Upload
@@ -280,6 +291,7 @@ Shared **evidence slot** UX (instant upload on selection):
    rejected selection.
 
 Step specifics:
+
 - **Step 2 (Social media):** the sheet first lists the FB pages to
   like/follow ("COT SBO", "SSC", etc. — same list shown to everyone; source
   TBD, §11.3) as a compact checklist, then the evidence slot for the
@@ -288,9 +300,10 @@ Step specifics:
 - **Step 4 (Mugshot):** single photo slot. Copy notes either path: "Upload a
   photo, or have an SBO officer capture it at the office."
 - **Step 5 (Consent):** single scan/photo slot; copy "Signed parent consent
-  + medical form".
+  - medical form".
 
 ### 6.4 Step 3 — Profiling (Google Form)
+
 - **Form set:** the sheet shows (a) a notice — "You'll return here to upload
   your success-page screenshot", (b) a primary **"Open the Google Form"**
   button → opens the form in a **new tab**, (c) the signed-in email hint —
@@ -306,6 +319,7 @@ Step specifics:
   waits (system-spec flow; no in-app verification of the response).
 
 ### 6.5 Step 6 — Enrollment queue
+
 - **Prerequisites not met:** blocked state — the sheet lists the missing
   steps ("You must complete: 1 Assessment, 3 Profiling") with no join
   affordance; the checklist card hint reads "Complete steps 1–5 first".
@@ -334,6 +348,7 @@ Step specifics:
 - No leave-queue action in v1 (completion is final per `erpsys-spec.md` §12).
 
 ### 6.6 Chat tab (chatbot)
+
 - Bottom tab "Chat" → full-tab conversation surface (not a modal):
   - **Empty state:** calm illustration-free intro (thin-stroke navy icon,
     short copy "Ask about the enrollment process") + **suggested-question
@@ -355,16 +370,17 @@ Step specifics:
   - Errors (Groq down): inline error bubble + retry on the last message.
 
 ### 6.7 The stamp — verified state (student side)
+
 Rendering contract is fixed by `sbo-officers-page-spec.md` §7.6; **this spec
 fixes its student-side placement**:
 
 - The stamp renders on the **step sheet** (not the checklist card — compact
   chip there, §5.4). Position: a "Verified" block in the sheet body — the
   composed stamp (officer display name + date + optional transparent graphic
-  + optional signature; navy text in a navy-outlined rounded badge, slight
-  rotation; 70–80% opacity, `mix-blend-multiply` in light mode) over a subtle
-  "VERIFIED" backdrop.
-- **Stamp landing:** when a step flips to Verified *while the sheet is open*
+  - optional signature; navy text in a navy-outlined rounded badge, slight
+    rotation; 70–80% opacity, `mix-blend-multiply` in light mode) over a subtle
+    "VERIFIED" backdrop.
+- **Stamp landing:** when a step flips to Verified _while the sheet is open_
   (or the notification arrives), the stamp animates in — scales/rotates from
   a small press-like origin with `damping 0.8, response 0.3` (momentum earned
   by the officer's action; `design.md` §5.3). No confetti, no sound
@@ -387,11 +403,12 @@ fixes its student-side placement**:
   (replays once on first open).
 
 ### 6.8 Enrollment success screen (the one celebration)
+
 Full-screen moment when the adviser completes enrollment (system-spec flow,
 `erpsys-spec.md` §5.6):
 
 - Message: "You are now enrolled in `<Department name>`, `<semester>
-  <academic year>`" (e.g. "1st Semester 2026-2027") — display-size type,
+<academic year>`" (e.g. "1st Semester 2026-2027") — display-size type,
   navy on dirty-white.
 - **Confetti** (the only confetti in the system): restrained — a brief
   (≈2.5–3s) burst of small navy/dirty-white/amber shapes falling over the
@@ -406,12 +423,13 @@ Full-screen moment when the adviser completes enrollment (system-spec flow,
 ## 7. System-wide Decisions
 
 ### 7.1 Color language — 60 / 20 / 10 + 10 (same as officers)
-| Share | Role | Tailwind tokens |
-|---|---|---|
-| 60% | **White / dirty white** — background, surfaces, cards | `--color-surface`, `--color-surface-raised` (`#f7f6f3`-family) |
-| 20% | **Navy blue** — primary actions, active tab, progress fill, chips, links, focus rings, position number, verified marks | `--color-primary` (`#1e3a5f`-family) |
-| 10% | **Black** — primary text | `--color-ink` |
-| 10% | **Neutral gray** — secondary text, dividers, muted chrome | `--color-muted`, `--color-border` |
+
+| Share | Role                                                                                                                   | Tailwind tokens                                                |
+| ----- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 60%   | **White / dirty white** — background, surfaces, cards                                                                  | `--color-surface`, `--color-surface-raised` (`#f7f6f3`-family) |
+| 20%   | **Navy blue** — primary actions, active tab, progress fill, chips, links, focus rings, position number, verified marks | `--color-primary` (`#1e3a5f`-family)                           |
+| 10%   | **Black** — primary text                                                                                               | `--color-ink`                                                  |
+| 10%   | **Neutral gray** — secondary text, dividers, muted chrome                                                              | `--color-muted`, `--color-border`                              |
 
 Semantic on top: `error` (red) for upload failures and duplicate student
 number; `warning` (amber) for `Returned` chips and the outside-org banner.
@@ -420,17 +438,19 @@ number; `warning` (amber) for `Returned` chips and the outside-org banner.
 Settings (§2 NG5).
 
 ### 7.2 Status chips
-| Status | Color | Detail |
-|---|---|---|
-| Pending | gray | default unverified |
-| Applied | navy | step 1, awaiting officer review |
-| Returned | amber | officer sent it back — reply visible on sheet + card preview |
-| Verified | navy + checkmark | stamped |
+
+| Status   | Color            | Detail                                                       |
+| -------- | ---------------- | ------------------------------------------------------------ |
+| Pending  | gray             | default unverified                                           |
+| Applied  | navy             | step 1, awaiting officer review                              |
+| Returned | amber            | officer sent it back — reply visible on sheet + card preview |
+| Verified | navy + checkmark | stamped                                                      |
 
 Chips are color + label + (where meaningful) icon — never motion alone
 (`design.md` §4 Craft). Motion never carries information (§7.8).
 
 ### 7.3 Typography
+
 - System font stack (`system-ui`); `design.md` §5.11: negative tracking on
   headings (`-0.02em` at display sizes), body near `0`; tightened leading in
   dense sheet content.
@@ -439,6 +459,7 @@ Chips are color + label + (where meaningful) icon — never motion alone
 - All spacing `rem`/`em` — layout scales with the user's text-size setting.
 
 ### 7.4 Data freshness & rollover
+
 - **Polling:** TanStack Query `refetchInterval` ~20s on the step list
   (reflects stamps and returns from officers) and the queue position
   (§6.5). `refetchOnWindowFocus` + pull-to-refresh on the checklist (mobile
@@ -465,11 +486,13 @@ Chips are color + label + (where meaningful) icon — never motion alone
   inline banner with Retry.
 
 ### 7.5 Academic year — hidden
+
 No year label anywhere on the student page (explicit decision). Context comes
 from content: stamp dates, the step-3 form, the enrollment success message.
 Rollover notice (§7.4) is the only year-aware copy.
 
 ### 7.6 Notifications (bell)
+
 - **Bell** in the app header (right), red unread badge with count; badge
   animates (spring scale) on change.
 - **Events (v1):** step verified (stamp), queue joined / position update,
@@ -488,6 +511,7 @@ Rollover notice (§7.4) is the only year-aware copy.
   events only).
 
 ### 7.7 Theme
+
 - **Default: light, always** (same rule as officers). Dark mode = opt-in
   preference in the existing Settings page; no in-page toggle.
 - Honor `design.md` §5.13: `prefers-reduced-motion` (cross-fades, no
@@ -497,6 +521,7 @@ Rollover notice (§7.4) is the only year-aware copy.
 - No abrupt brightness jumps on theme change.
 
 ### 7.8 Accessibility & keyboard
+
 - Contrast: navy on dirty-white for primary text ≥ 4.5:1; muted ≥ 4.5:1 at
   token time (verify).
 - Focus ring: navy, 2px offset, never removed; full keyboard path on desktop
@@ -512,6 +537,7 @@ Rollover notice (§7.4) is the only year-aware copy.
   everywhere (§7.8).
 
 ### 7.9 Performance
+
 - Animate only `transform`/`opacity`; `will-change` only where motion is
   imminent (`design.md` §5.9).
 - Thumbnails: server-resized variants; lightbox loads full image lazily.
@@ -524,18 +550,18 @@ Rollover notice (§7.4) is the only year-aware copy.
 
 ## 8. Motion Table (values are authoritative)
 
-| Interaction | Spring / easing | Values |
-|---|---|---|
-| Checklist cards (entry), progress fill, pill/badge count, tab indicator | critically damped | `damping 1.0`, `response 0.3–0.4` |
-| All-set banner arrival + ready-card pulse | critically damped | `damping 1.0`, `response 0.4`; cross-fade under reduced motion |
-| Bottom sheet (enter/exit + drag) | sheet spring, velocity handoff | `damping 0.8`, `response 0.3`, same path both ways; rubber-band at bottom edge |
-| Bell panel / popovers | reposition | `damping 1.0`, `response 0.4`, anchored to trigger |
-| Stamp landing (step verified) | momentum spring | `damping 0.8`, `response 0.3`, scale+rotate from press origin |
-| Position number update (queue) | spring scale | `damping 1.0`, `response 0.4` |
-| Press states | CSS transition | `transform: scale(0.97)`, 100ms ease-out, pointer-down |
-| Empty states / static reveals | cross-fade | 200ms opacity |
-| Enrollment confetti | scripted burst | ≈2.5–3s, restrained palette; static check + cross-fade under reduced motion |
-| Reduced motion | all of the above → | short opacity cross-fades only (confetti → static check) |
+| Interaction                                                             | Spring / easing                | Values                                                                         |
+| ----------------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------ |
+| Checklist cards (entry), progress fill, pill/badge count, tab indicator | critically damped              | `damping 1.0`, `response 0.3–0.4`                                              |
+| All-set banner arrival + ready-card pulse                               | critically damped              | `damping 1.0`, `response 0.4`; cross-fade under reduced motion                 |
+| Bottom sheet (enter/exit + drag)                                        | sheet spring, velocity handoff | `damping 0.8`, `response 0.3`, same path both ways; rubber-band at bottom edge |
+| Bell panel / popovers                                                   | reposition                     | `damping 1.0`, `response 0.4`, anchored to trigger                             |
+| Stamp landing (step verified)                                           | momentum spring                | `damping 0.8`, `response 0.3`, scale+rotate from press origin                  |
+| Position number update (queue)                                          | spring scale                   | `damping 1.0`, `response 0.4`                                                  |
+| Press states                                                            | CSS transition                 | `transform: scale(0.97)`, 100ms ease-out, pointer-down                         |
+| Empty states / static reveals                                           | cross-fade                     | 200ms opacity                                                                  |
+| Enrollment confetti                                                     | scripted burst                 | ≈2.5–3s, restrained palette; static check + cross-fade under reduced motion    |
+| Reduced motion                                                          | all of the above →             | short opacity cross-fades only (confetti → static check)                       |
 
 Bounce appears **only** where user/officer action carried momentum (sheet
 drag, stamp tap). Nothing decorative bounces (`design.md` §4.8, §5.3).
@@ -550,12 +576,13 @@ New components (Svelte 5 runes, in `apps/web/src/components/student/`):
 (chip + hint + chevron + returned preview), `AllSetBanner` (ready-to-queue
 banner + CTA + done state), `StepSheet` (draggable shell),
 `RequirementsList`, `ApplyDialog`, `EvidenceSlot` (instant upload + progress
-+ inline retry + replace), `EvidenceLightbox` (simplified), `GoogleFormPanel`
-(link + email hint + no-form notice), `DepartmentQueue` (department cards +
-join + position), `NotificationBell` + `NotificationPanel`, `StampDisplay`
-(shared rendering contract — imported/copied from the officers surface,
-§6.7), `EnrollmentSuccess` (confetti screen), `ChatTab` (suggestion chips +
-streaming bubbles), `ToastStack`, `EmptyState`.
+
+- inline retry + replace), `EvidenceLightbox` (simplified), `GoogleFormPanel`
+  (link + email hint + no-form notice), `DepartmentQueue` (department cards +
+  join + position), `NotificationBell` + `NotificationPanel`, `StampDisplay`
+  (shared rendering contract — imported/copied from the officers surface,
+  §6.7), `EnrollmentSuccess` (confetti screen), `ChatTab` (suggestion chips +
+  streaming bubbles), `ToastStack`, `EmptyState`.
 
 Modified: existing `Header` gains the progress pill + bell slot;
 `UserMenu` unchanged (student number is not edited there — it's read-only).
@@ -616,7 +643,7 @@ Modified: existing `Header` gains the progress pill + bell slot;
    it plays well with the SvelteKit/TanStack setup during implementation
    (fallback: refresh button in the header).
 8. **Outside-org student numbers.** Duplicate-number handling is spec'd
-   (inline error); whether outside-org students *must* have a number to
+   (inline error); whether outside-org students _must_ have a number to
    proceed (blocking vs. dismissible prompt) is undecided — current spec:
    dismissible, re-appears until saved.
 9. **Post-enrollment banner state.** Spec'd as a calm "You're enrolled —

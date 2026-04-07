@@ -23,7 +23,7 @@ notification center. Each department the instructor serves is a tab; each tab
 shows who is next (a spotlight card), the rest of the line, and the
 availability switch that gates student joining. The page is desktop-first and
 deliberately minimal: no overview, no bell, no search, no history — the queue
-*is* the page. Emotion: calm and confident (`design.md` §4.8) — precise,
+_is_ the page. Emotion: calm and confident (`design.md` §4.8) — precise,
 unhurried, with the enrollment confirm as the single meaningful moment.
 
 **Completing an enrollment does two things in one atomic action:** the queue
@@ -45,12 +45,13 @@ toast — restraint (`design.md` §4.8, NG4).
 ## 2. Goals & Non-Goals
 
 ### Goals
+
 - **G1 — Serve fast and safely.** One glance tells who's next; serving takes
   one click + one confirm, with no mouse travel and no accidental enrollments.
 - **G2 — Queue-state control.** The availability switch is the instructor's
   single lever over what students see (Open / Closed). State is obvious,
   and shared-department transparency prevents double-toggle confusion.
-- **G3 — Trust before the final act.** The serve card shows identity *and*
+- **G3 — Trust before the final act.** The serve card shows identity _and_
   the steps 1–5 verified summary; the confirm dialog restates the context
   because enrollment is irreversible.
 - **G4 — Calm under load.** Dense but scannable lists; motion that
@@ -59,6 +60,7 @@ toast — restraint (`design.md` §4.8, NG4).
   be moved to the end of the line without ceremony; the queue keeps moving.
 
 ### Non-Goals (v1)
+
 - **NG1 —** No student-side UI (separate spec), no SBO-officer features
   (stamping, evidence review), no admin features (departments, mapping,
   years) — `erpsys-spec.md` §3, §9.
@@ -81,11 +83,11 @@ toast — restraint (`design.md` §4.8, NG4).
 
 ## 3. Users & Access
 
-| Who | Access |
-|---|---|
-| **Instructor** (`role: ENROLLMENT_ADVISER`) | Full instructor page; sees only departments mapped to them (`AdviserDepartment`). |
-| **Admin** (`role: ADMIN`) | Sees the instructor page too (queue procedures are role-guarded `ENROLLMENT_ADVISER, ADMIN` in `erpsys-spec.md` §7). Same UI; no role-specific chrome in v1. |
-| Student / SBO Officer / outside-org | Route-guarded out. |
+| Who                                         | Access                                                                                                                                                       |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Instructor** (`role: ENROLLMENT_ADVISER`) | Full instructor page; sees only departments mapped to them (`AdviserDepartment`).                                                                            |
+| **Admin** (`role: ADMIN`)                   | Sees the instructor page too (queue procedures are role-guarded `ENROLLMENT_ADVISER, ADMIN` in `erpsys-spec.md` §7). Same UI; no role-specific chrome in v1. |
+| Student / SBO Officer / outside-org         | Route-guarded out.                                                                                                                                           |
 
 Route: **`/instructor`**. Role guard requires `ENROLLMENT_ADVISER` or `ADMIN`;
 otherwise redirect to the role-appropriate surface with the standard session
@@ -118,6 +120,7 @@ tabs are the departments themselves.
 ```
 
 **Tab bar behavior** (mirrors the officers' tab bar, `sbo-officers-page-spec.md` §4):
+
 - Pill/segmented tabs in a translucent material bar under the app header
   (`design.md` §5.10). Active tab: navy-filled pill; inactive: text-only.
   Active-state transition is a cross-fade of the pill background
@@ -142,6 +145,7 @@ zero waiting students keeps its tab; its tab shows the drain state (§6.5).
 ## 5. Layout & Surfaces
 
 ### 5.1 Page shell
+
 - Content sits under the existing app `Header`; the instructor page adds the
   department tab bar (translucent, `backdrop-filter` blur, no hard divider —
   scroll-edge fade mask per `design.md` §5.10).
@@ -151,27 +155,29 @@ zero waiting students keeps its tab; its tab shows the drain state (§6.5).
   (best-effort mobile, `design.md` NG1).
 
 ### 5.2 Department tab anatomy (top to bottom)
+
 1. **Tab header row** — department name + code, queue status dot + label
-   (Open navy dot / Closed gray dot — the *derived* state students see),
+   (Open navy dot / Closed gray dot — the _derived_ state students see),
    waiting count ("12 waiting"), and the **"Accepting students" switch** (§6.2).
 2. **Spotlight card** — the next student in line (§5.3).
 3. **Waiting list** — everyone behind them, FIFO (§5.4).
 4. **Drain state** replaces 2+3 when the queue is empty (§6.5).
 
 ### 5.3 Spotlight card — "Next in line"
+
 A single large card, the visual anchor of the tab (the one thing the
 instructor must see):
 
-| Element | Detail |
-|---|---|
-| Label | "Next in line" (muted, small) |
-| Avatar | Initial-based, navy-on-dirty-white (same as officers' rows) |
-| Name | Ink, medium-weight, display-ish size |
-| Student number | `tabular-nums`, muted |
-| Joined time | "Joined 12m ago" (relative, muted, small) |
+| Element           | Detail                                                                                                                                                                                                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Label             | "Next in line" (muted, small) — flips to **"Now serving"** (navy, with a navy dot) while the student is `IN_PROGRESS`, i.e. the serve confirm dialog is open (§6.4, §11.3)                                                                                                               |
+| Avatar            | Initial-based, navy-on-dirty-white (same as officers' rows)                                                                                                                                                                                                                              |
+| Name              | Ink, medium-weight, display-ish size                                                                                                                                                                                                                                                     |
+| Student number    | `tabular-nums`, muted                                                                                                                                                                                                                                                                    |
+| Joined time       | "Joined 12m ago" (relative, muted, small)                                                                                                                                                                                                                                                |
 | Steps 1–5 summary | Compact verified summary — "All 5 steps verified" with five small navy checkmarks (or a single navy "Verified ✓" chip); renders whatever the API returns, so a partial summary is impossible in practice (join is gated server-side) but the summary is the trust check before enrolling |
-| Primary action | **"Serve"** (navy, ≥48px) → opens the enrollment confirm (§6.4) |
-| Secondary action | **"Not present — move to end"** (text button) → skip-to-end (§6.3) |
+| Primary action    | **"Serve"** (navy, ≥48px) → opens the enrollment confirm (§6.4)                                                                                                                                                                                                                          |
+| Secondary action  | **"Not present — move to end"** (text button) → skip-to-end (§6.3)                                                                                                                                                                                                                       |
 
 - Card surface: raised dirty-white (`--color-surface-raised`), hairline
   border, press feedback `scale(0.97)` on pointer-down (`design.md` §5.1).
@@ -185,14 +191,15 @@ instructor must see):
   `design.md` §5.7).
 
 ### 5.4 Waiting list
+
 Rows under the spotlight, oldest first (FIFO by `joinedAt`):
 
-| Column | Detail |
-|---|---|
-| Position | `#1`-style number, `tabular-nums`, navy for the next few, muted beyond ~5 (the top of the line matters) |
-| Student | Name (ink) + student number (muted, `tabular-nums`) |
-| Joined | Relative time ("12m ago"), muted |
-| Action | "Move to end" (subtle text button, appears on row hover/selected on keyboard; also always available on the spotlight's secondary) |
+| Column   | Detail                                                                                                                            |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Position | `#1`-style number, `tabular-nums`, navy for the next few, muted beyond ~5 (the top of the line matters)                           |
+| Student  | Name (ink) + student number (muted, `tabular-nums`)                                                                               |
+| Joined   | Relative time ("12m ago"), muted                                                                                                  |
+| Action   | "Move to end" (subtle text button, appears on row hover/selected on keyboard; also always available on the spotlight's secondary) |
 
 - Rows 52–56px, hairline dividers (neutral-gray at low opacity — not black),
   row hover = subtle dirty-white lift.
@@ -212,9 +219,10 @@ Rows under the spotlight, oldest first (FIFO by `joinedAt`):
 ## 6. Core Interactions
 
 ### 6.1 Data freshness
+
 - **Auto-refresh polling:** TanStack Query `refetchInterval` ~15s on the
   department queue (`["queue", deptId, year]`) — slightly tighter than the
-  officers' 20s because this page *acts* on the queue — plus
+  officers' 20s because this page _acts_ on the queue — plus
   `refetchOnWindowFocus` and a manual refresh button (spins while fetching)
   in the tab header. No SSE/websocket in v1.
 - New students, position changes (from skips elsewhere), and colleague
@@ -223,6 +231,7 @@ Rows under the spotlight, oldest first (FIFO by `joinedAt`):
   the row count drops.
 
 ### 6.2 Availability switch — "Accepting students"
+
 The instructor's single lever over the department's join state (students see
 Open / Closed per department; joining is blocked when no instructor of that
 department has availability on — `erpsys-spec.md` §5).
@@ -235,7 +244,7 @@ department has availability on — `erpsys-spec.md` §5).
 - **Close (off) with waiting students** → **confirm dialog first** (the
   queue pauses new joins and processing; queued students stay):
   - Copy: "**N students still waiting — close anyway?** They stay queued and
-    see the queue as closed until you reopen." Buttons: *Cancel* / **Close**.
+    see the queue as closed until you reopen." Buttons: _Cancel_ / **Close**.
   - Confirmed → switch flips, toast "Queue closed — N students remain
     queued."
 - **Close (off) with zero waiting** → flips immediately, no confirm
@@ -244,16 +253,34 @@ department has availability on — `erpsys-spec.md` §5).
   derived state read-only: **"Open by `<colleague name>`"** (navy dot,
   muted text, switch disabled) — transparency prevents double-toggle
   confusion (§2 G2). The instructor can still open their own availability
-  *after* a colleague closes theirs (the control returns once no colleague
+  _after_ a colleague closes theirs (the control returns once no colleague
   has it open). An instructor may always close their own availability even
   when a colleague has it open — the derived state then reflects the
   colleague's.
-- **Serving while closing:** an in-progress enrollment completes normally;
-  closing never interrupts the student being served (`erpsys-spec.md` §12).
+- **Logout:** clearing the session closes the instructor's _own_ availability
+  immediately, server-side, in the logout handler — no confirm (leaving is
+  the intent signal). Queued students stay; the derived state reflects any
+  colleague's availability.
+- **Inactivity auto-close:** availability auto-clears after **60 minutes**
+  without activity. Activity = real interaction on the page (pointer / key /
+  window focus) plus server mutations (serve, enroll, move-to-end, toggle)
+  plus an explicit heartbeat from the "Still there?" prompt — **passive 15s
+  polling never counts** (an open tab must not keep the queue Open forever).
+  At T−5 min the page shows a "Still there?" dialog; answering resets the
+  timer fully. The server-side timeout is the backstop for closed tabs.
+  Auto-close never fires while a student is `IN_PROGRESS` for that instructor
+  (§6.4). It clears only the instructor's own availability — the department
+  stays Open if a colleague's switch is on (same derived-state contract as
+  the colleague-open bullet above).
+- **After auto-close:** the next visit shows a quiet notice — "Queue was
+  auto-closed while you were away" — with one-click reopen. Students queued
+  before the close stay and see Closed until reopened (same contract as the
+  manual close-with-waiting confirm above).
 - Switch press feedback on pointer-down (`scale(0.97)`); state change is the
   single beat — no decorative animation.
 
 ### 6.3 Skip-to-end ("Not present — move to end")
+
 The next student isn't physically at the office; the line must keep moving.
 
 - **Affordances:** "Not present — move to end" on the spotlight card
@@ -270,6 +297,7 @@ The next student isn't physically at the office; the line must keep moving.
 - Students see their new position live via their own position polling.
 
 ### 6.4 Enrollment completion (the final act)
+
 1. Instructor presses **Serve** (spotlight or list row, pointer-down
    feedback) → **confirm dialog** opens (modal task with dimming scrim —
    `design.md` §5.10 "dim to focus"; `design.md` §4 Agency: an irreversible
@@ -281,7 +309,7 @@ The next student isn't physically at the office; the line must keep moving.
    - the steps 1–5 verified summary line,
    - a calm note: "Enrollment is final." — **no extra input fields**
      (explicit decision, NG7).
-   - Buttons: *Cancel* / **Enroll** (navy). Focus is trapped; Esc or Cancel
+   - Buttons: _Cancel_ / **Enroll** (navy). Focus is trapped; Esc or Cancel
      dismisses; focus returns to the Serve button.
 3. On **Enroll**: `completeEnrollment` fires and does **two things in one
    atomic server-side action** — (a) marks the queue entry **done**
@@ -303,6 +331,7 @@ The next student isn't physically at the office; the line must keep moving.
    <name>." and the row disappears on the next poll (see §11.3).
 
 ### 6.5 Drain state — queue empty
+
 When the last student is served (or the queue is empty on load) while the
 switch is on:
 
@@ -311,7 +340,7 @@ switch is on:
   **"Flip the switch off when you're done for the day."** (explicit decision:
   suggest, don't auto-close — §11.7).
 - The status dot still reads Open (students may join at any moment); the
-  empty state and the hint are *not* a toast — they are a persistent state
+  empty state and the hint are _not_ a toast — they are a persistent state
   that disappears the moment a student joins (row enters at the bottom,
   spotlight fills).
 - If the switch is off, the empty state drops the hint — "Queue closed — no
@@ -322,12 +351,13 @@ switch is on:
 ## 7. System-wide Decisions
 
 ### 7.1 Color language — 60 / 20 / 10 + 10 (same as officers/student)
-| Share | Role | Tailwind tokens |
-|---|---|---|
-| 60% | **White / dirty white** — page background, surfaces, cards | `--color-surface`, `--color-surface-raised` (`#f7f6f3`-family) |
-| 20% | **Navy blue** — primary actions, active tab, status-open dot, verified summary, focus rings, position numbers | `--color-primary` (`#1e3a5f`-family) |
-| 10% | **Black** — primary text | `--color-ink` |
-| 10% | **Neutral gray** — secondary text, dividers, muted chrome, closed dot | `--color-muted`, `--color-border` |
+
+| Share | Role                                                                                                          | Tailwind tokens                                                |
+| ----- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 60%   | **White / dirty white** — page background, surfaces, cards                                                    | `--color-surface`, `--color-surface-raised` (`#f7f6f3`-family) |
+| 20%   | **Navy blue** — primary actions, active tab, status-open dot, verified summary, focus rings, position numbers | `--color-primary` (`#1e3a5f`-family)                           |
+| 10%   | **Black** — primary text                                                                                      | `--color-ink`                                                  |
+| 10%   | **Neutral gray** — secondary text, dividers, muted chrome, closed dot                                         | `--color-muted`, `--color-border`                              |
 
 Semantic on top: `error` (red) for action failures (e.g. "Already
 enrolled" conflict); `warning` (amber) reserved for the close-with-waiting
@@ -336,18 +366,20 @@ navy checkmark motif (discipline, `design.md` §4.7). Dark mode: same ratios
 inverted; opt-in via Settings (out of this spec's scope).
 
 ### 7.2 Status language
-| State | Expression |
-|---|---|
-| Queue Open | Navy dot + "Open" label (derived: any instructor available) |
-| Queue Closed | Gray dot + "Closed" label |
-| Waiting student | Gray position row, no chip |
-| Student being served | Spotlight highlight + dialog open (transient; no persistent "serving" chip in v1 — §11.3) |
-| Enrolled | Leaves the queue; quiet toast. Queue entry `COMPLETED` + step 6 stamped `VERIFIED` by this instructor — the official enrollment record (§6.4) |
+
+| State                | Expression                                                                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Queue Open           | Navy dot + "Open" label (derived: any instructor available)                                                                                   |
+| Queue Closed         | Gray dot + "Closed" label                                                                                                                     |
+| Waiting student      | Gray position row, no chip                                                                                                                    |
+| Student being served | Spotlight highlight + dialog open (transient; no persistent "serving" chip in v1 — §11.3)                                                     |
+| Enrolled             | Leaves the queue; quiet toast. Queue entry `COMPLETED` + step 6 stamped `VERIFIED` by this instructor — the official enrollment record (§6.4) |
 
 Motion never carries information alone — every state is color + shape + label
 (`design.md` §4 Craft; §7.8).
 
 ### 7.3 Typography
+
 - System font stack (`system-ui`); `design.md` §5.11: negative tracking on
   headings (`-0.02em`), body near `0`; tightened leading in the waiting list.
 - **`tabular-nums`** everywhere numbers must align/read: student numbers,
@@ -355,20 +387,24 @@ Motion never carries information alone — every state is color + shape + label
 - All spacing `rem`/`em` — layout scales with the user's text-size setting.
 
 ### 7.4 Empty states
+
 Calm, no illustration-library art: thin-stroke navy icon, short copy, one hint:
+
 - **No departments:** "No departments assigned — contact your admin."
 - **Queue empty (open):** §6.5 (with the suggest-closing hint).
 - **Queue empty (closed):** §6.5 (no hint).
 - Empty states fade in (200ms cross-fade; none under reduced-motion).
 
 ### 7.5 Notifications — none (explicit decision)
-**No bell on the instructor page.** The queue tabs *are* the notification
+
+**No bell on the instructor page.** The queue tabs _are_ the notification
 channel: tab badges (waiting counts) and the derived Open/Closed dot carry
 everything the instructor needs. A bell would duplicate the page's own
 surface (NG3). (The generic notification component exists for student/officer
 surfaces and stays untouched.)
 
 ### 7.6 Chrome & keyboard (mirrors officers)
+
 - **AY label** in the page header (right-aligned, quiet, display-only) —
   same as `sbo-officers-page-spec.md` §4.
 - **Shortcuts** (documented in the `?` popover, one-time hint on first
@@ -378,6 +414,7 @@ surfaces and stays untouched.)
 - Focus ring: navy, 2px offset, never removed (`design.md` §4 Craft).
 
 ### 7.7 Theme
+
 - **Default: light, always** (same rule as officers/student). Dark mode =
   opt-in preference in Settings; no in-page toggle.
 - Honor `design.md` §5.13: `prefers-reduced-motion` (cross-fades, no
@@ -386,6 +423,7 @@ surfaces and stays untouched.)
 - No abrupt brightness jumps on theme change.
 
 ### 7.8 Accessibility & keyboard
+
 - Contrast: navy on dirty-white ≥ 4.5:1; muted ≥ 4.5:1 at token time
   (verify).
 - Switch: real `<button role="switch">` with `aria-checked` + visible label;
@@ -398,6 +436,7 @@ surfaces and stays untouched.)
 - Motion never carries information alone (§7.2).
 
 ### 7.9 Performance
+
 - Animate only `transform`/`opacity`; `will-change` only where motion is
   imminent (`design.md` §5.9).
 - One aggregate query per department tab (`getMyQueues`); waiting list
@@ -409,18 +448,18 @@ surfaces and stays untouched.)
 
 ## 8. Motion Table (values are authoritative)
 
-| Interaction | Spring / easing | Values |
-|---|---|---|
-| Tab indicator, badge counts, waiting counts | critically damped | `damping 1.0`, `response 0.3–0.4` |
-| Spotlight student change (next slides in) | critically damped | `damping 1.0`, `response 0.4`, slide-up from the list |
-| Waiting rows (entry at bottom, position renumber) | critically damped | `damping 1.0`, `response 0.4` |
-| Switch flip | critically damped | `damping 1.0`, `response 0.4` |
-| Confirm dialog (enter/exit) | modal scrim + spring | `damping 1.0`, `response 0.3`; cross-fade under reduced motion |
-| Toasts (enrolled, queue open/close, moved) | reposition | `damping 1.0`, `response 0.4`, anchored bottom/top; no bounce |
-| Popovers (shortcuts `?`) | reposition | `damping 1.0`, `response 0.4`, anchored to trigger |
-| Press states | CSS transition | `transform: scale(0.97)`, 100ms ease-out, pointer-down |
-| Empty states / static reveals | cross-fade | 200ms opacity |
-| Reduced motion | all of the above → | short opacity cross-fades only |
+| Interaction                                       | Spring / easing      | Values                                                         |
+| ------------------------------------------------- | -------------------- | -------------------------------------------------------------- |
+| Tab indicator, badge counts, waiting counts       | critically damped    | `damping 1.0`, `response 0.3–0.4`                              |
+| Spotlight student change (next slides in)         | critically damped    | `damping 1.0`, `response 0.4`, slide-up from the list          |
+| Waiting rows (entry at bottom, position renumber) | critically damped    | `damping 1.0`, `response 0.4`                                  |
+| Switch flip                                       | critically damped    | `damping 1.0`, `response 0.4`                                  |
+| Confirm dialog (enter/exit)                       | modal scrim + spring | `damping 1.0`, `response 0.3`; cross-fade under reduced motion |
+| Toasts (enrolled, queue open/close, moved)        | reposition           | `damping 1.0`, `response 0.4`, anchored bottom/top; no bounce  |
+| Popovers (shortcuts `?`)                          | reposition           | `damping 1.0`, `response 0.4`, anchored to trigger             |
+| Press states                                      | CSS transition       | `transform: scale(0.97)`, 100ms ease-out, pointer-down         |
+| Empty states / static reveals                     | cross-fade           | 200ms opacity                                                  |
+| Reduced motion                                    | all of the above →   | short opacity cross-fades only                                 |
 
 Bounce appears **only** where the user's action carried momentum — and on
 this page there is no gesture-driven surface (no sheets, no drags). Nothing
@@ -432,12 +471,13 @@ decorative bounces (`design.md` §4.8, §5.3).
 
 New components (Svelte 5 runes, in `apps/web/src/components/instructor/`):
 `InstructorTabBar` (dept tabs + waiting badges), `DeptTabHeader` (status dot
-+ label + waiting count + refresh + switch), `AvailabilitySwitch` (role=
-switch, colleague read-only state), `NextSpotlight` (serve card + move-to-end
-secondary), `WaitingList` + `WaitingRow` (position, identity, move-to-end),
-`ServeConfirmDialog` (context restatement, Cancel/Enroll),
-`MoveToEndToast` / `EnrollToast` (shared `ToastStack`), `QueueEmptyState`
-(drain + suggest-closing hint), `NoDepartmentsState`, `ShortcutsPopover`.
+
+- label + waiting count + refresh + switch), `AvailabilitySwitch` (role=
+  switch, colleague read-only state), `NextSpotlight` (serve card + move-to-end
+  secondary), `WaitingList` + `WaitingRow` (position, identity, move-to-end),
+  `ServeConfirmDialog` (context restatement, Cancel/Enroll),
+  `MoveToEndToast` / `EnrollToast` (shared `ToastStack`), `QueueEmptyState`
+  (drain + suggest-closing hint), `NoDepartmentsState`, `ShortcutsPopover`.
 
 Modified: `Header` gains the AY label slot (or reused from the officer
 layout); `ToastStack` and `EmptyState` are shared components
@@ -480,11 +520,15 @@ stamp/notification components).
 3. **Multi-instructor race on serve.** Two instructors with the same
    department open can both see the same next student; both may click Serve.
    Resolution: server-side idempotent `completeEnrollment` (second attempt →
-   "Already enrolled"); the `IN_PROGRESS` state in `QueueStatus` is for the
-   in-flight window between confirm and completion, not a persistent UI
-   "serving" lock in v1. Confirm the API shape
-   (`processNextStudent` → `completeEnrollment` as one client action vs. two)
-   during implementation.
+   "Already enrolled"). **Resolved (2026-08-22):** the serve confirm window
+   now sets `IN_PROGRESS` (`beginServing` on dialog open, `endServing` on
+   cancel, only by the instructor who began it) — this is the student-side
+   "The adviser is serving you now." indicator and the instructor spotlight's
+   "Now serving" label. It is a transient in-flight lock, not a persistent
+   "serving" chip: two instructors opening the same student's dialog resolve
+   through idempotent `completeEnrollment`; `IN_PROGRESS` is never a stale
+   block because `completeEnrollment` completes it and the serving instructor
+   sees the state in the spotlight.
 4. **Move-to-end confirm?** Spec'd with no confirm (reversible in effect,
    immediately visible). Revisit if real use shows accidental skips — a light
    confirm is a cheap addition later.
@@ -499,9 +543,10 @@ stamp/notification components).
    constraint.
 7. **Suggest-closing hint copy.** "Flip the switch off when you're done for
    the day." — confirm wording with instructors during testing; auto-close on
-   drain was explicitly rejected.
+   drain was explicitly rejected (distinct from inactivity auto-close —
+   §11.11).
 8. **Colleague-open read-only switch.** Spec'd as disabled + "Open by
-   <name>". Confirm the instructor can always close *their own* availability
+   <name>". Confirm the instructor can always close _their own_ availability
    (yes — per §6.2) and that the derived dot reflects the department, not
    their own toggle.
 9. **Step-6 stamp on `completeEnrollment`.** `erpsys-spec.md` §5 originally
@@ -513,10 +558,20 @@ stamp/notification components).
    stamp (student spec §6.5/§6.7). **Reconciled:** `erpsys-spec.md` §5 flow
    item 6, §5 rules, §6 `StepVerification` note, and §7 `completeEnrollment`
    now carry the same transactional contract.
-10. **No-active-year state.** Distinct from the no-departments guard (§3):
-    no active year → "No active academic year — contact your admin."
-    Previously the no-departments copy would have shown for the wrong reason.
-    Fixed in §3.
+10. **Auto-close on logout/inactivity — resolved (2026-08-23).** Explicit
+    logout clears the instructor's own availability immediately (logout
+    handler); inactivity auto-clears it after 60 min, with a "Still there?"
+    prompt at T−5 min and a server-side timeout as backstop for closed tabs.
+    Scope is per-instructor availability only — the department derived state
+    stays Open while any colleague's switch is on (§6.2). Passive polling
+    never resets the timer (only mutations + heartbeat do); auto-close never
+    fires mid-serve; queued students stay (same contract as §6.2 manual
+    close); the next visit shows a "closed while you were away" notice with
+    one-click reopen. **Requires:** `lastActiveAt DateTime?` on
+    `AdviserAvailability` (packages/db — updated by mutations + heartbeat,
+    never by polls), a server job clearing stale records, and the client
+    idle-timer + prompt on the instructor page. Distinct from §11.7 (drain):
+    drain still suggests, never auto-closes.
 
 ---
 
