@@ -1,0 +1,28 @@
+{
+  "name": "@steps/api",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@orpc/client": "catalog:",
+    "@orpc/openapi": "catalog:",
+    "@orpc/server": "catalog:",
+    "@orpc/zod": "catalog:",
+    "@steps/auth": "workspace:*",
+    "@steps/db": "workspace:*",
+    "@steps/env": "workspace:*",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@steps/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

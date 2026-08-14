@@ -1,0 +1,24 @@
+{
+  "name": "@steps/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@steps/db": "workspace:*",
+    "@steps/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@steps/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
