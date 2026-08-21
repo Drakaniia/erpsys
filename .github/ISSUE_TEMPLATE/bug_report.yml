@@ -1,0 +1,72 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug in ERPSYS (COT-SBO Enrollment
+        Requirements Processing System)! Please fill out the information below to help us investigate.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe what happened and what you expected to happen instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Start the dev server (bun run dev)
+        2. Navigate to ...
+        3. When ... observe the bug: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-expected
+    attributes:
+      label: Actual vs Expected Behavior
+      description: What actually happened (include full error message if applicable) and what you expected to happen instead.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected Area
+      description: Which part of ERPSYS is affected?
+      options:
+        - Auth (sign-in, sign-up, session)
+        - Dashboard / UI
+        - API (oRPC routes)
+        - Database (Prisma schema, queries)
+        - Environment / config
+        - Build / CI
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system and runtime versions.
+      placeholder: "e.g., Windows 11, bun 1.3.14"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other context about the problem here.
+    validations:
+      required: false
