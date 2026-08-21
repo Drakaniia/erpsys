@@ -113,10 +113,14 @@ steps plus, on step 1, the requirements/payments checklist.
    ("Queue closed — adviser is not yet accepting students").
 5. Adviser opens availability → sees their department's queue (FIFO by
    `joinedAt`) → **processes the next student** one at a time.
-6. Adviser marks the student **enrolled** (they generate the COR in the
-   separate university system in parallel). The student sees a **confetti
-   success screen** with a message: *"You are now enrolled in `<Department
-   name>`, `<semester> <academic year>`"* (e.g., "1st Semester 2026-2027").
+6. Adviser marks the student **enrolled** — one atomic action that (a) sets
+   the queue entry to `COMPLETED` (`servedById`, `completedAt`) and (b) writes
+   the step-6 **`StepVerification` as `VERIFIED`** (`stepId` = `ENROLLMENT`,
+   `verifiedById` = adviser, `verifiedAt` = now) — the official enrollment
+   record. (The adviser generates the COR in the separate university system in
+   parallel.) The student sees a **confetti success screen** with a message:
+   *"You are now enrolled in `<Department name>`, `<semester> <academic
+   year>`"* (e.g., "1st Semester 2026-2027").
 7. A completed enrollment sends an in-app notification and the queue position
    is cleared.
 
@@ -127,6 +131,9 @@ steps plus, on step 1, the requirements/payments checklist.
 - Availability is per adviser per department per academic year.
 - Closing availability does not eject queued students — it stops new joins and
   pauses processing.
+- `completeEnrollment` is **transactional**: the queue `COMPLETED` state and
+  the step-6 `StepVerification` (`VERIFIED`) always land together — never one
+  without the other. Completion is final (see §12).
 
 ---
 
@@ -188,6 +195,11 @@ see below.)
   step 4 → `{ mugshotUploadId? }`; step 5 → `{ consentUploadId? }`; step 1 →
   `{}` (appliedAt is the record).
 - `verifiedById`/`verifiedAt` provide the audit trail.
+- Step 6 (`ENROLLMENT`) is verified by the **enrollment queue flow**, not the
+  officer stamp flow: the adviser's `completeEnrollment` writes this record
+  (`verifiedById` = adviser) atomically with the queue `COMPLETED` state (§5).
+  Step 6 has no `appliedAt` — the queue join is the equivalent signal; steps
+  1–5 are stamped by SBO officers.
 
 **Upload**
 - `id, fileKey, fileUrl, kind UploadKind, uploadedById → User, studentProfileId,
@@ -244,7 +256,9 @@ Follow existing `packages/api/src/routers/` pattern (`publicProcedure`,
 - **queue** (role: ENROLLMENT_ADVISER, ADMIN): `getDepartments`, `getQueueStatus`
   (per department: open/closed, count), `setAvailability`, `getMyQueues`
   (adviser's departments + FIFO lists), `processNextStudent`, `completeEnrollment`
-  (status COMPLETED + notification + success payload), `getEnrolledStudents`.
+  (transactionally: queue status `COMPLETED` + step-6 `StepVerification`
+  `VERIFIED` with `verifiedById` + notification + success payload),
+  `getEnrolledStudents`.
 - **admin** (role: ADMIN): `listUsers`, `setRole` (student↔officer),
   departments CRUD, adviser↔department mapping, academic year CRUD (activate
   year), `listRequirementItems`/`upsertRequirementItem`, `updateChatbotKnowledge`,
