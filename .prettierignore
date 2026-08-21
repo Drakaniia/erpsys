@@ -1,0 +1,20 @@
+node_modules
+dist
+build
+.svelte-kit
+.turbo
+.omp
+.agents
+.vscode
+coverage
+*.tsbuildinfo
+bun.lock
+.env
+.env*.local
+apps/web/src/routeTree.gen.ts
+packages/db/prisma/generated
+docs
+
+# Maintained prose; format only if requested
+AGENTS.md
+design.md

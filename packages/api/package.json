@@ -9,7 +9,9 @@
       "default": "./src/*.ts"
     }
   },
-  "scripts": {},
+  "scripts": {
+    "lint": "eslint ."
+  },
   "dependencies": {
     "@orpc/client": "catalog:",
     "@orpc/openapi": "catalog:",

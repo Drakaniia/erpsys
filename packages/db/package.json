@@ -15,7 +15,8 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "postinstall": "prisma generate",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@prisma/client": "catalog:",

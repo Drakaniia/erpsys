@@ -56,3 +56,5 @@ coverage
 .cache
 tmp
 temp
+.qoder/settings.local.json
+.omp/extensions/emdash-hook.ts

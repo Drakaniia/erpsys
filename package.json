@@ -1,5 +1,6 @@
 {
   "name": "steps",
+  "description": "COT-SBO Enrollment Requirements Processing System (ERPSYS)",
   "private": true,
   "workspaces": {
     "packages": [
@@ -24,11 +25,15 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "check-types": "turbo run check-types",
+    "lint": "turbo run lint",
     "dev:web": "turbo run dev -F web --",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "db:push": "turbo run db:push -F @steps/db --",
     "db:studio": "turbo run db:studio -F @steps/db --",
     "db:generate": "turbo run db:generate -F @steps/db --",
-    "db:migrate": "turbo run db:migrate -F @steps/db --"
+    "db:migrate": "turbo run db:migrate -F @steps/db --",
+    "prepare": "husky"
   },
   "dependencies": {
     "@steps/env": "workspace:*",
@@ -36,10 +41,20 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@steps/config": "workspace:*",
     "@types/node": "catalog:",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-svelte": "^3.23.0",
+    "globals": "^17.11.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.9.6",
+    "prettier-plugin-svelte": "^4.1.1",
     "turbo": "^2.10.7",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "typescript-eslint": "^8.67.0"
   },
   "packageManager": "bun@1.3.14"
 }
