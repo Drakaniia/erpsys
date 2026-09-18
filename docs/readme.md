@@ -40,4 +40,3 @@ The process is that there are three main roles: the students, the SBO officers, 
 - The last step is the enrollment officer — this is where `@buksu.edu.ph` comes in; this email is used by the instructor.
 - The final verification is for the processing of the COR; you can't go to step 6 if none of these steps is fulfilled.
 - The instructor is a new role, so it has a different dashboard. Students, Sbo Officers, and Adviser have different pages.
-

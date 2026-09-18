@@ -40,12 +40,12 @@ Both are **additive**: a student may submit with files only, link only, camera c
 
 ## 3. Scope & Step Matrix
 
-| Step | Code | Current evidence | v1 Alternatives | Notes |
-|------|------|------------------|-----------------|-------|
-| 2 | `SOCIAL_MEDIA` | `EvidenceSlot` (file) | **file + external link** | No camera |
-| 3 | `PROFILING` | `EvidenceSlot` (file) + `GoogleFormPanel` | **file + external link** | Link supplements screenshot of “response recorded” |
-| 4 | `MUGSHOT` | `EvidenceSlot` (file) | **file + external link + camera** | Camera = primary student-side capture |
-| 5 | `CONSENT` | `EvidenceSlot` (file, `multiple=true`) | **file + external link + camera** | Camera useful for photographing signed papers |
+| Step | Code           | Current evidence                          | v1 Alternatives                   | Notes                                              |
+| ---- | -------------- | ----------------------------------------- | --------------------------------- | -------------------------------------------------- |
+| 2    | `SOCIAL_MEDIA` | `EvidenceSlot` (file)                     | **file + external link**          | No camera                                          |
+| 3    | `PROFILING`    | `EvidenceSlot` (file) + `GoogleFormPanel` | **file + external link**          | Link supplements screenshot of “response recorded” |
+| 4    | `MUGSHOT`      | `EvidenceSlot` (file)                     | **file + external link + camera** | Camera = primary student-side capture              |
+| 5    | `CONSENT`      | `EvidenceSlot` (file, `multiple=true`)    | **file + external link + camera** | Camera useful for photographing signed papers      |
 
 - File limit stays **4 MB** (`EvidenceSlot.svelte:35`, `uploadthing.ts:38`).
 - External link: **at most 1 per StepVerification** (student can Add / Replace / Remove until `VERIFIED`).
@@ -70,6 +70,7 @@ enum UploadKind {
 ```
 
 An external link is an `Upload` row with:
+
 - `kind = EXTERNAL_LINK`
 - `fileUrl = <the share link>` (validated URL, max 1000 chars)
 - `fileKey = ""` or `"external:<domain>:<hash>"` (empty string not ideal for required field; use sentinel `external-<uuid>`; no `utapi.delete` call for these rows on delete)
@@ -121,7 +122,7 @@ If Option A is used, `upsertExternalLink` internally creates/updates an `Upload`
 Validate `new URL(url).hostname` (lower-cased, strip `www.`):
 
 - `drive.google.com` (covers `https://drive.google.com/file/d/...` and `https://drive.google.com/open?id=...`)
-- `storage.to`  (and `*.storage.to` if subdomains are used)
+- `storage.to` (and `*.storage.to` if subdomains are used)
 
 Error message (inline, blocking): **“Only Google Drive and storage.to links allowed.”** (`§7`).
 
@@ -174,7 +175,7 @@ Refactor `apps/web/src/components/student/EvidenceSlot.svelte` (and callers `Evi
 
 - If `!navigator.mediaDevices?.getUserMedia` or permission denied, camera tab shows:
   > “Camera unavailable — use file upload or paste a link instead.”
-  with a button to switch to the Upload file tab.
+  > with a button to switch to the Upload file tab.
 - File picker stays visible/usable regardless (the tabs design guarantees this). Only steps 4–5 have the camera tab, so other steps are unaffected.
 
 ### 6.3 Validation & Errors
@@ -210,15 +211,15 @@ Refactor `apps/web/src/components/student/EvidenceSlot.svelte` (and callers `Evi
 
 ## 9. Edge Cases
 
-| Case | Handling |
-|------|----------|
-| Student pastes `http://` Drive link | Reject — require `https:` |
-| Student pastes `https://drive.google.com/...` but file is private | Allow save; officer sees link, may `Send back` with “Link not accessible” chip |
-| Student adds link then immediately files `VERIFIED` race | `updateMany({ not: VERIFIED })` guard rolls back link row (same as `upload-evidence.ts:77`) |
-| Student deletes link, then has zero evidence | `evidenceCount` drops to `files.length`; submit button disables; `StepStatus` stays `SUBMITTED` until officer returns or student adds new evidence |
-| Camera stream fails mid-capture | Show fallback message; stop tracks; keep file/link tabs |
-| Multiple tabs open | Last write wins; `uploadIds` deduped via `Set` in `resolveUploads` |
-| Officer revokes `VERIFIED` | Student can re-add/replace link (status becomes `RETURNED`) — same as file revoke flow |
+| Case                                                              | Handling                                                                                                                                           |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Student pastes `http://` Drive link                               | Reject — require `https:`                                                                                                                          |
+| Student pastes `https://drive.google.com/...` but file is private | Allow save; officer sees link, may `Send back` with “Link not accessible” chip                                                                     |
+| Student adds link then immediately files `VERIFIED` race          | `updateMany({ not: VERIFIED })` guard rolls back link row (same as `upload-evidence.ts:77`)                                                        |
+| Student deletes link, then has zero evidence                      | `evidenceCount` drops to `files.length`; submit button disables; `StepStatus` stays `SUBMITTED` until officer returns or student adds new evidence |
+| Camera stream fails mid-capture                                   | Show fallback message; stop tracks; keep file/link tabs                                                                                            |
+| Multiple tabs open                                                | Last write wins; `uploadIds` deduped via `Set` in `resolveUploads`                                                                                 |
+| Officer revokes `VERIFIED`                                        | Student can re-add/replace link (status becomes `RETURNED`) — same as file revoke flow                                                             |
 
 ---
 
@@ -272,4 +273,3 @@ Refactor `apps/web/src/components/student/EvidenceSlot.svelte` (and callers `Evi
 - Allowlist = `drive.google.com` and `storage.to` only; block inline with message.
 - Link editable until `VERIFIED`; either DB storage option acceptable.
 - Link alone satisfies submit; officer evidence shows link alongside images.
-

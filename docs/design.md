@@ -2,9 +2,9 @@
 
 **Status:** Normative baseline for all ERPSYS surfaces (created 2026-08-21)
 **Source:** the **`apple-design` skill** — Apple's interface principles
-translated to the web (chiefly *Designing Fluid Interfaces*, WWDC 2018; *The
-Details of UI Typography*, WWDC 2020; *Principles of Great Design*, WWDC
-2026; *Designing Audio-Haptic Experiences*). Every rule below traces to that
+translated to the web (chiefly _Designing Fluid Interfaces_, WWDC 2018; _The
+Details of UI Typography_, WWDC 2020; _Principles of Great Design_, WWDC
+2026; _Designing Audio-Haptic Experiences_). Every rule below traces to that
 skill, per the project rule (`AGENTS.md`: "main design and animation
 baseline — apple design skill"). This file is the ERPSYS application of it.
 **Companions:** `docs/spec/*.md` (per-role page specs — student, SBO officer,
@@ -41,10 +41,10 @@ presets, iconography, a component motion library).
 
 - **Calm and confident.** Every page spec names its emotion in its §1:
   Student = calm tracker; Officer = precise workbench; Instructor = minimal
-  queue workbench; Admin = quiet control room. The page *is* that emotion —
+  queue workbench; Admin = quiet control room. The page _is_ that emotion —
   motion is not a layer added after the pixels.
 - **Restraint is a feature.** The officer's stamp landing and the student's
-  enrollment success are the only *earned* moments in the system; everything
+  enrollment success are the only _earned_ moments in the system; everything
   else is quiet. Feedback that fires everywhere trains people to ignore all
   of it.
 - **Directness.** Respond instantly, move continuously, carry momentum,
@@ -58,19 +58,19 @@ presets, iconography, a component motion library).
   - **Damping ratio** — controls overshoot. `1.0` = critically damped, no
     bounce, smooth settle. `< 1.0` = overshoots/oscillates. Lower = bouncier.
   - **Response** — how quickly the value reaches its target, in seconds.
-    Lower = snappier. This is *not* a duration; settle time emerges from the
+    Lower = snappier. This is _not_ a duration; settle time emerges from the
     parameters.
 - **Materials** — translucent surfaces via `backdrop-filter: blur()` +
-    semi-transparent background; content scrolls under floating chrome.
+  semi-transparent background; content scrolls under floating chrome.
 - **Color tokens** (Tailwind v4 `@theme`): `--color-surface` /
-    `--color-surface-raised` (dirty white, `#f7f6f3` family), `--color-primary`
-    (navy, `#1e3a5f` family), `--color-ink`, `--color-muted`, `--color-border`;
-    semantic `--color-error` (red), `--color-warning` (amber). Palette rule:
-    60/20/10+10 (§4.7).
+  `--color-surface-raised` (dirty white, `#f7f6f3` f amily), `--color-primary`
+  (navy, `#1e3a5f` family), `--color-ink`, `--color-muted`, `--color-border`;
+  semantic `--color-error` (red), `--color-warning` (amber). Palette rule:
+  60/20/10+10 (§4.7).
 - **Type:** `system-ui` stack; tracking/leading per §5.11; `tabular-nums`
-    wherever numbers must align (student numbers, positions, counts).
+  wherever numbers must align (student numbers, positions, counts).
 - **Motion never carries information alone** — every state is color + shape +
-    label (§4.7).
+  label (§4.7).
 
 ---
 
@@ -78,7 +78,7 @@ presets, iconography, a component motion library).
 
 Reason with these names. Each maps to the human need it serves.
 
-1. **Purpose.** Make with intention; decide what *not* to build. Every feature
+1. **Purpose.** Make with intention; decide what _not_ to build. Every feature
    spends the user's time, attention, and trust — spend only where it pays.
 2. **Agency.** Keep people in control; offer choices, not a single forced
    path. Back it with forgiveness — easy undo for slips; a confirmation
@@ -108,12 +108,12 @@ Reason with these names. Each maps to the human need it serves.
 
 ### §4.7 Craft — color discipline & the 60/20/10+10 rule
 
-| Share | Role | Tokens |
-|---|---|---|
-| 60% | White / dirty white — backgrounds, surfaces, cards | `--color-surface`, `--color-surface-raised` (`#f7f6f3`-family) |
-| 20% | Navy — primary actions, active states, links, focus rings, verified marks | `--color-primary` (`#1e3a5f`-family) |
-| 10% | Black — primary text | `--color-ink` |
-| 10% | Neutral gray — secondary text, dividers, disabled, muted chrome | `--color-muted`, `--color-border` |
+| Share | Role                                                                      | Tokens                                                         |
+| ----- | ------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 60%   | White / dirty white — backgrounds, surfaces, cards                        | `--color-surface`, `--color-surface-raised` (`#f7f6f3`-family) |
+| 20%   | Navy — primary actions, active states, links, focus rings, verified marks | `--color-primary` (`#1e3a5f`-family)                           |
+| 10%   | Black — primary text                                                      | `--color-ink`                                                  |
+| 10%   | Neutral gray — secondary text, dividers, disabled, muted chrome           | `--color-muted`, `--color-border`                              |
 
 Semantic colors ride **on top** (functional, not brand): `error` (red) for
 failures/destructive actions; `warning` (amber) for `Returned`/outside-org
@@ -125,7 +125,7 @@ is color + shape + label; animation reinforces, never solely signals.
 
 ### §4.8 Delight — earned moments, restrained celebration
 
-- Calm and confident is the register everywhere. The two *earned* moments:
+- Calm and confident is the register everywhere. The two _earned_ moments:
   the **stamp landing** (officer acts → stamp springs in, `damping 0.8`) and
   the **enrollment success** (the system's single confetti grant).
 - Everything else is quiet: toasts, chips, cross-fades. Bounce appears only
@@ -137,6 +137,7 @@ is color + shape + label; animation reinforces, never solely signals.
 ## 5. Motion & materials
 
 ### 5.1 Response — kill latency
+
 - **Respond on pointer-down, not on release.** Feedback lives on the press:
   `transform: scale(0.97)`, `transition: transform 100ms ease-out`.
 - Audit every debounce, artificial timer, and transition wait on the input
@@ -146,6 +147,7 @@ is color + shape + label; animation reinforces, never solely signals.
   transitions.
 
 ### 5.2 Direct manipulation — 1:1 tracking
+
 - Dragged content stays glued to the pointer, **respecting the grab offset**
   (snapping to the element's center on grab breaks the illusion).
 - Pointer Events + `setPointerCapture` so tracking continues when the pointer
@@ -154,16 +156,17 @@ is color + shape + label; animation reinforces, never solely signals.
   release (§5.4).
 
 ### 5.3 Springs — behavior over animation (authoritative values)
+
 A pre-scripted animation can't respond to input; a spring can — new input
 just changes the target and motion stays continuous. **Use springs for
 anything a user can touch.**
 
-| Interaction | Damping | Response |
-|---|---|---|
+| Interaction                                              | Damping                   | Response  |
+| -------------------------------------------------------- | ------------------------- | --------- |
 | Move / reposition, most UI (tabs, cards, badges, counts) | `1.0` (critically damped) | `0.3–0.4` |
-| Rotation | `0.8` | `0.4` |
-| Drawer / sheet (drag-driven) | `0.8` | `0.3` |
-| Popovers / anchored surfaces | `1.0` | `0.4` |
+| Rotation                                                 | `0.8`                     | `0.4`     |
+| Drawer / sheet (drag-driven)                             | `0.8`                     | `0.3`     |
+| Popovers / anchored surfaces                             | `1.0`                     | `0.4`     |
 
 - **Start at `damping 1.0` everywhere** — graceful, non-distracting.
 - Add bounce (**`damping ~0.8`**) **only when the gesture carried momentum**:
@@ -176,12 +179,14 @@ anything a user can touch.**
   desyncs when X and Y velocities differ.
 
 ### 5.4 Velocity handoff
+
 When a gesture ends, the animation must **continue at the finger's exact
 velocity** — no visible seam between drag and animation. Hand the release
-velocity to the spring as initial velocity. If the API wants *relative*
+velocity to the spring as initial velocity. If the API wants _relative_
 velocity: `gestureVelocity / (target − current)`.
 
 ### 5.5 Interruptibility — the single most important principle
+
 - Every animation must be interruptible and redirectable at any moment —
   a closing sheet grabbed again follows the finger; input is never locked
   during a transition.
@@ -194,6 +199,7 @@ velocity: `gestureVelocity / (target − current)`.
   velocity.
 
 ### 5.6 Rubber-banding — soft boundaries
+
 At an edge, resist progressively instead of stopping hard (a hard stop reads
 frozen; continuous resistance reads "responsive, but nothing more here"):
 
@@ -204,6 +210,7 @@ function rubberband(overshoot, dimension, constant = 0.55) {
 ```
 
 ### 5.7 Spatial consistency — symmetric paths, anchored origins
+
 - **Enter and exit along the same path.** A right-side sheet dismisses to the
   right; a bottom sheet exits downward.
 - **Anchor interactions to their source.** Popovers, menus, and sheets
@@ -213,11 +220,13 @@ function rubberband(overshoot, dimension, constant = 0.55) {
   directions).
 
 ### 5.8 Hint in the direction of the gesture
+
 Intermediate frames telegraph the outcome — Control Center modules "grow up
 and out toward your finger." In-between frames should point at where things
 are going, not interpolate blindly.
 
 ### 5.9 Frame-level smoothness
+
 - Keep per-frame positional change below the perception threshold (no
   strobing); for very fast motion, a subtle stretch/blur encodes speed.
 - `requestAnimationFrame` is the web's display-synced clock. **Animate only
@@ -225,9 +234,10 @@ are going, not interpolate blindly.
   with `will-change` only where motion is imminent.
 
 ### 5.10 Materials & translucency — hierarchy through depth
+
 - **Nav/toolbars/sheets are translucent layers** (`backdrop-filter: blur()`
-  + semi-transparent background) with content scrolling underneath — not
-  opaque bars consuming a fixed strip.
+  - semi-transparent background) with content scrolling underneath — not
+    opaque bars consuming a fixed strip.
 - Material weight encodes hierarchy: heavier materials separate structural
   regions (sidebars); lighter materials draw attention to interactive
   elements. **Never stack a light translucent surface on another** —
@@ -235,7 +245,7 @@ are going, not interpolate blindly.
   deeper shadow).
 - **Dim to focus, separate to keep flow.** A modal task pairs its surface
   with a dimming scrim and pushes the background back. A parallel,
-  non-blocking panel uses translucency and offset *without* a scrim.
+  non-blocking panel uses translucency and offset _without_ a scrim.
 - **Scroll-edge effects, not hard dividers** — fade a small blur/gradient
   mask where content meets floating chrome, instead of a 1px border under a
   sticky header.
@@ -252,6 +262,7 @@ are going, not interpolate blindly.
 ```
 
 ### 5.11 Typography — optical sizing, tracking, leading
+
 - **Tracking is size-specific, never one value.** Large display text:
   negative tracking (letters read too far apart as they grow) — headings
   `-0.02em` at display sizes. Small text: near `0` or slightly positive. Body
@@ -268,13 +279,15 @@ are going, not interpolate blindly.
   reason.
 
 ### 5.12 Inline validation
+
 Validate **inline, not on submit**: the error appears under the offending
 field as it is entered (or on blur for async checks), with a visible message
 and an `aria-live` announcement. Fail fast; never make the user submit to
 discover the problem.
 
 ### 5.13 Reduced motion & accessibility
-Reduced motion doesn't mean *no* feedback — a gentler, non-vestibular
+
+Reduced motion doesn't mean _no_ feedback — a gentler, non-vestibular
 equivalent. Honor three independent signals:
 
 - **`prefers-reduced-motion: reduce`** — replace slides/springs/parallax with
@@ -292,14 +305,21 @@ moving surfaces out during big repositioning, back in once settled.
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  .sheet { transition: opacity 200ms ease; transform: none !important; }
+  .sheet {
+    transition: opacity 200ms ease;
+    transform: none !important;
+  }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .toolbar { background: white; backdrop-filter: none; }
+  .toolbar {
+    background: white;
+    backdrop-filter: none;
+  }
 }
 ```
 
 ### 5.14 Multimodal feedback — motion + sound + haptics
+
 Three rules (applied within ERPSYS's restraint — see NG2):
 
 1. **Causality** — feedback fires on the actual causal event (the toggle
@@ -314,6 +334,7 @@ Three rules (applied within ERPSYS's restraint — see NG2):
 ## 6. Layout, spacing & anchoring
 
 ### 6.1 Grouping & mapping
+
 Proximity implies relationship: place a control near what it affects, and
 arrange controls to mirror what they change. If a control needs a label to
 explain its mapping, the mapping is weak. **Direct, specific labels beat
@@ -321,12 +342,14 @@ safe generic ones** — name nav items for their contents ("Progress",
 "Assessment"), not vague umbrellas.
 
 ### 6.2 Density — the workbench rule
+
 Dense, information-heavy surfaces (officer tables, instructor waiting lists,
 admin user lists) use tightened leading, hairline dividers
 (neutral-gray at low opacity — never black), and 52–56px rows. Density is a
-*choice* per surface, not a default everywhere — see §6.4.
+_choice_ per surface, not a default everywhere — see §6.4.
 
 ### 6.3 Popovers & anchored surfaces
+
 Menus, popovers, and shortcut panels **anchor to their trigger**:
 `transform-origin` on the trigger element, enter/exit along the same path,
 `damping 1.0, response 0.4`. The spatial relationship between the button and
@@ -334,6 +357,7 @@ its content must be obvious — content never floats in from an unrelated
 origin.
 
 ### 6.4 Air & rhythm — simplicity in spacing
+
 Simpler surfaces breathe: airier cards (96–120px in card views), generous
 gutters, staggered entries (~40ms) that settle once. Whitespace is emphasis —
 a surface with fewer elements spends its spacing to say so. "Burying
@@ -345,6 +369,7 @@ hierarchy obvious, not hidden.
 ## 7. Implementation
 
 ### 7.1 Springs via `svelte/motion`
+
 - Use `svelte/motion` springs (`spring`/`tweened`) for everything in the
   Motion Tables. Map `damping`/`response` directly (`stiffness`/`damping`
   under the hood are derived; prefer the Motion/Framer-style
@@ -356,17 +381,20 @@ hierarchy obvious, not hidden.
   edge (§5.6), velocity handoff on release (§5.4).
 
 ### 7.2 `prefers-reduced-*` overrides at component scope
+
 Every component with motion or translucency carries its own overrides
 (§5.13), scoped at the component, not just a global media query — so a new
 component can't accidentally skip the reduced-motion path.
 
 ### 7.3 Tailwind v4 tokens
+
 Define `@theme` tokens once per §3: `--color-surface`, `--color-surface-raised`,
 `--color-primary`, `--color-ink`, `--color-muted`, `--color-border`,
 `--color-error`, `--color-warning`. Contrast floors: navy on dirty-white
 ≥ 4.5:1; muted ≥ 4.5:1 (verify at token time).
 
 ### 7.4 Accessibility implementation
+
 - Focus ring: navy, 2px offset, **never removed**.
 - Dialogs/sheets: focus-trapped, `aria-modal`, Esc + backdrop dismiss, focus
   returns to the trigger.
@@ -418,19 +446,19 @@ Define `@theme` tokens once per §3: `--color-surface`, `--color-surface-raised`
 
 ## 18. Quick Reference
 
-| Need | Technique | Concrete value |
-|---|---|---|
-| Default UI spring | critically damped, no overshoot | `damping 1.0`, `response 0.3–0.4` |
-| Momentum / flick spring | under-damped, slight bounce | `damping 0.8`, `response 0.3–0.4` |
-| Gesture → spring velocity | hand off release velocity | `gestureVelocity / (target − current)` |
-| Interrupt cleanly | start from presentation (live) value | read the on-screen transform |
-| Avoid reversal "brick wall" | carry velocity through re-target | velocity-blending spring |
-| Reversible transition | mirror the easing curve | inverse cubic-bézier |
-| 1:1 drag | Pointer Events + capture | respect the grab offset |
-| Feedback | on pointer-down, continuous | `scale(0.97)`, 100ms ease-out |
-| Boundary | rubber-band, don't hard-stop | `rubberband()` (§5.6) |
-| Translucent chrome | `backdrop-filter` layer | content scrolls under |
-| Type tracking | size-specific, never fixed | headings `-0.02em`, body `0` |
-| Reduced motion | cross-fade, not slide/spring | `@media (prefers-reduced-motion)` |
-| Verified language | navy stamp motif, no green | `--color-primary` |
-| Palette discipline | 60/20/10+10 | surface / primary / ink / muted |
+| Need                        | Technique                            | Concrete value                         |
+| --------------------------- | ------------------------------------ | -------------------------------------- |
+| Default UI spring           | critically damped, no overshoot      | `damping 1.0`, `response 0.3–0.4`      |
+| Momentum / flick spring     | under-damped, slight bounce          | `damping 0.8`, `response 0.3–0.4`      |
+| Gesture → spring velocity   | hand off release velocity            | `gestureVelocity / (target − current)` |
+| Interrupt cleanly           | start from presentation (live) value | read the on-screen transform           |
+| Avoid reversal "brick wall" | carry velocity through re-target     | velocity-blending spring               |
+| Reversible transition       | mirror the easing curve              | inverse cubic-bézier                   |
+| 1:1 drag                    | Pointer Events + capture             | respect the grab offset                |
+| Feedback                    | on pointer-down, continuous          | `scale(0.97)`, 100ms ease-out          |
+| Boundary                    | rubber-band, don't hard-stop         | `rubberband()` (§5.6)                  |
+| Translucent chrome          | `backdrop-filter` layer              | content scrolls under                  |
+| Type tracking               | size-specific, never fixed           | headings `-0.02em`, body `0`           |
+| Reduced motion              | cross-fade, not slide/spring         | `@media (prefers-reduced-motion)`      |
+| Verified language           | navy stamp motif, no green           | `--color-primary`                      |
+| Palette discipline          | 60/20/10+10                          | surface / primary / ink / muted        |
