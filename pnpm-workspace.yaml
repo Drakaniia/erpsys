@@ -1,0 +1,9 @@
+packages:
+  - "apps/*"
+allowBuilds:
+  esbuild: true
+  # Optional native accelerator for the transitive msgpackr dependency.
+  # msgpackr falls back to a pure-JS codec when it is absent, so the
+  # native build (and its toolchain requirement) is skipped deliberately.
+  msgpackr-extract: false
+  workerd: false
