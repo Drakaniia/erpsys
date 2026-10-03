@@ -1,0 +1,32 @@
+{
+  "name": "@erpsys/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "admin:reset-2fa": "tsx src/scripts/reset-admin-2fa.ts",
+    "build": "tsc",
+    "cf:whoami": "wrangler whoami",
+    "check": "tsc --noEmit && tsc -p tsconfig.test.json",
+    "dev": "tsx watch src/index.ts",
+    "r2:info": "tsx src/scripts/r2-setup.ts --info",
+    "r2:setup": "tsx src/scripts/r2-setup.ts",
+    "r2:verify": "tsx src/scripts/r2-setup.ts --verify",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.879.0",
+    "@aws-sdk/s3-request-presigner": "^3.879.0",
+    "better-auth": "1.6.27",
+    "dotenv": "latest",
+    "express": "latest",
+    "mongodb": "latest",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "latest",
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "wrangler": "4.149.0"
+  }
+}
