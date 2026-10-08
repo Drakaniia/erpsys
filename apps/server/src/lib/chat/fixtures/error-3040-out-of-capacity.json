@@ -1,0 +1,6 @@
+{
+  "description": "HTTP 429, OpenAI-shaped envelope: the model is out of capacity (also what `rejectIfBusy` returns instead of queueing). The chain moves to the next model. The compat endpoint's error envelope is unverified, which is why this shape is covered as well as the Cloudflare-native one.",
+  "status": 429,
+  "headers": { "content-type": "application/json" },
+  "body": "{\"error\":{\"message\":\"Out of capacity\",\"type\":\"capacity_error\",\"code\":3040}}"
+}

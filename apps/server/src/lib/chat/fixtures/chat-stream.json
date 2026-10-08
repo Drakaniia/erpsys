@@ -1,0 +1,15 @@
+{
+  "description": "Recorded `data:` frames from POST /client/v4/accounts/{id}/ai/v1/chat/completions with stream:true and model @cf/openai/gpt-oss-20b, kept as the raw SSE lines (blank separators included) so the parser is tested at frame boundaries. The first frame carries only chain-of-thought and must never reach a student.",
+  "frames": [
+    "data: {\"id\":\"chatcmpl-a1\",\"object\":\"chat.completion.chunk\",\"created\":1770000000,\"model\":\"@cf/openai/gpt-oss-20b\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\"We need to find the assessment requirements for the student...\"},\"finish_reason\":null}]}",
+    "",
+    "data: {\"id\":\"chatcmpl-a1\",\"object\":\"chat.completion.chunk\",\"created\":1770000000,\"model\":\"@cf/openai/gpt-oss-20b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"Bring your \"},\"finish_reason\":null}]}",
+    "",
+    "data: {\"id\":\"chatcmpl-a1\",\"object\":\"chat.completion.chunk\",\"created\":1770000000,\"model\":\"@cf/openai/gpt-oss-20b\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Form 137 and a 2x2 photo.\"},\"finish_reason\":null}]}",
+    "",
+    "data: {\"id\":\"chatcmpl-a1\",\"object\":\"chat.completion.chunk\",\"created\":1770000000,\"model\":\"@cf/openai/gpt-oss-20b\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":3210,\"completion_tokens\":18,\"total_tokens\":3228}}",
+    "",
+    "data: [DONE]",
+    ""
+  ]
+}

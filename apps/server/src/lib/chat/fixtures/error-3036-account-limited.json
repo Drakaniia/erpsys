@@ -1,0 +1,6 @@
+{
+  "description": "HTTP 429, Cloudflare-native envelope: the account's 10,000 daily Neurons are used up. The day is written off after one retry.",
+  "status": 429,
+  "headers": { "content-type": "application/json" },
+  "body": "{\"result\":null,\"success\":false,\"errors\":[{\"code\":3036,\"message\":\"Account limited\"}],\"messages\":[]}"
+}

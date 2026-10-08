@@ -1,0 +1,33 @@
+{
+  "description": "The remaining error bodies the chain reacts to, keyed by scenario.",
+  "needsPaid": {
+    "description": "HTTP 403 code 5035 — the model needs a Workers Paid plan. Account-level, so the chain stops.",
+    "status": 403,
+    "headers": { "content-type": "application/json" },
+    "body": "{\"result\":null,\"success\":false,\"errors\":[{\"code\":5035,\"message\":\"Model requires Workers Paid\"}],\"messages\":[]}"
+  },
+  "accountBlocked": {
+    "description": "HTTP 403 code 3023 — the account is blocked. Account-level, so the chain stops.",
+    "status": 403,
+    "headers": { "content-type": "application/json" },
+    "body": "{\"result\":null,\"success\":false,\"errors\":[{\"code\":3023,\"message\":\"Account blocked\"}],\"messages\":[]}"
+  },
+  "tooLarge": {
+    "description": "HTTP 413 code 3006 — the prompt is too large. The student is told to start a new chat.",
+    "status": 413,
+    "headers": { "content-type": "application/json" },
+    "body": "{\"result\":null,\"success\":false,\"errors\":[{\"code\":3006,\"message\":\"Request too large\"}],\"messages\":[]}"
+  },
+  "badModelId": {
+    "description": "HTTP 404 code 3042 — the model id does not exist. Only that model's remaining attempts are skipped.",
+    "status": 404,
+    "headers": { "content-type": "application/json" },
+    "body": "{\"result\":null,\"success\":false,\"errors\":[{\"code\":3042,\"message\":\"No such model\"}],\"messages\":[]}"
+  },
+  "unparseable429": {
+    "description": "HTTP 429 with a body carrying no code at all — treated as capacity, so the chain moves on.",
+    "status": 429,
+    "headers": { "content-type": "application/json" },
+    "body": "<html><body>429 Too Many Requests</body></html>"
+  }
+}
