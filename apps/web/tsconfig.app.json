@@ -1,0 +1,45 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "es2023",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["vite/client", "node"],
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": false,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "moduleDetection": "force",
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "$lib": ["./src/lib"],
+      "$lib/*": ["./src/lib/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "test-setup.ts"],
+  // ponytail: Svelte-render tests excluded until their RTL ports land
+  // (mirrors vitest exclude in vite.config.ts). Delete entries as ports land.
+  "exclude": [
+    "src/components/auth/AcademicYearSelect.test.ts",
+    "src/components/auth/CourseYearPicker.portal.test.ts",
+    "src/components/auth/CourseYearPicker.test.ts",
+    "src/components/instructor/AssignDepartmentModal.test.ts",
+    "src/components/report/ReportFilterBar.test.ts",
+    "src/components/report/ReportsPanel.test.ts",
+    "src/components/student/ChatTab.test.ts",
+    "src/components/student/ProfileTab.test.ts",
+    "src/components/student/QueueShareModal.test.ts",
+    "src/components/student/QueueStatusCard.test.ts",
+    "src/components/student/YearLevelModal.test.ts",
+    "src/components/ui/NotificationCenter.test.ts",
+    "src/lib/instructor/tab-nav.test.ts"
+  ]
+}
