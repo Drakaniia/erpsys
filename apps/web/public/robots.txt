@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /rpc/
+Disallow: /admin/
+Disallow: /officer/
+Disallow: /instructor/
+Disallow: /student/
+Disallow: /queue/
+Disallow: /loading
+
+Sitemap: https://erpsys.buksu.edu.ph/sitemap.xml
