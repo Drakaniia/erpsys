@@ -1,0 +1,39 @@
+.dropdown-panel {
+  animation: dd-in 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  backdrop-filter: none;
+}
+
+@keyframes dd-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-panel {
+    animation: dd-fade 150ms ease both;
+    transform: none !important;
+  }
+}
+
+@keyframes dd-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .dropdown-panel {
+    background: var(--color-surface-raised) !important;
+    backdrop-filter: none !important;
+  }
+}

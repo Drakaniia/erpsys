@@ -1,0 +1,26 @@
+@media (prefers-reduced-motion: reduce) {
+  .modal-panel {
+    transform: none !important;
+  }
+  .modal-scrim {
+    backdrop-filter: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .modal-scrim {
+    backdrop-filter: none;
+    background: rgba(0, 0, 0, 0.35);
+  }
+  .modal-panel {
+    background: white;
+    backdrop-filter: none;
+    border-color: var(--color-border);
+  }
+}
+@media (prefers-contrast: more) {
+  .modal-panel {
+    border-width: 2px;
+    background: white;
+    backdrop-filter: none;
+  }
+}

@@ -1,0 +1,17 @@
+/* Svelte scoped these to the component; the root class keeps that scoping. */
+@media (prefers-contrast: more) {
+  .apple-switch .switch-track {
+    box-shadow:
+      inset 0 0 0 1.5px rgba(28, 28, 26, 0.55),
+      inset 0 1px 2px rgba(28, 28, 26, 0.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apple-switch .knob-press {
+    transition: none;
+  }
+  .apple-switch .knob-press:active {
+    transform: none;
+  }
+}
