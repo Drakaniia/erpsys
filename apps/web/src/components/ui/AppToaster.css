@@ -1,0 +1,130 @@
+/* Sonner renders outside the React tree, so these stay global selectors —
+   the Svelte original reached them through `:global()`. */
+
+[data-sonner-toaster] {
+  z-index: 45 !important;
+  bottom: 20px !important;
+}
+
+[data-sonner-toast] {
+  background: rgba(255, 255, 255, 0.86) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.55) !important;
+  border-radius: 14px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 24px rgba(16, 24, 40, 0.12),
+    0 2px 8px rgba(16, 24, 40, 0.06) !important;
+  color: var(--color-ink) !important;
+  font-size: 13.5px !important;
+  line-height: 1.45 !important;
+  letter-spacing: 0.01em;
+  padding: 12px 14px !important;
+  /* compositor-only props */
+  will-change: transform, opacity;
+}
+
+[data-sonner-toast][data-type="success"] {
+  border-color: rgba(30, 58, 95, 0.14) !important;
+}
+[data-sonner-toast][data-type="error"] {
+  background: rgba(255, 249, 249, 0.92) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--color-error) 18%,
+    transparent
+  ) !important;
+}
+[data-sonner-toast][data-type="warning"] {
+  background: rgba(255, 252, 240, 0.92) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--color-warning) 18%,
+    transparent
+  ) !important;
+}
+
+[data-sonner-toast] [data-icon] {
+  flex-shrink: 0;
+}
+
+[data-sonner-toast][data-state="open"] {
+  animation: app-toast-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+[data-sonner-toast][data-state="closed"] {
+  animation: app-toast-out 220ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+[data-sonner-toast][data-mounted="true"] {
+  animation: app-toast-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+[data-sonner-toast][data-removed="true"] {
+  animation: app-toast-out 220ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes app-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes app-toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toast][data-state="open"],
+  [data-sonner-toast][data-mounted="true"] {
+    animation: app-toast-fade-in 200ms ease both !important;
+  }
+  [data-sonner-toast][data-state="closed"],
+  [data-sonner-toast][data-removed="true"] {
+    animation: app-toast-fade-out 160ms ease both !important;
+  }
+  [data-sonner-toast] {
+    transform: none !important;
+  }
+}
+@keyframes app-toast-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes app-toast-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  [data-sonner-toast] {
+    background: #fff !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/* High contrast — defined border (Apple §14) */
+@media (prefers-contrast: more) {
+  [data-sonner-toast] {
+    border-color: var(--color-ink) !important;
+    background: #fff !important;
+  }
+}
