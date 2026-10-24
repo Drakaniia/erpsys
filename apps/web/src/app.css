@@ -1,0 +1,950 @@
+﻿@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-surface: #f7f6f3;
+  --color-surface-raised: #fdfcfa;
+  --color-primary: #1e3a5f;
+  --color-primary-soft: #16324f;
+  --color-ink: #1c1c1a;
+  --color-muted: #6b6b66;
+  --color-border: rgba(28, 28, 26, 0.14);
+  --color-error: #b3261e;
+  --color-warning: #9a6700;
+
+  --color-gold: #f5a623;
+  --color-auth-navy: #051d37;
+  --color-auth-navy-deep: #021c39;
+  --color-auth-dark: #111416;
+  --color-auth-blue: #0874d1;
+  --color-auth-ink: #1c1c1a;
+  --color-auth-border: rgba(28, 28, 26, 0.14);
+
+  --color-chrome: rgba(247, 246, 243, 0.72);
+  --color-chrome-strong: rgba(247, 246, 243, 0.9);
+
+  --font-sans:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+}
+
+html {
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+}
+
+body {
+  @apply bg-surface text-ink antialiased;
+  color-scheme: light;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@layer components {
+  .press {
+    transition: scale 100ms ease-out;
+  }
+
+  .press:active {
+    scale: 0.97;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press:active {
+    scale: none;
+  }
+}
+
+.display {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 650;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+}
+
+.auth-enter {
+  animation: auth-enter 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+@keyframes auth-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-page-enter {
+  animation: auth-page-enter 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes auth-page-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-enter,
+  .auth-page-enter {
+    animation: auth-fade 200ms ease both;
+  }
+}
+
+@keyframes auth-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  animation: overlay-enter 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes overlay-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-overlay {
+    animation: overlay-enter 150ms ease both;
+  }
+}
+
+.modal-scrim {
+  background: rgba(0, 0, 0, 0.08);
+  -webkit-backdrop-filter: blur(3px) saturate(110%);
+  backdrop-filter: blur(3px) saturate(110%);
+  transition:
+    -webkit-backdrop-filter 150ms ease-out,
+    backdrop-filter 150ms ease-out;
+}
+
+@starting-style {
+  .modal-scrim {
+    -webkit-backdrop-filter: blur(0px) saturate(100%);
+    backdrop-filter: blur(0px) saturate(100%);
+  }
+}
+
+/* Reduced motion: instant blur, no transition. */
+@media (prefers-reduced-motion: reduce) {
+  .modal-scrim {
+    transition: none !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .material {
+    background: var(--color-surface) !important;
+    backdrop-filter: none !important;
+  }
+  .modal-scrim {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+@keyframes lightbox-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.lightbox-enter {
+  animation: lightbox-enter 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lightbox-exit {
+  animation: lightbox-exit 200ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+@keyframes lightbox-exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox-enter,
+  .lightbox-exit {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Skeleton placeholders
+   A single `.skeleton` class is the one source of truth for every loading
+   placeholder in the app. Shape comes from Tailwind (h-*, w-*, rounded-*);
+   the material and the motion come from here.
+
+   The motion is one slow, diffuse light sweep. It is deliberately not a
+   brightness pulse: a pulse makes the whole page twitch in unison, while a
+   sweep reads as light travelling across a surface. Rows are staggered by
+   setting `--skeleton-i` on any ancestor (custom properties inherit), so a
+   list cascades instead of marching in lockstep.
+--------------------------------------------------------------------------- */
+
+.skeleton {
+  --skeleton-fill: color-mix(in srgb, var(--color-ink) 7%, transparent);
+  --skeleton-sheen: color-mix(in srgb, #fff 52%, transparent);
+  --skeleton-band: 72px;
+
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background: var(--skeleton-fill);
+}
+
+/* The sheen is a fixed-width band anchored to the right edge of a
+   full-width pseudo-element. That combination is what keeps the band the same
+   physical width on a 16px chip and a 256px bar, and it makes the peak land at
+   the 50% mark of the loop for any element width. Animating `left` instead
+   would need layout on every frame; this is transform-only. */
+.skeleton::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-sheen) 50%,
+    transparent
+  );
+  background-size: var(--skeleton-band) 100%;
+  background-repeat: no-repeat;
+  background-position: 100% 50%;
+  transform: translate3d(-100%, 0, 0);
+  animation: skeleton-sheen 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: calc(var(--skeleton-i, 0) * 70ms);
+  will-change: transform;
+  pointer-events: none;
+}
+
+@keyframes skeleton-sheen {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(var(--skeleton-band), 0, 0);
+  }
+}
+
+/* No travel — the placeholder is still unmistakably a placeholder. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+    display: none;
+  }
+}
+
+/* Keep the sheen from washing out against an opaque backdrop. */
+@media (prefers-reduced-transparency: reduce) {
+  .skeleton {
+    --skeleton-fill: color-mix(in srgb, var(--color-ink) 10%, transparent);
+  }
+  .skeleton::after {
+    display: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .skeleton {
+    --skeleton-fill: color-mix(in srgb, var(--color-ink) 18%, transparent);
+  }
+  .skeleton::after {
+    display: none;
+  }
+}
+
+.apple-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.apple-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.apple-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.apple-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+
+/* Reveal on hover / focus / active scroll */
+.apple-scrollbar:hover,
+.apple-scrollbar:focus-within,
+.apple-scrollbar.is-scrolling {
+  scrollbar-color: rgba(28, 28, 26, 0.18) transparent;
+}
+
+.apple-scrollbar:hover::-webkit-scrollbar-thumb,
+.apple-scrollbar:focus-within::-webkit-scrollbar-thumb,
+.apple-scrollbar.is-scrolling::-webkit-scrollbar-thumb {
+  background: rgba(28, 28, 26, 0.18);
+  background-clip: content-box;
+}
+
+.apple-scrollbar:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(28, 28, 26, 0.28);
+  background-clip: content-box;
+}
+
+.apple-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(28, 28, 26, 0.35);
+  background-clip: content-box;
+}
+
+.apple-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.markdown-body {
+  color: inherit;
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+
+.markdown-body > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-body > *:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body p {
+  margin: 0 0 0.6em;
+}
+
+.markdown-body strong {
+  font-weight: 650;
+  color: var(--color-ink);
+}
+
+.markdown-body em {
+  font-style: italic;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0 0 0.6em;
+  padding-left: 1.15em;
+}
+
+.markdown-body ul {
+  list-style: disc;
+}
+
+.markdown-body ol {
+  list-style: decimal;
+}
+
+.markdown-body li {
+  margin: 0.2em 0;
+}
+
+.markdown-body li::marker {
+  color: var(--color-muted);
+}
+
+.markdown-body li > ul,
+.markdown-body li > ol {
+  margin: 0.2em 0;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin: 0.9em 0 0.4em;
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+}
+
+.markdown-body h1:first-child,
+.markdown-body h2:first-child,
+.markdown-body h3:first-child {
+  margin-top: 0;
+}
+
+.markdown-body blockquote {
+  margin: 0 0 0.6em;
+  padding-left: 0.8em;
+  border-left: 2px solid var(--color-border);
+  color: var(--color-muted);
+}
+
+.markdown-body code {
+  padding: 0.1em 0.35em;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--color-ink) 7%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+}
+
+.markdown-body pre {
+  margin: 0 0 0.6em;
+  padding: 0.7em 0.8em;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-ink) 8%, transparent);
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+.markdown-body pre code {
+  padding: 0;
+  background: none;
+  font-size: 0.82em;
+  white-space: pre;
+}
+
+.markdown-body a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-body hr {
+  margin: 0.9em 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.markdown-body table {
+  width: 100%;
+  margin: 0 0 0.6em;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 0.35em 0.5em;
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.markdown-body th {
+  background: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  font-weight: 650;
+}
+
+@layer components {
+  .auth-card {
+    background: rgba(255, 255, 255, 0.82);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 22px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 1px 2px rgba(16, 24, 40, 0.05),
+      0 16px 40px rgba(16, 24, 40, 0.1);
+  }
+
+  .auth-input {
+    height: 2.75rem;
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid transparent;
+    background: var(--color-surface);
+    padding-inline: 0.75rem;
+    font-size: 15px;
+    color: var(--color-auth-ink);
+    outline: none;
+    transition:
+      border-color 140ms ease-out,
+      background-color 140ms ease-out,
+      box-shadow 140ms ease-out;
+  }
+
+  .auth-input::placeholder {
+    color: color-mix(in srgb, var(--color-muted) 72%, transparent);
+  }
+
+  .auth-input:hover:not(:disabled) {
+    background: var(--color-surface-raised);
+  }
+
+  .auth-input[aria-invalid="true"] {
+    border-color: var(--color-error);
+  }
+
+  .auth-input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .auth-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 550;
+    letter-spacing: 0.01em;
+    color: var(--color-auth-ink);
+  }
+
+  /*
+   * Morphing floating label. The label is a single absolutely-positioned
+   * element that glides center -> upper-left (and back), driven by
+   * `data-active` (focused || hasValue). Height stays fixed at 3.5rem in
+   * both states so focusing never moves surrounding layout.
+   */
+  .auth-float {
+    position: relative;
+  }
+
+  .auth-input.auth-float-control {
+    height: 3.5rem;
+    padding-top: 1.375rem;
+    padding-bottom: 0.375rem;
+    transition:
+      padding-top 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      padding-bottom 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 140ms ease-out,
+      background-color 140ms ease-out,
+      box-shadow 140ms ease-out;
+  }
+
+  .auth-input.auth-float-control[data-active="false"] {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .auth-float-label {
+    position: absolute;
+    top: 50%;
+    left: 0.75rem;
+    transform: translateY(-50%);
+    max-width: calc(100% - 2.75rem);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: color-mix(in srgb, var(--color-muted) 85%, transparent);
+    pointer-events: none;
+    transition:
+      top 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      font-size 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      color 200ms ease-out;
+  }
+
+  .auth-float-label[data-active="true"] {
+    top: 0.55rem;
+    transform: translateY(0);
+    font-size: 0.6875rem;
+    font-weight: 550;
+    letter-spacing: 0.02em;
+    color: var(--color-muted);
+  }
+
+  .auth-float-label[data-invalid="true"] {
+    color: var(--color-error);
+  }
+
+  .auth-alert {
+    border-radius: 0.875rem;
+    border: 1px solid color-mix(in srgb, var(--color-error) 22%, transparent);
+    background: color-mix(in srgb, var(--color-error) 8%, transparent);
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--color-error);
+  }
+
+  .auth-field-error {
+    font-size: 0.8125rem;
+    color: var(--color-error);
+    animation: auth-hint-in 160ms ease-out both;
+  }
+
+  .auth-btn-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 3rem;
+    width: 100%;
+    border-radius: 0.875rem;
+    background: var(--color-auth-blue);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 1px 2px rgba(16, 24, 40, 0.12),
+      0 6px 16px color-mix(in srgb, var(--color-auth-blue) 24%, transparent);
+    transition:
+      scale 100ms ease-out,
+      filter 140ms ease-out,
+      box-shadow 140ms ease-out;
+  }
+
+  .auth-btn-primary:hover:not(:disabled) {
+    filter: brightness(1.06);
+  }
+
+  .auth-btn-primary:active:not(:disabled) {
+    scale: 0.975;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1);
+  }
+
+  .auth-btn-primary:disabled {
+    opacity: 0.55;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  .auth-btn-secondary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 3rem;
+    width: 100%;
+    border-radius: 0.875rem;
+    border: 1px solid var(--color-auth-border);
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--color-auth-ink);
+    font-size: 15px;
+    font-weight: 500;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transition:
+      scale 100ms ease-out,
+      background-color 140ms ease-out;
+  }
+
+  .auth-btn-secondary:hover:not(:disabled) {
+    background: #fff;
+  }
+
+  .auth-btn-secondary:active:not(:disabled) {
+    scale: 0.975;
+  }
+
+  .auth-section {
+    margin-top: 1.75rem;
+  }
+}
+
+@keyframes auth-hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.auth-input:focus-visible {
+  outline: 2px solid var(--color-auth-blue);
+  outline-offset: 0;
+  background: #fff;
+  border-color: var(--color-auth-blue);
+  box-shadow: 0 0 0 4px
+    color-mix(in srgb, var(--color-auth-blue) 18%, transparent);
+}
+
+.auth-input[aria-invalid="true"]:focus-visible {
+  outline-color: var(--color-error);
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-error) 16%, transparent);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .auth-card,
+  .auth-btn-secondary {
+    background: #fff !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .auth-card {
+    background: #fff;
+    border-color: var(--color-auth-ink);
+  }
+  .auth-input {
+    border-color: var(--color-auth-ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-btn-primary:active:not(:disabled),
+  .auth-btn-secondary:active:not(:disabled) {
+    scale: none;
+  }
+  .auth-input {
+    transition: none;
+  }
+  .auth-float-label,
+  .auth-input.auth-float-control {
+    transition: none;
+  }
+  .auth-field-error {
+    animation: auth-fade 160ms ease both;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Dither loader (beui `dither` variant port)
+   A 4x4 grid whose cells light in Bayer order, so the fill shimmers like a
+   dissolving halftone. Uses currentColor and scales from the size prop; each
+   cell's delay comes inline from its Bayer rank.
+--------------------------------------------------------------------------- */
+
+.dither-loader {
+  display: inline-grid;
+  grid-template-columns: repeat(4, auto);
+}
+
+.dither-cell {
+  background: currentColor;
+  animation: dither-pulse 1s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+  will-change: opacity;
+}
+
+@keyframes dither-pulse {
+  0%,
+  100% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* No travel here either — keep the shimmer legible as a calm breath. */
+@media (prefers-reduced-motion: reduce) {
+  .dither-cell {
+    animation-name: dither-breathe;
+    animation-timing-function: ease-in-out;
+  }
+}
+
+@keyframes dither-breathe {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@theme inline {
+  --color-chart-line-primary: var(--chart-line-primary);
+  --color-chart-line-secondary: var(--chart-line-secondary);
+  --color-chart-brush-border: var(--chart-brush-border);
+  --color-chart-tooltip-background: var(--chart-tooltip-background);
+  --color-chart-tooltip-foreground: var(--chart-tooltip-foreground);
+  --color-chart-tooltip-muted: var(--chart-tooltip-muted);
+  --color-chart-scale-02: var(--chart-scale-02);
+  --color-chart-scale-03: var(--chart-scale-03);
+  --color-chart-scale-04: var(--chart-scale-04);
+  --color-chart-scale-05: var(--chart-scale-05);
+  --color-chart-segment-line: var(--chart-segment-line);
+  --color-chart-segment-background: var(--chart-segment-background);
+  --color-chart-marker-badge-foreground: var(--chart-marker-badge-foreground);
+  --color-chart-marker-badge-background: var(--chart-marker-badge-background);
+  --color-chart-indicator-secondary-color: var(--chart-indicator-secondary-color);
+  --color-chart-indicator-color: var(--chart-indicator-color);
+  --color-chart-scale-pattern-color: var(--chart-scale-pattern-color);
+  --chart-scale-05: var(--chart-scale-05);
+  --chart-scale-04: var(--chart-scale-04);
+  --chart-scale-03: var(--chart-scale-03);
+  --chart-scale-02: var(--chart-scale-02);
+  --color-chart-scale-01: var(--chart-scale-01);
+  --color-chart-scale-mix: var(--chart-scale-mix);
+  --color-chart-label: var(--chart-label);
+  --color-chart-marker-foreground: var(--chart-marker-foreground);
+  --color-chart-marker-border: var(--chart-marker-border);
+  --color-chart-marker-background: var(--chart-marker-background);
+  --chart-tooltip-muted: var(--chart-tooltip-muted);
+  --chart-tooltip-foreground: var(--chart-tooltip-foreground);
+  --chart-tooltip-background: var(--chart-tooltip-background);
+  --chart-brush-border: var(--chart-brush-border);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-crosshair: var(--chart-crosshair);
+  --chart-line-secondary: var(--chart-line-secondary);
+  --chart-line-primary: var(--chart-line-primary);
+  --color-chart-foreground-muted: var(--chart-foreground-muted);
+  --color-chart-foreground: var(--chart-foreground);
+  --color-chart-background: var(--chart-background);
+  --color-chart-negative: var(--chart-negative);
+  --color-chart-positive: var(--chart-positive);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-legend-track: var(--legend-track);
+  --color-legend-muted-foreground: var(--legend-muted-foreground);
+  --color-legend-muted: var(--legend-muted);
+  --color-legend-foreground: var(--legend-foreground);
+  --color-legend: var(--legend);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+}
+
+:root {
+  --background: #fdfcfa;
+  --foreground: #1c1c1a;
+  --popover: #fdfcfa;
+  --popover-foreground: #1c1c1a;
+  --muted-foreground: #6b6b66;
+  --border: rgba(28, 28, 26, 0.14);
+
+  --legend: #fdfcfa;
+  --legend-foreground: #1c1c1a;
+  --legend-muted: #efede8;
+  --legend-muted-foreground: #6b6b66;
+  --legend-track: #e7e4dd;
+  --chart-1: #1e3a5f;
+  --chart-2: #d48f1c;
+  --chart-3: #6d8fb4;
+  --chart-4: #b5aea1;
+  --chart-5: #1c1c1a;
+  --chart-positive: #2f7d55;
+  --chart-negative: #b3261e;
+  --chart-background: #fdfcfa;
+  --chart-foreground: #1c1c1a;
+  --chart-foreground-muted: #6b6b66;
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-2);
+  --chart-crosshair: #1e3a5f;
+  --chart-grid: rgba(28, 28, 26, 0.08);
+  --chart-brush-border: var(--chart-grid);
+  --chart-tooltip-background: var(--popover);
+  --chart-tooltip-foreground: var(--popover-foreground);
+  --chart-tooltip-muted: var(--muted-foreground);
+  --chart-marker-background: #f2f0eb;
+  --chart-marker-border: rgba(28, 28, 26, 0.18);
+  --chart-marker-foreground: #1c1c1a;
+  --chart-label: #6b6b66;
+  --chart-scale-mix: oklch(1 0 0);
+  --chart-scale-01: oklch(0.922 0 0);
+  --chart-scale-02: color-mix(in oklab, var(--chart-1) 35%, var(--chart-scale-mix));
+  --chart-scale-03: color-mix(in oklab, var(--chart-1) 55%, var(--chart-scale-mix));
+  --chart-scale-04: color-mix(in oklab, var(--chart-1) 78%, var(--chart-scale-mix));
+  --chart-scale-05: var(--chart-1);
+  --chart-scale-pattern-color: oklch(1 0 0);
+  --chart-indicator-color: oklch(0.21 0.006 285);
+  --chart-indicator-secondary-color: oklch(0.913 0 0);
+  --chart-marker-badge-background: oklch(0 0 0);
+  --chart-marker-badge-foreground: oklch(0.84 0 0);
+  --chart-segment-background: oklch(0.756 0 0 / 0.06);
+  --chart-segment-line: oklch(0.5 0 0 / 0.25);
+}
+
+.dark {
+  --legend: oklch(0.21 0.006 285.885);
+  --legend-foreground: oklch(0.985 0 0);
+  --legend-muted: oklch(0.274 0.006 286.033);
+  --legend-muted-foreground: oklch(0.705 0.015 286.067);
+  --legend-track: oklch(0.274 0.006 286.033);
+  --chart-1: oklch(0.585 0.233 277.117);
+  --chart-2: oklch(0.852 0.199 91.936);
+  --chart-3: oklch(0.667 0.295 322.15);
+  --chart-4: oklch(0.56 0.021 213.5);
+  --chart-5: oklch(1 0 0);
+  --chart-positive: oklch(0.765 0.177 163.223);
+  --chart-negative: oklch(0.704 0.191 22.216);
+  --chart-background: oklch(0.145 0 0);
+  --chart-foreground: oklch(0.45 0 0);
+  --chart-foreground-muted: oklch(0.65 0.01 260);
+  --chart-crosshair: oklch(0.45 0 0);
+  --chart-grid: oklch(0.25 0 0);
+  --chart-brush-border: var(--chart-grid);
+  --chart-marker-background: oklch(0.25 0.01 260);
+  --chart-marker-border: oklch(0.4 0.01 260);
+  --chart-marker-foreground: oklch(0.9 0 0);
+  --chart-label: oklch(0.75 0.01 260);
+  --chart-scale-mix: oklch(0.25 0 0);
+  --chart-scale-01: oklch(0.3 0 0);
+  --chart-scale-02: color-mix(in oklab, var(--chart-1) 35%, var(--chart-scale-mix));
+  --chart-scale-03: color-mix(in oklab, var(--chart-1) 55%, var(--chart-scale-mix));
+  --chart-scale-04: color-mix(in oklab, var(--chart-1) 78%, var(--chart-scale-mix));
+  --chart-scale-05: var(--chart-1);
+  --chart-scale-pattern-color: oklch(0.145 0 0);
+  --chart-indicator-color: oklch(1 0 0);
+  --chart-indicator-secondary-color: oklch(0.145 0 0);
+  --chart-marker-badge-background: oklch(1 0 0);
+  --chart-marker-badge-foreground: oklch(0.15 0 0);
+  --chart-segment-background: oklch(0.41 0.0127 248.14 / 0.25);
+  --chart-segment-line: oklch(1 0 0 / 0.25);
+}
