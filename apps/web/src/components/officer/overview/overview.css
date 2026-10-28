@@ -1,0 +1,93 @@
+/* One entrance per mount: the headline lands first, then the desk, then the
+   supporting charts. Polling refreshes never replay it. */
+.oo-rise {
+  animation: oo-rise 460ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: calc(var(--oo-i, 0) * 70ms);
+}
+
+@keyframes oo-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The figure strip reads as one ledger line: hairline rules between
+   figures on wide screens, a 2x2 grid with row rules on narrow ones. */
+.oo-ledger > * + * {
+  border-left: 1px solid var(--color-border);
+}
+
+@media (max-width: 767px) {
+  .oo-ledger > * + * {
+    border-left: 0;
+  }
+  .oo-ledger > :nth-child(even) {
+    border-left: 1px solid var(--color-border);
+  }
+  .oo-ledger > :nth-child(n + 3) {
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+/* Desk rows are the page's main controls: a quiet wash on hover, a small
+   press on click. */
+.oo-row,
+.oo-press {
+  transition:
+    background-color 140ms ease,
+    scale 100ms ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .oo-row:hover {
+    background-color: color-mix(in oklab, var(--color-ink) 3.5%, transparent);
+  }
+}
+
+.oo-row:active,
+.oo-press:active {
+  scale: 0.985;
+}
+
+/* Each status bar wipes in from the left once, so a step's split reads as a
+   proportion filling up rather than a static stripe. */
+.oo-bar {
+  animation: oo-bar 620ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: calc(180ms + var(--oo-i, 0) * 50ms);
+}
+
+@keyframes oo-bar {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oo-rise {
+    animation: oo-fade 200ms ease both;
+  }
+  .oo-bar {
+    animation: none;
+  }
+  .oo-row:active,
+  .oo-press:active {
+    scale: none;
+  }
+}
+
+@keyframes oo-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
