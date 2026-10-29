@@ -1,0 +1,61 @@
+/* One entrance per mount: sections rise in a short cascade so the eye lands
+   on the headline first, then the clearance line, then the supporting panels. */
+.ov-rise {
+  animation: ov-rise 460ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: calc(var(--ov-i, 0) * 70ms);
+}
+
+@keyframes ov-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ov-rise {
+    animation: ov-fade 200ms ease both;
+  }
+}
+
+@keyframes ov-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* The figure strip reads as one ledger line: hairline rules between figures,
+   dropped when the strip wraps on narrow screens. */
+.ov-figures > * + * {
+  border-left: 1px solid var(--color-border);
+}
+
+@media (max-width: 639px) {
+  .ov-figures > * + * {
+    border-left: 0;
+  }
+}
+
+.ov-link {
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    scale 100ms ease-out;
+}
+
+.ov-link:active {
+  scale: 0.97;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ov-link:active {
+    scale: none;
+  }
+}
