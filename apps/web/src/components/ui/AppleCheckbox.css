@@ -1,0 +1,20 @@
+/* Svelte scoped these to the component; the root class keeps that scoping. */
+@media (prefers-reduced-motion: reduce) {
+  .apple-checkbox span[style] {
+    transform: none !important;
+  }
+}
+
+/* High contrast */
+@media (prefers-contrast: more) {
+  .apple-checkbox span.relative {
+    border-width: 2px;
+  }
+}
+
+/* Reduced transparency — solid fill */
+@media (prefers-reduced-transparency: reduce) {
+  .apple-checkbox span.relative {
+    backdrop-filter: none;
+  }
+}
