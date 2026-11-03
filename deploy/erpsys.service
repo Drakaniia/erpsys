@@ -1,0 +1,162 @@
+# ERPSYS API server — systemd unit
+#
+#   sudo install -o root -g root -m 0644 deploy/erpsys.service \
+#     /etc/systemd/system/erpsys.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now erpsys
+#   systemctl status erpsys
+#
+# The full procedure, including Nginx and the first deploy, is
+# docs/ops/deployment.md. Every number in this file is explained there; the
+# comments here are only the ones that are load-bearing at 3am.
+
+[Unit]
+Description=ERPSYS API server (apps/server)
+Documentation=file:///srv/erpsys/docs/ops/deployment.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=erpsys
+Group=erpsys
+
+# `node dist/index.js` resolves against this directory (tsc outDir). It also
+# matters for lib/env.ts:4, which dotenv-loads `../../.env` relative to cwd,
+# i.e. /srv/erpsys/.env. That file must NOT exist in production — see
+# docs/ops/deployment.md §3. systemd's EnvironmentFile wins anyway, because
+# dotenv does not overwrite variables that are already set.
+WorkingDirectory=/srv/erpsys/apps/server
+
+# NODE_ENV is duplicated here and in /etc/erpsys.env on purpose: the value in
+# this file is the one assertProductionEnv() (lib/env.ts:193) checks, so it
+# must be set even if the env file is truncated or missing.
+Environment=NODE_ENV=production
+Environment=PORT=3001
+EnvironmentFile=/etc/erpsys.env
+
+# ── Heap ceiling vs cgroup limit ────────────────────────────────────────────
+# --max-old-space-size=3072 is deliberately BELOW MemoryMax=4G.
+#
+# V8's old space is only part of the process's resident set. The rest is
+# outside the heap ceiling: Buffers, the TLS/socket buffers the Mongo driver
+# and Atlas connections hold, V8 code space and metadata, and the Node binary
+# itself. If the two numbers were equal, the cgroup would OOM-kill the process
+# in the instant V8 reached the ceiling — an uncatchable SIGKILL that skips the
+# graceful shutdown entirely and severs every in-flight request and SSE stream.
+#
+# With the heap at 75% of the cgroup, V8 hits its own ceiling first, throws a
+# catchable allocation failure, and lib/guard.ts + lib/shutdown.ts get to run
+# the ordered drain instead. A clean deploy is the common case; the OOM-kill is
+# the backstop for the cases V8 cannot see (native allocations).
+#
+# BOTH NUMBERS ARE ESTIMATES. Retune them from the Phase 4 metrics under real
+# enrollment-day load, not from a laptop. See docs/ops/deployment.md §14.
+ExecStart=/usr/bin/node --max-old-space-size=3072 dist/index.js
+
+MemoryHigh=3G
+MemoryMax=4G
+# No swap for this cgroup. A 4 GiB VM under load should OOM at a predictable
+# ceiling, not silently page to disk for 30 seconds and turn a memory problem
+# into a latency problem that looks like a database problem. Requires cgroup v2
+# (default on Ubuntu 22.04+); `systemctl show erpsys -p MemoryMax` to confirm.
+MemorySwapMax=0
+
+# ── Restart and stop ────────────────────────────────────────────────────────
+# `always`, not `on-failure`: an unhandled rejection that takes the process
+# down should come back on its own, and lib/guard.ts already keeps the process
+# alive for the cases it can. RestartSec=2 keeps the outage during a deploy
+# inside the retry window configured in deploy/nginx/erpsys.conf.
+Restart=always
+RestartSec=2
+
+# SIGTERM is what lib/shutdown.ts installs a handler for. With the default
+# SIGKILL there is no drain at all: every socket dies mid-request.
+KillSignal=SIGTERM
+
+# ── TimeoutStopSec is load-bearing. Read this before changing it. ────────────
+# The intended shutdown is:
+#     DRAIN_DELAY_MS (2000)   readiness flips to 503, wait for the proxy
+#     + server.close()        blocked only by clients honouring the SSE
+#                             `reconnect` publish
+#     + SHUTDOWN_GRACE_MS (10000)  hard close of whatever is left
+#     = 12s of designed work, with 18s of headroom inside 30s.
+#
+# If TimeoutStopSec were shorter than that sum, systemd would SIGKILL a
+# process that was still draining cleanly. SIGKILL cannot be caught: the
+# shutdown sequence never reaches its `process.exit(0)`, in-flight requests are
+# cut, Mongo connections are severed, and the journal shows exit status 137
+# instead of the `exiting 0` line from lib/shutdown.ts.
+#
+# The constraint to hold when retuning:
+#     DRAIN_DELAY_MS + SHUTDOWN_GRACE_MS < TimeoutStopSec
+# Raising SHUTDOWN_GRACE_MS above ~20000 without raising this is the mistake.
+#
+# Note the grace timer in lib/shutdown.ts starts only after `server.close()`
+# resolves, so a client that ignores the `reconnect` event and holds its SSE
+# socket open can push the real bound up to this number. That headroom exists
+# for exactly that case.
+TimeoutStopSec=30
+
+# Deliberately NOT whitelisting 143/137 in SuccessExitStatus. A clean stop
+# exits 0 (lib/shutdown.ts step 7). A 143 means the SIGTERM handler did not
+# run, and a 137 means the cgroup or systemd killed the process outright —
+# both are faults, and both should show up as `failed`, not as `active`.
+
+# ── Sandbox ─────────────────────────────────────────────────────────────────
+# ProtectSystem=strict is only usable with the rest of this block. On its own
+# it leaves the unit unable to write /tmp, unable to see /proc in a usable
+# form, and unable to load kernel modules; combined with a non-root User it
+# then fails on the first DNS lookup or TLS handshake. The directives below
+# are the minimum that makes strict mode work for an ordinary Node service.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallFilter=@system-service
+# EPERM rather than EPERM-as-kill: an unexpected syscall degrades one call
+# instead of killing the process mid-request. Node needs mmap/mprotect for the
+# JIT, clone for its thread pool, and epoll for the event loop.
+SystemCallErrorNumber=EPERM
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Deliberately NOT setting MemoryDenyWriteExecute=yes. It is the obvious
+# companion to ProtectSystem=strict and it breaks Node: V8's JIT needs pages
+# that are simultaneously writable and executable. Setting it produces a
+# process that starts and then dies inside V8 with a SIGSEGV and no useful log.
+
+# The app writes nothing to disk — Mongo is the only datastore — so strict mode
+# needs no ReadWritePaths. StateDirectory still exists for two reasons: a
+# writable, audited place to drop a heap dump when diagnosing an OOM, and
+# somewhere for a future file logger to write that is not the app directory.
+StateDirectory=erpsys
+StateDirectoryMode=0750
+ReadWritePaths=/var/lib/erpsys
+
+# Nginx proxies keep-alive SSE sockets and long-polling RPC requests. 1024 is
+# the systemd default and is too low for the target load of 300–1000
+# concurrent students; this must stay at or above the app's `maxConnections`
+# and below nginx's `worker_connections`.
+LimitNOFILE=16384
+
+UMask=0077
+SyslogIdentifier=erpsys
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

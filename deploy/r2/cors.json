@@ -1,0 +1,17 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": [
+          "http://localhost:5173",
+          "http://127.0.0.1:5173",
+          "https://erpsys.buksu.edu.ph"
+        ],
+        "methods": ["PUT"],
+        "headers": ["Content-Type", "Content-Length"]
+      },
+      "exposeHeaders": ["ETag"],
+      "maxAgeSeconds": 3600
+    }
+  ]
+}
