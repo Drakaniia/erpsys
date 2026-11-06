@@ -1,0 +1,157 @@
+name: Load gate
+
+# The load gate (`pnpm test:load`). It is NOT a PR blocker: it needs a
+# MongoDB it can seed and tear down, and an opt-in p95 budget that only exists
+# once Phase 3 has recorded real numbers. So it runs on demand and nightly, and
+# the nightly run tolerates the unset budget (the measured p95 is reported and
+# that one assertion is SKIPPED) rather than going red forever.
+#
+# PR CI is .github/workflows/ci.yml — `pnpm check` and `pnpm test` only.
+#
+# PREREQUISITES THIS WORKFLOW PROVIDES
+#   - pnpm + Node, from pnpm-lock.yaml
+#   - an ephemeral MongoDB service container, torn down with the runner
+#   - a step catalog, bootstrapped from the server's own compiled domain module
+#   - the server started with an explicit --max-old-space-size, which is the
+#     same number the heap assertion compares against
+#
+# PREREQUISITES THIS WORKFLOW CANNOT PROVIDE — set these as repository variables
+#   - LOAD_P95_BUDGET_MS   the budget from the end of Phase 3, in the runbook.
+#                         Left unset, the gate reports the measured p95 and
+#                         SKIPs the assertion.
+#   - LOAD_STUDENTS       default 500. Lower it on a small runner.
+#   - LOAD_CONNECTIONS    default = LOAD_STUDENTS. 500 sockets per sustained
+#                         procedure needs a real VM; a GitHub runner will not
+#                         take 1500 of them.
+#   - LOAD_DURATION_S     default 60
+#
+# For a run against a real deployment, set the secrets/variables below to that
+# origin and drop the service container and the local server steps.
+
+on:
+  workflow_dispatch:
+    inputs:
+      students:
+        description: "Distinct seeded students (LOAD_STUDENTS)"
+        required: false
+        default: "500"
+      connections:
+        description: "Connections per sustained read procedure (LOAD_CONNECTIONS)"
+        required: false
+        default: "500"
+      duration:
+        description: "Seconds the reads sustain (LOAD_DURATION_S)"
+        required: false
+        default: "60"
+      p95_budget_ms:
+        description: "p95 budget in ms; blank means unset, and the assertion is SKIPPED"
+        required: false
+        default: ""
+      max_old_space_mb:
+        description: "--max-old-space-size for the server, and the heap ceiling it is compared against"
+        required: false
+        default: "768"
+  schedule:
+    # 03:17 UTC nightly. Off the hour on purpose: the top of the hour is when
+    # every other scheduled workflow in the world runs.
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: load-gate
+  cancel-in-progress: false
+
+jobs:
+  load-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      mongo:
+        # A database name that is deliberately not the server's localhost
+        # default, so a production boot's DATABASE_URL check does not trip.
+        image: mongo:7
+        env:
+          MONGO_INITDB_DATABASE: erpsys_loadgate
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # CI-only values against an ephemeral container. Nothing here is a secret,
+      # and none of it is a production credential.
+      NODE_ENV: production
+      PORT: "3001"
+      DATABASE_URL: mongodb://127.0.0.1:27017/erpsys_loadgate
+      BETTER_AUTH_SECRET: load-gate-only-throwaway-secret-0000000000000000
+      BETTER_AUTH_URL: https://load-gate.invalid
+      PUBLIC_SITE_URL: https://load-gate.invalid
+      MONGO_APP_NAME: erpsys-load-gate
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the server
+        run: pnpm --filter @erpsys/server build
+
+      - name: Configure the step catalog
+        # joinQueue refuses the join until every pre-enrollment step is
+        # VERIFIED, so the gate needs the catalog to exist. The codes come from
+        # the server's own domain module — nothing is redeclared here.
+        run: node load/step-catalog.mjs
+
+      - name: Start the server
+        env:
+          LOAD_MAX_OLD_SPACE_MB: ${{ inputs.max_old_space_mb || '768' }}
+        run: |
+          mkdir -p /tmp/load-gate
+          node --max-old-space-size="$LOAD_MAX_OLD_SPACE_MB" \
+            apps/server/dist/index.js > /tmp/load-gate/server.log 2>&1 &
+          echo $! > /tmp/load-gate/server.pid
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3001/api/health > /dev/null; then
+              echo "server up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "server did not become healthy in 60s:"
+          cat /tmp/load-gate/server.log
+          exit 1
+
+      - name: Run the load gate
+        env:
+          LOAD_BASE_URL: http://127.0.0.1:3001
+          LOAD_ORIGIN: https://load-gate.invalid
+          LOAD_STUDENTS: ${{ inputs.students || '500' }}
+          LOAD_CONNECTIONS: ${{ inputs.connections || '500' }}
+          LOAD_DURATION_S: ${{ inputs.duration || '60' }}
+          LOAD_P95_BUDGET_MS: ${{ inputs.p95_budget_ms || vars.LOAD_P95_BUDGET_MS }}
+          LOAD_MAX_OLD_SPACE_MB: ${{ inputs.max_old_space_mb || '768' }}
+        run: pnpm test:load
+
+      - name: Server log
+        if: always()
+        run: cat /tmp/load-gate/server.log || true
+
+      - name: Stop the server
+        if: always()
+        run: |
+          if [ -f /tmp/load-gate/server.pid ]; then
+            kill -TERM "$(cat /tmp/load-gate/server.pid)" 2>/dev/null || true
+            sleep 3
+            kill -KILL "$(cat /tmp/load-gate/server.pid)" 2>/dev/null || true
+          fi
