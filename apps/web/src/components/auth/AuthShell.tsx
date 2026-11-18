@@ -1,96 +1,85 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { Link } from "react-router";
+import BlueprintBackground from "./BlueprintBackground";
 
 const ClearanceDeskIllustration = lazy(
   () => import("./ClearanceDeskIllustration"),
 );
 
-const ROLES = [
-  { role: "Student", job: "Submit requirements and track your clearance" },
-  { role: "Instructor", job: "Serve the enrollment queue" },
-  { role: "SBO officer", job: "Review and verify submissions" },
-] as const;
-
-const ILLUSTRATION_TOKENS = {
-  ink: "#0b2340",
-  face: "#fdfcf9",
-  accent: "#f5a623",
-  bg: "#051d37",
-};
-
 /**
- * Split auth screen: the navy desk panel explains who signs in here, the white
- * panel holds the form. Below `lg` the form comes first and the panel shrinks
- * to a brand strip.
+ * Light drafting-sheet page: brand, form card and docs link stacked on the
+ * left, the clearance-desk drawing beside them from 1080px. Below that the
+ * drawing drops and the stack centres. Height is a minimum, never a frame.
+ * `wide` gives long forms a two-column card and drops the drawing.
  */
-export default function AuthShell({ children }: { children: ReactNode }) {
+export default function AuthShell({
+  children,
+  heading,
+  wide = false,
+}: {
+  children: ReactNode;
+  heading?: string;
+  wide?: boolean;
+}) {
+  const showFigure = !wide;
   return (
-    <div className="auth-page-enter flex min-h-dvh flex-col bg-white lg:grid lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
-      <aside className="relative hidden flex-col overflow-hidden bg-auth-navy px-12 py-10 text-white lg:flex xl:px-16">
-        <BrandMark />
+    <div className="auth-page-enter relative flex min-h-dvh flex-col items-center bg-surface px-[clamp(16px,4vw,40px)] pt-[clamp(48px,9vh,112px)] pb-[clamp(20px,5vh,56px)] text-auth-ink [@media(max-height:700px)]:pt-6 [@media(max-height:700px)]:pb-4">
+      <BlueprintBackground />
 
-        <div className="mt-14 max-w-[30rem]">
-          <h2 className="text-[clamp(2.1rem,3.2vw,2.9rem)] leading-[1.04] font-extrabold tracking-[-0.035em]">
-            Every requirement, cleared at one desk.
-          </h2>
-          <p className="mt-4 text-[15px] leading-relaxed text-white/65">
-            COT-SBO Enrollment Requirements Processing System, Bukidnon State
-            University.
-          </p>
-        </div>
-
-        <div className="relative my-auto flex aspect-[240/163] w-full max-w-[520px] self-center py-8">
-          <Suspense fallback={null}>
-            <ClearanceDeskIllustration
-              tokens={ILLUSTRATION_TOKENS}
-              title="An enrollment clearance desk: a checklist, an officer's stamp, a queue ticket and ID cards"
-              className="w-full"
+      <div
+        className={`relative z-[1] my-auto grid w-full items-center justify-center ${
+          showFigure
+            ? "grid-cols-[minmax(0,440px)] min-[1080px]:grid-cols-[minmax(0,440px)_minmax(0,1fr)] min-[1080px]:justify-normal min-[1080px]:gap-[clamp(32px,5vw,72px)] min-[1080px]:ps-[clamp(0px,8vw,160px)]"
+            : "grid-cols-[minmax(0,760px)]"
+        }`}
+      >
+        <div className="flex w-full flex-col items-center gap-[clamp(16px,3vh,28px)]">
+          <div className="flex flex-col items-center gap-2.5 text-center">
+            <img
+              src="/images/cot-sbo-logo.webp"
+              alt="COT-SBO"
+              className="h-[clamp(64px,8vw,96px)] w-auto object-contain select-none [@media(max-height:820px)]:h-14"
             />
-          </Suspense>
+            <p className="mt-[clamp(6px,1.5vh,14px)] text-[clamp(22px,2.2vw,34px)] leading-tight font-semibold tracking-[-0.01em] whitespace-nowrap">
+              ERPSYS
+            </p>
+            <p className="max-w-[40ch] text-[clamp(15px,1.1vw,17px)] leading-snug text-balance text-muted">
+              COT-SBO Enrollment Requirements Processing System, Bukidnon State
+              University
+            </p>
+            {heading ? (
+              <h1 className="sr-only">
+                {heading}
+              </h1>
+            ) : null}
+          </div>
+
+          <main
+            className={`auth-enter relative w-full rounded-[14px] border border-border bg-white p-[clamp(22px,3vw,32px)] shadow-[0_1px_2px_rgb(15_26_51/6%)] ${wide ? "max-w-[760px]" : "max-w-[440px]"}`}
+          >
+            {children}
+          </main>
+
+          <Link
+            to="/docs"
+            className="text-[13px] text-muted underline decoration-auth-border underline-offset-4 transition-colors hover:text-auth-ink"
+          >
+            How ERPSYS works
+          </Link>
         </div>
 
-        <dl className="grid grid-cols-3 gap-6 border-t border-white/12 pt-6">
-          {ROLES.map(({ role, job }) => (
-            <div key={role}>
-              <dt className="font-mono text-[11px] font-semibold tracking-[0.14em] text-gold uppercase">
-                {role}
-              </dt>
-              <dd className="mt-1.5 text-[13px] leading-snug text-white/70">
-                {job}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </aside>
-
-      <header className="bg-auth-navy px-6 py-5 lg:hidden">
-        <BrandMark />
-      </header>
-
-      <main className="flex flex-1 flex-col px-6 py-10 sm:px-10 lg:py-10">
-        <div className="auth-enter m-auto w-full max-w-[400px]">{children}</div>
-        <Link
-          to="/docs"
-          className="mx-auto mt-10 text-[13px] text-muted underline decoration-auth-border underline-offset-4 transition-colors hover:text-auth-ink"
-        >
-          How ERPSYS works
-        </Link>
-      </main>
-    </div>
-  );
-}
-
-function BrandMark() {
-  return (
-    <div className="flex items-center gap-3">
-      <img
-        src="/images/cot-sbo-logo.webp"
-        alt="COT-SBO"
-        className="h-10 w-10 shrink-0 object-contain select-none"
-      />
-      <span className="font-mono text-[13px] font-semibold tracking-[0.2em] text-white/85">
-        ERPSYS
-      </span>
+        {showFigure ? (
+          <figure className="m-0 hidden w-full min-[1080px]:block">
+            <Suspense fallback={null}>
+              <ClearanceDeskIllustration
+                animate="hover"
+                title="An enrollment clearance desk: a live queue monitor, a ticket dispenser, a six-step checklist with an officer's stamp, requirement folders and student ID cards"
+                className="mx-auto block max-h-[min(78vh,680px)] w-full"
+              />
+            </Suspense>
+          </figure>
+        ) : null}
+      </div>
     </div>
   );
 }

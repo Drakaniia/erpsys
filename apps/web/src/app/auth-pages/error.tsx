@@ -5,6 +5,7 @@ import { useSpring } from "$lib/ui/use-spring";
 import { authClient } from "$lib/auth-client";
 import { linkFlowStep } from "$lib/auth/link-flow";
 import { homeRouteForRole } from "$lib/auth/redirect";
+import { isInternalPath } from "$lib/auth/completion-gate";
 
 /** `routes/auth/auth/error/+page.svelte` — the OAuth failure surface. */
 export function AuthErrorPage() {
@@ -20,9 +21,12 @@ export function AuthErrorPage() {
   useEffect(() => {
     if (!signedIn) return;
     let cancelled = false;
-    void authClient.listAccounts().then((res) => {
-      if (!cancelled && res.data) setAccounts(res.data);
-    });
+    authClient
+      .listAccounts()
+      .then((res) => {
+        if (!cancelled && res.data) setAccounts(res.data);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -31,7 +35,8 @@ export function AuthErrorPage() {
   const error = params.get("error");
   const errorDescription = params.get("error_description");
 
-  const dest = params.get("dest");
+  const rawDest = params.get("dest");
+  const dest = isInternalPath(rawDest) ? rawDest : null;
   const linkedProviders = accounts.map((a) => a.providerId);
 
   const step = linkFlowStep({

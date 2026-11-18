@@ -76,14 +76,16 @@ export const router = createBrowserRouter([
                 path: "/login/reset-password",
                 element: <ResetPasswordPage />,
               },
-              { path: "/loading", element: <LoadingPage /> },
-              { path: "/auth/error", element: <AuthErrorPage /> },
+
+
             ],
           },
           {
             element: <AuthLayout />,
             children: [
               { path: "/login/copy-code", element: <CopyCodePage /> },
+              { path: "/loading", element: <LoadingPage /> },
+              { path: "/auth/error", element: <AuthErrorPage /> },
               {
                 path: "/settings/accounts",
                 element: <ConnectedAccountsPage />,

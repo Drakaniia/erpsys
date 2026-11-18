@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+
 import { MemoryRouter } from "react-router";
 import LoginCard from "./LoginCard";
 
@@ -67,11 +68,10 @@ describe("LoginCard", () => {
     // Role decides the destination after sign-in, so the card must not ask
     // the visitor which kind of account they have.
     renderCard();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Sign in to ERPSYS" }),
-    ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /student|instructor|officer/i }))
-      .toBeNull();
+      screen.queryByRole("button", { name: /student|instructor|officer/i }),
+    ).toBeNull();
     expect(
       screen
         .getByRole("link", { name: "Create an account" })
@@ -81,6 +81,24 @@ describe("LoginCard", () => {
 });
 
 describe("LoginCard integration flags", () => {
+  it("keeps email/password and Google without sign-in method buttons", () => {
+    renderCard();
+    expect(screen.queryByRole("group", { name: "Sign-in method" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Password" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Email code" })).toBeNull();
+    expect(screen.getByLabelText("Email")).toBeTruthy();
+    expect(screen.getByLabelText("Password")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(googleButton()).toBeTruthy();
+  });
+
+  it("keeps password login when email delivery is disabled", () => {
+    integration.flags.email = false;
+    renderCard();
+    expect(screen.queryByRole("button", { name: "Email code" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
+  });
+
   it("renders both when googleAuth and turnstile are on", () => {
     renderCard();
     expect(googleButton()).toBeTruthy();

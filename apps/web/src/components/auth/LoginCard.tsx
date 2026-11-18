@@ -5,6 +5,7 @@ import { z } from "zod";
 import { authClient } from "$lib/auth-client";
 import { useGoogleSignIn } from "./use-google-sign-in";
 import AuthField from "./AuthField";
+
 import GoogleIcon from "./GoogleIcon";
 import AccountLinkDialog from "./AccountLinkDialog";
 import Turnstile, { type TurnstileHandle } from "./Turnstile";
@@ -28,6 +29,7 @@ export default function LoginCard() {
   const showGoogle = flags.googleAuth;
 
   const [formError, setFormError] = useState("");
+
 
   const google = useGoogleSignIn({
     dest: params.get("dest"),
@@ -99,7 +101,11 @@ export default function LoginCard() {
         setFormError("Please complete the verification challenge.");
         return;
       }
-      sessionStorage.setItem("lastAuthProvider", "credential");
+      try {
+        sessionStorage.setItem("lastAuthProvider", "credential");
+      } catch {
+        /* storage blocked */
+      }
       const result = await authClient.signIn.email({
         email: value.email,
         password: value.password,
@@ -143,16 +149,9 @@ export default function LoginCard() {
 
   return (
     <div className="w-full">
-      <h1 className="text-[30px] leading-[1.1] font-bold tracking-[-0.03em] text-auth-ink">
-        Sign in to ERPSYS
-      </h1>
-      <p className="mt-2 text-sm leading-relaxed text-muted">
-        Students, instructors and SBO officers all sign in here. We'll open the
-        console for your role.
-      </p>
 
       <form
-        className="auth-section space-y-5"
+        className="space-y-5"
         onSubmit={(e) => {
           e.preventDefault();
           e.stopPropagation();

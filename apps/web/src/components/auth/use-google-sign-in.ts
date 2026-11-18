@@ -39,7 +39,11 @@ export function useGoogleSignIn({
   async function signInWithGoogle() {
     if (googleBusy) return;
     setGoogleBusy(true);
-    sessionStorage.setItem("lastAuthProvider", "google");
+    try {
+      sessionStorage.setItem("lastAuthProvider", "google");
+    } catch {
+      /* storage blocked */
+    }
     const origin = window.location.origin;
     const googleCb = `${origin}${isInternalPath(dest) ? dest : "/"}`;
 
@@ -76,7 +80,9 @@ export function useGoogleSignIn({
       if (intent === "continue" && currentUser) {
         // Already authenticated with this identity - no OAuth round trip
         // and nothing to link. Send them where they were headed.
-        navigate(dest ?? homeRouteForRole(currentUser.role));
+        navigate(
+          isInternalPath(dest) ? dest! : homeRouteForRole(currentUser.role),
+        );
         return;
       }
 
