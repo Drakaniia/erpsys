@@ -13,6 +13,50 @@ import { useDragTrack } from "./use-drag-track";
 
 const PLACEHOLDER = "Select your course and year level";
 
+const PANEL_MAX_WIDTH = 420;
+const PANEL_GAP = 6;
+const VIEWPORT_MARGIN = 8;
+/** Below this much free room under the trigger, the panel opens upward. */
+const MIN_ROOM_BELOW = 260;
+
+type PanelAnchor = {
+  left: number;
+  width: number;
+  maxHeight: number;
+  top?: number;
+  bottom?: number;
+};
+
+/**
+ * Pin the panel to the trigger: same left edge and width, just under it, or
+ * just above it when the viewport has no room below. Viewport coordinates,
+ * because the panel is `position: fixed` in a body portal.
+ */
+function anchorTo(trigger: HTMLElement): PanelAnchor {
+  const rect = trigger.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const width = Math.min(
+    Math.max(rect.width, 280),
+    PANEL_MAX_WIDTH,
+    vw - VIEWPORT_MARGIN * 2,
+  );
+  const left = Math.min(
+    Math.max(rect.left, VIEWPORT_MARGIN),
+    vw - width - VIEWPORT_MARGIN,
+  );
+  const roomBelow = vh - rect.bottom - PANEL_GAP - VIEWPORT_MARGIN;
+  const roomAbove = rect.top - PANEL_GAP - VIEWPORT_MARGIN;
+  const openUp = roomBelow < MIN_ROOM_BELOW && roomAbove > roomBelow;
+  const room = openUp ? roomAbove : roomBelow;
+  // No fixed cap: the whole course list shows. The panel only scrolls as a
+  // last resort, when the list cannot fit in the room the viewport leaves.
+  const maxHeight = Math.max(160, room);
+  return openUp
+    ? { left, width, maxHeight, bottom: vh - rect.top + PANEL_GAP }
+    : { left, width, maxHeight, top: rect.bottom + PANEL_GAP };
+}
+
 export default function CourseYearPicker({
   departmentId = "",
   yearLevel = "",
@@ -46,6 +90,7 @@ export default function CourseYearPicker({
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
   const [pickedDepartmentId, setPickedDepartmentId] = useState("");
+  const [anchor, setAnchor] = useState<PanelAnchor | null>(null);
 
   const panelEl = useRef<HTMLDivElement | null>(null);
   const triggerEl = useRef<HTMLButtonElement | null>(null);
@@ -84,6 +129,9 @@ export default function CourseYearPicker({
 
   function openPicker() {
     if (disabled || loading) return;
+    // Measured before the panel mounts so its first frame is already
+    // pinned to the trigger and the swipe track reads the final width.
+    if (triggerEl.current) setAnchor(anchorTo(triggerEl.current));
     setOpen(true);
     setQuery("");
     setHighlight(
@@ -123,6 +171,21 @@ export default function CourseYearPicker({
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  // Keep the panel glued to the trigger if the window resizes or an ancestor
+  // scrolls while it is open.
+  useEffect(() => {
+    if (!open) return;
+    const reanchor = () => {
+      if (triggerEl.current) setAnchor(anchorTo(triggerEl.current));
+    };
+    window.addEventListener("resize", reanchor);
+    window.addEventListener("scroll", reanchor, true);
+    return () => {
+      window.removeEventListener("resize", reanchor);
+      window.removeEventListener("scroll", reanchor, true);
     };
   }, [open]);
 
@@ -269,15 +332,15 @@ export default function CourseYearPicker({
         <p className="mt-1 text-xs text-muted">{staleNote}</p>
       ) : null}
 
-      {open
+      {open && anchor
         ? createPortal(
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[100]">
               <button
                 type="button"
                 tabIndex={-1}
                 aria-label="Close course and year level selection"
                 onClick={closePicker}
-                className="absolute inset-0 cursor-default bg-ink/20"
+                className="absolute inset-0 cursor-default bg-transparent"
               />
 
               <div
@@ -288,8 +351,15 @@ export default function CourseYearPicker({
                 aria-label="Choose your course and year level"
                 tabIndex={-1}
                 onKeyDown={handlePanelKeydown}
-                className="relative flex max-h-[min(76dvh,420px)] w-full max-w-[420px] flex-col overflow-y-auto overscroll-contain rounded-2xl border border-white/60 bg-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_48px_rgba(16,24,40,0.18),0_2px_8px_rgba(16,24,40,0.08)]"
-                style={{ willChange: "transform, opacity" }}
+                className="fixed flex flex-col overflow-y-auto overscroll-contain rounded-2xl border border-white/60 bg-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_48px_rgba(16,24,40,0.18),0_2px_8px_rgba(16,24,40,0.08)]"
+                style={{
+                  left: anchor.left,
+                  width: anchor.width,
+                  maxHeight: anchor.maxHeight,
+                  top: anchor.top,
+                  bottom: anchor.bottom,
+                  willChange: "transform, opacity",
+                }}
               >
                 <div
                   ref={track.viewportEl}

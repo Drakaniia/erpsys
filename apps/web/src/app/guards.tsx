@@ -25,8 +25,8 @@ import PageLoader from "../components/ui/PageLoader";
 // route prefetch measurably matters.
 export function HashRedirect() {
   const { hash, search } = window.location;
-  if (hash.startsWith("#/")) {
-    const target = hash.slice(1) + (hash.includes("?") ? "" : search);
+  const target = hash.slice(1) + (hash.includes("?") ? "" : search);
+  if (hash.startsWith("#/") && isInternalPath(target)) {
     return <Navigate to={target} replace />;
   }
   return <Outlet />;
@@ -124,8 +124,6 @@ const AUTH_PATHS = new Set([
   "/login/register",
   "/login/forgot-password",
   "/login/reset-password",
-  "/loading",
-  "/auth/error",
 ]);
 
 export function RequireNoAuth({ children }: { children: React.ReactNode }) {

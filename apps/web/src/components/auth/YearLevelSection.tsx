@@ -60,7 +60,7 @@ export default function YearLevelSection({
         role="listbox"
         aria-label="Year level"
         onScroll={onListScroll}
-        className={`apple-scrollbar max-h-[min(248px,44dvh)] overflow-y-auto overscroll-contain p-1 ${isScrolling ? "is-scrolling" : ""}`}
+        className={`apple-scrollbar overscroll-contain p-1 ${isScrolling ? "is-scrolling" : ""}`}
       >
         {stepTwoLevels.map((level, index) => {
           const selected =

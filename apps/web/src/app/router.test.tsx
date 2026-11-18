@@ -40,11 +40,12 @@ describe("router (React port)", () => {
     renderApp();
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", { name: "Sign in to ERPSYS" }),
+        screen.getByRole("heading", {
+          name: "Sign in to submit and track your clearance",
+        }),
       ).toBeTruthy();
     });
   });
-
 
   it("serves the documentation page to a signed-out visitor", async () => {
     renderApp();

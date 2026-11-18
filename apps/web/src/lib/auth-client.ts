@@ -1,5 +1,5 @@
 import { createAuthClient } from "better-auth/react";
-import { twoFactorClient } from "better-auth/client/plugins";
+import { emailOTPClient, twoFactorClient } from "better-auth/client/plugins";
 
 // Standalone-API mode: point auth at the API origin. Same-origin default is
 // undefined (better-auth defaults to the page origin).
@@ -10,6 +10,7 @@ export const authClient = createAuthClient({
   ...(baseURL ? { baseURL } : {}),
   plugins: [
     twoFactorClient(),
+    emailOTPClient(),
     {
       id: "student-signup",
       pathMethods: { "/sign-up/student": "POST" } as const,

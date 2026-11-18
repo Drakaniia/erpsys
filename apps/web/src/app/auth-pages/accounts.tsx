@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { authClient } from "$lib/auth-client";
 import { homeRouteForRole } from "$lib/auth/redirect";
+import { isInternalPath } from "$lib/auth/completion-gate";
 import { useIntegrations } from "$lib/integrations/use-integrations";
 import AccountLinkDialog from "../../components/auth/AccountLinkDialog";
 import GoogleIcon from "../../components/auth/GoogleIcon";
+import EmailCodeForm from "../../components/auth/EmailCodeForm";
 
-/** `routes/auth/settings/accounts/+page.svelte` — linked sign-in methods. */
+/** Linked sign-in methods for the signed-in account. */
 export function ConnectedAccountsPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -18,17 +20,20 @@ export function ConnectedAccountsPage() {
   >([]);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkError, setLinkError] = useState("");
+  const [linking, setLinking] = useState(false);
+  const [verified, setVerified] = useState(false);
+  const role = (sessionQuery.data?.user as { role?: string } | undefined)
+    ?.role;
 
   async function loadAccounts() {
-    const res = await authClient.listAccounts();
-    if (res.data) setAccounts(res.data);
+    const res = await authClient.listAccounts().catch(() => null);
+    if (res?.data) setAccounts(res.data);
   }
 
   const signedIn = !!sessionQuery.data?.user;
   useEffect(() => {
     if (!signedIn) return;
     void loadAccounts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signedIn]);
 
   const hasGoogle = accounts.some((p) => p.providerId === "google");
@@ -36,17 +41,20 @@ export function ConnectedAccountsPage() {
     (sessionQuery.data?.user as { email?: string } | undefined)?.email ?? "";
 
   async function confirmLink() {
+    if (linking) return;
+    setLinking(true);
     setLinkError("");
     const origin = window.location.origin;
-    const dest = params.get("dest");
+    const rawDest = params.get("dest");
+    const dest = isInternalPath(rawDest) ? rawDest : null;
     const callbackURL = dest
       ? `${origin}/settings/accounts?dest=${encodeURIComponent(dest)}`
       : `${origin}/settings/accounts`;
 
-    const result = await authClient.linkSocial({
-      provider: "google",
-      callbackURL,
-    });
+    const result = await authClient
+      .linkSocial({ provider: "google", callbackURL })
+      .catch(() => ({ error: { message: "" } }));
+    setLinking(false);
 
     if (result.error) {
       setLinkError(
@@ -58,14 +66,7 @@ export function ConnectedAccountsPage() {
 
     await loadAccounts();
     setLinkDialogOpen(false);
-
-    if (dest) {
-      navigate(dest);
-      return;
-    }
-    const role = (sessionQuery.data?.user as { role?: string } | undefined)
-      ?.role;
-    navigate(homeRouteForRole(role));
+    navigate(dest ?? homeRouteForRole(role));
   }
 
   return (
@@ -86,16 +87,31 @@ export function ConnectedAccountsPage() {
               </p>
             ) : null}
 
+            <section className="mt-6 space-y-3" aria-labelledby="email-verification-heading">
+              <h2 id="email-verification-heading" className="text-[15px] font-medium text-auth-ink">Email verification</h2>
+              {verified || sessionQuery.data?.user.emailVerified ? (
+                <p role="status" className="text-sm text-muted">Email verified: {userEmail}</p>
+              ) : (
+                <>
+                  <p className="text-sm text-muted">Your email is not verified. Verification is optional; you can keep using your account.</p>
+                  <p className="text-sm text-muted">For staff or admin addresses, verification clears unverified credentials and existing sessions. Sign in with an email code afterward.</p>
+                  {flags.email && userEmail ? <EmailCodeForm key={userEmail} email={userEmail} onSuccess={() => { setVerified(true); void authClient.getSession(); }} /> : <p className="text-sm text-muted">Email delivery is unavailable. Try again later.</p>}
+                </>
+              )}
+            </section>
+
             {flags.googleAuth ? (
               <div className="mt-6 divide-y divide-auth-border">
-                <div className="flex items-center justify-between py-4">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between gap-3 py-4">
+                  <div className="flex min-w-0 items-center gap-3">
                     <GoogleIcon />
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-[15px] font-medium text-auth-ink">
                         Google
                       </p>
-                      <p className="text-[13px] text-muted">{userEmail}</p>
+                      <p className="truncate text-[13px] text-muted">
+                        {userEmail}
+                      </p>
                     </div>
                   </div>
                   {hasGoogle ? (
@@ -117,10 +133,10 @@ export function ConnectedAccountsPage() {
 
             <div className="mt-6 text-center">
               <Link
-                to="/login"
-                className="text-[13px] font-medium text-auth-blue transition-opacity duration-140 hover:opacity-80"
+                to={homeRouteForRole(role)}
+                className="text-[13px] font-medium text-auth-blue underline-offset-2 hover:underline"
               >
-                Back to sign in
+                Back to console
               </Link>
             </div>
           </div>

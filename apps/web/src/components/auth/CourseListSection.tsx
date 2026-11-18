@@ -50,7 +50,7 @@ export default function CourseListSection({
         role="listbox"
         aria-label="Courses"
         onScroll={onListScroll}
-        className={`apple-scrollbar max-h-[min(248px,44dvh)] overflow-y-auto overscroll-contain p-1 ${isScrolling ? "is-scrolling" : ""}`}
+        className={`apple-scrollbar overscroll-contain p-1 ${isScrolling ? "is-scrolling" : ""}`}
       >
         {filtered.length === 0 ? (
           <li className="px-3 py-6 text-center text-sm text-muted">

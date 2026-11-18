@@ -71,8 +71,8 @@ function renderCard() {
   );
 }
 
-const googleButton = () => screen.queryByRole("button", { name: /^google$/i });
-const divider = () => screen.queryByText(/or sign in with/i);
+const googleButton = () =>
+  screen.queryByRole("button", { name: /continue with google/i });
 const turnstile = () => screen.queryByTestId("turnstile-container");
 
 describe("RegisterCard integration flags", () => {
@@ -86,12 +86,6 @@ describe("RegisterCard integration flags", () => {
     integration.flags.googleAuth = false;
     renderCard();
     expect(googleButton()).toBeNull();
-  });
-
-  it("drops the divider with the button, so no rule is left orphaned", () => {
-    integration.flags.googleAuth = false;
-    renderCard();
-    expect(divider()).toBeNull();
   });
 
   it("renders no Turnstile when turnstile is off", () => {

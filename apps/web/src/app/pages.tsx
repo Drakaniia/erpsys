@@ -60,7 +60,7 @@ export function LoginPage() {
     "Sign in to the COT-SBO Enrollment Requirements Processing System (ERPSYS) with your BukSU account.",
   );
   return (
-    <AuthShell>
+    <AuthShell heading="Sign in to submit and track your clearance">
       <LoginCard />
     </AuthShell>
   );
@@ -73,7 +73,7 @@ export function RegisterPage() {
     "Create an ERPSYS student account to submit and track your enrollment requirements.",
   );
   return (
-    <AuthShell>
+    <AuthShell heading="Create your student account" wide>
       <RegisterCard />
     </AuthShell>
   );
