@@ -209,9 +209,19 @@ in the database..
 
 add sir Gil in Mongodb Database
 
-rate limiting and ui.  so user dont spam login
 
 
 smiplify collections, drop duplicate, make some in local session instead of storing in collections, make collections simple as possible 
 
 in chatbot knowledge page.  remove the preview and the markdown. maek it real editor whithout needing the markdown..  add new buttons like list unorder list, bold, underline, itallic , bold, h1 h2 or h3. all
+
+use temporary Data for screenshots for the chapter snippet in the /docs/paper  for the screenshots of the System for the main important pages, add it in the /paper/screenshots
+
+
+add test button
+
+
+why still button to connect to Google callendar if user logged in with google?
+add external link to the calendar so it opens in a new tab
+
+will the calendar auto open queue if whats in my schedule?
