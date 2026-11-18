@@ -3,6 +3,8 @@ import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COLLECTIONS } from "../../src/lib/db/db.js";
 import { errorHandler } from "../../src/middleware/errorHandler.js";
+import { timestampOrdering } from "../../src/middleware/timestamp.js";
+import { guardDb } from "../../src/lib/db/timestamp-ordering.js";
 import { v1Router } from "../../src/routes/index.js";
 import { fakeDb, type Row } from "../helpers/fakeDb.js";
 
@@ -111,7 +113,7 @@ function seed(): Record<string, Row[]> {
 async function serve(): Promise<{ url: string; close: () => Promise<void> }> {
   const app = express();
   app.use(express.json());
-  app.use("/api/v1", v1Router);
+  app.use("/api/v1", timestampOrdering, v1Router);
   app.use(errorHandler);
   const server = app.listen(0);
   await new Promise<void>((resolve) => server.once("listening", resolve));
@@ -128,7 +130,7 @@ let server: { url: string; close: () => Promise<void> };
 beforeEach(async () => {
   holder.session = ADVISER;
   context = fakeDb(seed());
-  holder.db = context.db;
+  holder.db = guardDb(context.db as never);
   server = await serve();
 });
 
@@ -173,6 +175,34 @@ describe("instructor schedule", () => {
     });
     await call("/me/schedule", "PUT", { departmentId: "dept-1", windows: [] });
     expect(context.store[COLLECTIONS.availabilityWindow]).toHaveLength(0);
+  });
+
+  it("saves a deletion after a newer calendar-status read without reporting a failed save", async () => {
+    context.store[COLLECTIONS.calendarConnection].push({
+      _id: "calendar-1", userId: "adv1", status: "CONNECTED",
+      syncState: "CLEAN", attempts: 0,
+    });
+    await call("/me/schedule", "PUT", { departmentId: "dept-1", windows: [monday] });
+    const read = await call("/me/schedule?departmentId=dept-1");
+    await call("/me/calendar");
+    const saved = await call("/me/schedule", "PUT", {
+      departmentId: "dept-1", windows: [], ts: read.body.ts,
+    });
+    expect(saved.status).toBe(200);
+    expect(saved.body.data.windows).toEqual([]);
+    expect(context.store[COLLECTIONS.availabilityWindow]).toHaveLength(0);
+  });
+
+  it("rejects a stale schedule without deleting posted hours", async () => {
+    await call("/me/schedule", "PUT", { departmentId: "dept-1", windows: [monday] });
+    const read = await call("/me/schedule?departmentId=dept-1");
+    await call("/me/schedule?departmentId=dept-1");
+    const saved = await call("/me/schedule", "PUT", {
+      departmentId: "dept-1", windows: [], ts: read.body.ts,
+    });
+    expect(saved.status).toBe(409);
+    expect(saved.body.data.code).toBe("TS_ABORTED");
+    expect(context.store[COLLECTIONS.availabilityWindow]).toHaveLength(1);
   });
 
   it("refuses overlapping hours with a 409", async () => {

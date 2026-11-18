@@ -40,7 +40,9 @@ export default function CalendarBanner() {
       </p>
       <button
         type="button"
-        onClick={() => void actions.connect()}
+        onClick={() => void actions.connect().catch((error: unknown) =>
+          notify.error(error instanceof Error ? error.message : "Could not connect Google Calendar."),
+        )}
         className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white"
       >
         Reconnect

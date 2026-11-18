@@ -83,8 +83,12 @@ export function useSchedule(departmentId: string, enabled: boolean) {
     api.instructor.getMySchedule.queryOptions({
       input: { departmentId },
       enabled,
+      refetchOnMount: "always",
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      structuralSharing: false,
     }),
-  ) as { data: ScheduleView | undefined; isPending: boolean; isError: boolean };
+  );
 }
 
 export function useSaveSchedule() {
@@ -96,8 +100,12 @@ export function useSaveSchedule() {
   >({
     mutationFn: (input) =>
       api.instructor.saveMySchedule.call(input) as Promise<ScheduleView>,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["instructor"] });
+    onSuccess: (saved, input) => {
+      queryClient.setQueryData(api.instructor.getMySchedule.queryKey({ departmentId: input.departmentId }), saved);
+      void queryClient.invalidateQueries({
+        queryKey: ["instructor"],
+        predicate: (query) => query.queryKey[1] !== "getMySchedule",
+      });
       void queryClient.invalidateQueries({ queryKey: ["student"] });
     },
   });
