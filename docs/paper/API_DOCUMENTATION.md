@@ -1,3562 +1,6278 @@
-# ERPSYS — API Documentation
+# API Documentation
 
-## Purpose and Scope
+This document explains how ERPSYS exchanges information for sign-in, student requirements, enrollment, queues, and system settings. Each module lists its endpoints and explains what they do.
 
-This document describes the API exposed by the current application, including uncommitted changes present during reconciliation. Chapters 1–5 remain in the separate final paper. This is a contract review, not a claim that every example was executed against a deployed service.
+**Base address:** [http://localhost:3001](http://localhost:3001). This is the local API server. Use the website's permitted origin for authentication; do not change the server's sign-in or Google callback settings just for a screenshot.
 
-**Base address:** `http://localhost:3001` for local development. Replace the address for a hosted system. Endpoint entries show origin-relative paths. Identifiers and secrets in angle brackets are placeholders and must be replaced privately; never include actual credentials or private student information in screenshots.
+**Screenshots:** Insert your own request-and-response screenshots in the marked spaces. Use sample data and hide secrets and personal information. Dates are assigned documentation dates; screenshots and actual testing results must be supplied separately.
 
-**Coverage:** Each currently mounted concrete resource method/path appears once. Authentication is delegated to Better Auth 1.6.27; the authentication section documents application-used entry points and custom checks, not every possible library-internal operation.
+**Shared Request Rules:**
 
-## Access and Request Conventions
+- Use an API client or the website's Network panel. Clicking an address sends GET only; POST, PUT, PATCH, and DELETE must use the stated method and fields.
+- Replace address placeholders such as :id, :userId, :code, :key, and :token with actual test values. Query options are added to the address, not the request body.
+- A signed-in browser sends its session cookie. A separate API client needs its own authenticated cookie session and permitted Origin for authentication requests. Do not screenshot cookies or tokens.
+- Most application responses put the result inside data and may include ts. Authentication returns its own response; redirects, files, and assistant streams are different.
+- Prepare an active school year, department, adviser assignment, and student placement before dependent operations. Use separate test records for approval, cancellation, deletion, and reversal; these actions change later results.
+- Send request-body fields as JSON using the application/json content type. The fields are listed below without JSON examples.
+- A 409 response with TS_ABORTED means a record needs refreshing before retrying. Keep the returned ts value for edits. Earlier changes in a batch are not automatically undone.
+- Lists may include page, pageSize, and total. Follow the endpoint's list options.
+- Tables show only the main status codes, not every possible error. A successful response does not prove an email was delivered or a connected service finished its work.
+- For a complete enrollment capture: save placement, supply evidence or the profiling-form answer, submit requirements, have an officer verify all five requirements, open the adviser's queue, join it, serve the student, then complete enrollment.
+- Google sign-in and Calendar callbacks require real provider consent flows. Uploads require actual bytes in storage. Forms, mail, storage, and the assistant need their own enabled, working service configuration.
+- The disabled standard signup route is expected to return 400. An invalid-request screenshot should show the intended refusal; it is not an application failure. Only screenshot redacted status information for credential exports and authenticator setup.
 
-- **Session authentication:** Send the signed-in browser's cookie. Browser requests normally include credentials. A human role label is explanatory, not an authorization token or literal account-role value.
-- **Student-facing access:** Students, SBO officers, and administrators may enter that working area. Enrollment advisers do not automatically have student-facing access.
-- **Officer access:** SBO officers and administrators. Adviser access means enrollment advisers and administrators, subject to any handler-specific department or year-level checks.
-- **Administrator access:** Only administrators. Viewing protected settings does not grant permission to change them; sensitive integration actions require a separate temporary unlock.
-- **Role-valued fields:** Internal account-role codes are intentionally omitted. For role updates/filters, use the account-management client to send its permitted value. Do not replace it with a human-readable label or treat the examples as a complete role-enum specification.
-- **JSON bodies:** Use Content-Type: application/json, including business bodies on DELETE operations when listed. The main resource parser has a 1 MiB limit; the assistant has its own 100 KB limit. Authentication parsing is library-managed.
-- **Unknown input fields:** Most resource object schemas strip unrecognized fields; they do not generally reject them. Only documented fields should be relied on. Authentication schemas have their own behavior.
-- **Pagination:** Defaults and caps differ by endpoint. A returned page/pageSize does not guarantee every small-list handler slices its data. Read the endpoint notes.
+## 1.1 AUTHENTICATION AND ADMINISTRATOR VERIFICATION MODULE API
 
-## Responses, Errors, and Concurrency
+### 1.1.1 Module Description
 
-Versioned JSON helpers return a single object or a list as follows. The actual data shape is described per endpoint; these are structural examples, not captured results.
+This module lets users sign in, sign out, and recover their accounts. It also checks an administrator's identity before sensitive settings can be changed.
 
-```json
-{"data":{"id":"example"},"ts":1780000000000}
-```
+This module has the following endpoints:
 
-```json
-{"data":[],"page":1,"pageSize":50,"total":0,"ts":1780000000000}
-```
+- POST [http://localhost:3001/api/auth/email-otp/send-verification-otp](http://localhost:3001/api/auth/email-otp/send-verification-otp)
+- POST [http://localhost:3001/api/auth/sign-in/email-otp](http://localhost:3001/api/auth/sign-in/email-otp)
+- POST [http://localhost:3001/api/auth/email-otp/verify-email](http://localhost:3001/api/auth/email-otp/verify-email)
+- POST [http://localhost:3001/api/auth/sign-in/email](http://localhost:3001/api/auth/sign-in/email)
+- POST [http://localhost:3001/api/auth/sign-up/student](http://localhost:3001/api/auth/sign-up/student)
+- POST [http://localhost:3001/api/auth/sign-up/email](http://localhost:3001/api/auth/sign-up/email)
+- POST [http://localhost:3001/api/auth/sign-in/social](http://localhost:3001/api/auth/sign-in/social)
+- GET [http://localhost:3001/api/auth/callback/google](http://localhost:3001/api/auth/callback/google)
+- GET [http://localhost:3001/api/auth/get-session](http://localhost:3001/api/auth/get-session)
+- POST [http://localhost:3001/api/auth/sign-out](http://localhost:3001/api/auth/sign-out)
+- POST [http://localhost:3001/api/auth/request-password-reset](http://localhost:3001/api/auth/request-password-reset)
+- POST [http://localhost:3001/api/auth/reset-password](http://localhost:3001/api/auth/reset-password)
+- GET [http://localhost:3001/api/auth/reset-password/:token](http://localhost:3001/api/auth/reset-password/:token)
+- GET [http://localhost:3001/api/auth/admin-gate/status](http://localhost:3001/api/auth/admin-gate/status)
+- POST [http://localhost:3001/api/auth/admin-gate/pin](http://localhost:3001/api/auth/admin-gate/pin)
+- POST [http://localhost:3001/api/auth/admin-gate/password](http://localhost:3001/api/auth/admin-gate/password)
+- POST [http://localhost:3001/api/auth/admin-gate/code/send](http://localhost:3001/api/auth/admin-gate/code/send)
+- POST [http://localhost:3001/api/auth/admin-gate/code/verify](http://localhost:3001/api/auth/admin-gate/code/verify)
+- POST [http://localhost:3001/api/auth/two-factor/enable](http://localhost:3001/api/auth/two-factor/enable)
+- POST [http://localhost:3001/api/auth/two-factor/verify-totp](http://localhost:3001/api/auth/two-factor/verify-totp)
+- POST [http://localhost:3001/api/auth/two-factor/verify-backup-code](http://localhost:3001/api/auth/two-factor/verify-backup-code)
 
-Authentication responses, basic health, binary files, redirects, and assistant streams do not use this versioned helper envelope. Standard resource errors use a string error and optional data, not an error object containing code/message:
+### 1.1.2 Send an Email Sign-In or Verification Code
 
-```json
-{"error":"Request failed.","data":{"code":"TS_ABORTED","ts":1780000000000}}
-```
+**Version:** 1.0
 
-The optional data object is not present on every error. Server error names are not generally serialized as top-level codes. Production often replaces detailed business messages with generic status text; examples of conditions below do not promise exact production wording. Storage-quota responses and authentication errors have explicitly different shapes.
+**Date:** November 14, 2026
 
-Versioned business requests use transaction timestamps. A write may include the ts returned with the data being edited; the middleware consumes it before business-body validation. It must be a positive safe integer issued by the running server. Omit it to start a fresh server-anchored operation. A stale read or write can return HTTP 409 with data.code TS_ABORTED. Keep unsaved drafts and reload the affected records before retrying; a batch must not be assumed rolled back. Eligible server-started requests restart up to three times only before writing. Ordering is designed for one application process, not a multi-server transaction service. Advisory editing-presence operations run outside business timestamp ordering and do not advance business read/write stamps; presence is not a record lock.
+**Description:** This endpoint requests an email code for sign-in or email verification.
 
-Shared resource failures include 400 for invalid request input/timestamp; 401 for no session; 403 for permission failure; 404 for missing resources; 409 for conflicting state; 412 for unmet prerequisites; 413 for body/file limits; 429 for request limits; and 500/502/503 for internal/provider/service failures as applicable. Successful authorization does not bypass business-state checks.
-
-Resource requests share a 300-request-per-minute budget keyed by session fingerprint and IP. Credential sign-in/registration has a separate 20-attempt-per-five-minute IP budget. Upload, calendar, credential-editing, and assistant limits are described with their endpoints. Rate-limit responses can include Retry-After; standard 503 errors set Retry-After to five seconds. These limits are per-process controls, not measured capacity claims.
-
-## Retired and Non-API Paths
-
-Only the basic health endpoint is currently mounted for operations. Readiness, metrics, queue live-event streaming, and generated OpenAPI endpoints from the earlier manuscript are not exposed by the current server. Do not use those earlier sections as test instructions. The website documentation page is a frontend route, not a generated API explorer. Queue updates use resource reads; the assistant remains a separate stream.
-
-## 1. Authentication and Administrator Verification
-
-Authentication endpoints return library-owned JSON or redirects rather than data/ts envelopes. Capture actual headers and cookies from the configured version when producing evidence. The administrator confirmation chain is PIN → password, when present → emailed code → authenticator or backup code. Step freshness is ten minutes; final success grants a five-minute sensitive-action unlock. It is not an ordinary sign-in-wide MFA challenge. Other two-factor operations are forbidden by the application's allowlist.
-
-### 1.1. Sign In with Email and Password
-
-**Method:** POST
-
-**Endpoint:** `/api/auth/sign-in/email`
-
-**Version:** Configured application/authentication version
-
-**Capture date:** Not yet supplied.
-
-**Access:** Public
-
-**Parameters:** Body: email and password, required. Optional callbackURL and rememberMe. Supply a valid Turnstile token through cf-turnstile-response, turnstileToken, or the matching header when the configured auth check requires it.
-
-**Success:** HTTP 200. Better Auth sign-in result with user/token information and session cookie.
-
-**Behavior:** Credential requests share a 20-attempt IP budget per five minutes. Blocked users cannot create new sessions. This response is not a versioned data/ts envelope.
-
-**Additional failure conditions:** 400 invalid challenge/body; 401 invalid credentials; 403 blocked account; 429 repeated attempts.
-
-**Illustrative request body:**
-
-```json
-{
-  "email": "student@example.org",
-  "password": "<account password>",
-  "turnstileToken": "<fresh challenge token>"
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 1.2. Register a Student Account
+**Endpoint:** [http://localhost:3001/api/auth/email-otp/send-verification-otp](http://localhost:3001/api/auth/email-otp/send-verification-otp)
 
 **Method:** POST
 
-**Endpoint:** `/api/auth/sign-up/student`
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
 
-**Version:** Configured application/authentication version
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- email — Required existing account email in the request body.
+- type — Required purpose: sign-in or email-verification.
+- cf-turnstile-response — Required header with a fresh bot-check token for sign-in codes when protection is enabled.
 
-**Access:** Public
+**Important Notes:**
 
-**Parameters:** Body: name (nonempty), studentNumber (trimmed digits only), email (valid email), password (8–128 characters), academicYearId, departmentId, yearLevel (FIRST/SECOND/THIRD/FOURTH/FIFTH), required. Optional cf-turnstile-response or turnstileToken (1–2,048 characters).
+- Email delivery must be enabled and configured. Codes last five minutes, allow three incorrect guesses, and work once. Sign-in codes do not create accounts. Hide the code in screenshots.
 
-**Success:** HTTP 200. { token, user }, with session cookie; HTTP 200.
+Response codes of this API endpoint:
 
-**Behavior:** Creates profile and placement and signs in. University student-email accounts use Google instead of this password-registration route. A blocked account owning the email/number can be replaced. The year must exist but need not be active. Placement errors currently may surface as generic 500 because of error adaptation, even for unsuitable course/year selections; do not promise every placement failure is a 400.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 503 | Service Unavailable | The required service is unavailable. |
 
-**Additional failure conditions:** 400 malformed/duplicate identity or university email requiring Google; 429 credential-request budget; 500 possible placement/persistence failure.
+**Response (JSON):** A success confirmation is returned, not the code. For sign-in, an unknown email also receives a general confirmation without an email being sent.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "name": "Example Student",
-  "studentNumber": "202600001",
-  "email": "student@example.org",
-  "password": "<new password>",
-  "academicYearId": "year-example",
-  "departmentId": "department-example",
-  "yearLevel": "FIRST",
-  "turnstileToken": "<fresh challenge token>"
-}
-```
+**Figure 1.** Send an Email Sign-In or Verification Code — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure illustrates the request and returned response for “Send an Email Sign-In or Verification Code.”
 
-### 1.3. Standard Password Signup Is Disabled
+[SCREENSHOT: Invalid request and response.]
 
-**Method:** POST
+**Figure 2.** Send an Email Sign-In or Verification Code — Invalid Request and Response
 
-**Endpoint:** `/api/auth/sign-up/email`
+This figure shows a rejected request for “Send an Email Sign-In or Verification Code” and the error message returned by the system.
 
-**Version:** Configured application/authentication version
+### 1.1.3 Sign In with an Email Code
 
-**Capture date:** Not yet supplied.
+**Version:** 1.0
 
-**Access:** Public
+**Date:** November 14, 2026
 
-**Parameters:** Standard library signup is not the supported student-registration path.
+**Description:** This endpoint signs in an existing account using a fresh emailed code.
 
-**Expected outcome:** HTTP 400; registration is deliberately disabled. No successful registration through this endpoint.
-
-**Behavior:** Use the custom student signup route. An HTTP request here is deliberately rejected.
-
-**Additional failure conditions:** 400 rejected registration.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 1.4. Begin Google Sign-In
+**Endpoint:** [http://localhost:3001/api/auth/sign-in/email-otp](http://localhost:3001/api/auth/sign-in/email-otp)
 
 **Method:** POST
 
-**Endpoint:** `/api/auth/sign-in/social`
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
 
-**Version:** Configured application/authentication version
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- email — Required existing account email in the request body.
+- otp — Required fresh code received after requesting type sign-in. The website uses a six-digit code.
 
-**Access:** Public
+**Important Notes:**
 
-**Parameters:** Body: provider: google; callbackURL for the permitted return destination. Other optional Better Auth redirect controls remain library-owned.
+- Request a sign-in code first for an existing, unblocked account. This also proves email ownership. For staff or administrator permissions, verify the resulting session rather than assuming a typed email grants a role.
 
-**Success:** HTTP 200. Better Auth provider authorization URL/redirect result; follow the configured flow.
+Response codes of this API endpoint:
 
-**Behavior:** Google integration must be enabled. Do not treat this as a completed authenticated session before the provider callback succeeds.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Additional failure conditions:** 412 Google sign-in disabled; provider errors use the authentication response format.
+**Response (JSON):** The session token and account details are returned. A session cookie is set. Read the current session to confirm the account's permissions.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "provider": "google",
-  "callbackURL": "/"
-}
-```
+**Figure 3.** Sign In with an Email Code — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure depicts the request and returned response for “Sign In with an Email Code.”
 
-### 1.5. Complete Google Sign-In
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 4.** Sign In with an Email Code — Invalid Request and Response
+
+This figure shows a rejected request for “Sign In with an Email Code” and the error message returned by the system.
+
+### 1.1.4 Verify an Account Email Address
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint confirms account ownership using an emailed verification code.
+
+**Endpoint:** [http://localhost:3001/api/auth/email-otp/verify-email](http://localhost:3001/api/auth/email-otp/verify-email)
+
+**Method:** POST
+
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
+
+**Parameters:**
+
+- email — Required account email in the request body.
+- otp — Required fresh code received after requesting type email-verification. A sign-in code cannot be used instead.
+
+**Important Notes:**
+
+- Request an email-verification code first. Initial verification of a privileged staff or administrator email removes unproven password credentials and ends existing sessions. Sign in again using an email code or Google to receive the permitted role.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** A successful status and verified user are returned. The token is null; this action does not create a new sign-in session.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 5.** Verify an Account Email Address — Valid Request and Response
+
+This figure illustrates the request and returned response for “Verify an Account Email Address.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 6.** Verify an Account Email Address — Invalid Request and Response
+
+This figure shows a rejected request for “Verify an Account Email Address” and the error message returned by the system.
+
+### 1.1.5 Sign In with Email and Password
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint allows a user to sign in using an email address and password.
+
+**Endpoint:** [http://localhost:3001/api/auth/sign-in/email](http://localhost:3001/api/auth/sign-in/email)
+
+**Method:** POST
+
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
+
+**Parameters:**
+
+- email and password — Required account details in the request body.
+- callbackURL and rememberMe — Optional return address and stay-signed-in choice.
+- turnstileToken or cf-turnstile-response — A fresh bot-check token, when the sign-in settings require it.
+
+**Important Notes:**
+
+- A blocked account cannot sign in. Password sign-in and registration share a limit of 20 attempts per five minutes for an internet address.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 401 | Sign-In Required | Sign in or check your sign-in details. |
+
+**Response (JSON):** The account details and sign-in information are returned. The browser receives a session cookie to keep the user signed in.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 7.** Sign In with Email and Password — Valid Request and Response
+
+This figure depicts the request and returned response for “Sign In with Email and Password.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 8.** Sign In with Email and Password — Invalid Request and Response
+
+This figure shows a rejected request for “Sign In with Email and Password” and the error message returned by the system.
+
+### 1.1.6 Register a Student Account
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint creates a student account and saves the student's enrollment placement.
+
+**Endpoint:** [http://localhost:3001/api/auth/sign-up/student](http://localhost:3001/api/auth/sign-up/student)
+
+**Method:** POST
+
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
+
+**Parameters:**
+
+- name, studentNumber, email, and password — Required account details in the request body. The number must contain digits only. The password must be 8–128 characters.
+- academicYearId, departmentId, and yearLevel — Required school-year, department, and year-level choices. Use FIRST, SECOND, THIRD, FOURTH, or FIFTH for yearLevel.
+- turnstileToken or cf-turnstile-response — Optional bot-check token, 1–2,048 characters when supplied.
+
+**Important Notes:**
+
+- University student-email accounts use Google sign-in instead. The selected school year must exist but does not have to be active. A blocked account using the same identity may be replaced. Some placement failures currently appear as a server error.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+
+**Response (JSON):** The new account details are returned and the student is signed in.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 9.** Register a Student Account — Valid Request and Response
+
+This figure illustrates the request and returned response for “Register a Student Account.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 10.** Register a Student Account — Invalid Request and Response
+
+This figure shows a rejected request for “Register a Student Account” and the error message returned by the system.
+
+### 1.1.7 Standard Password Signup Is Disabled
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint rejects the unused standard registration route.
+
+**Endpoint:** [http://localhost:3001/api/auth/sign-up/email](http://localhost:3001/api/auth/sign-up/email)
+
+**Method:** POST
+
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
+
+**Parameters:**
+
+- Standard library signup is not the supported student-registration path.
+
+**Important Notes:**
+
+- Use the custom student signup route. An HTTP request here is deliberately rejected.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 400 | Registration Disabled | Use the student-registration endpoint instead. |
+
+**Response (JSON):** The request is refused. Students must use the student-registration endpoint instead.
+
+[SCREENSHOT: Expected Rejected Request; include the request and response.]
+
+**Figure 11.** Standard Password Signup Is Disabled — Expected Rejected Request and Response
+
+This figure shows the rejected standard signup request and the message directing students to the student-registration route.
+
+### 1.1.8 Begin Google Sign-In
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint starts the Google sign-in process.
+
+**Endpoint:** [http://localhost:3001/api/auth/sign-in/social](http://localhost:3001/api/auth/sign-in/social)
+
+**Method:** POST
+
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
+
+**Parameters:**
+
+- Request body: connected service: google
+- callbackURL for the permitted return destination.
+- Other optional Better Auth redirect controls remain library-owned.
+
+**Important Notes:**
+
+- Google integration must be enabled. Do not treat this as a completed authenticated session before the connected service callback succeeds.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+
+**Response (JSON):** A Google sign-in address is returned. The user must finish the Google steps before sign-in is complete.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 12.** Begin Google Sign-In — Valid Request and Response
+
+This figure shows the request and returned response for “Begin Google Sign-In.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 13.** Begin Google Sign-In — Invalid Request and Response
+
+This figure shows a rejected request for “Begin Google Sign-In” and the error message returned by the system.
+
+### 1.1.9 Complete Google Sign-In
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint receives Google's answer after the user signs in.
+
+**Endpoint:** [http://localhost:3001/api/auth/callback/google](http://localhost:3001/api/auth/callback/google)
 
 **Method:** GET
 
-**Endpoint:** `/api/auth/callback/google`
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
 
-**Version:** Configured application/authentication version
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Google supplies authorization code/state or error address filter parameters.
 
-**Access:** Public provider callback
+**Important Notes:**
 
-**Parameters:** Google supplies authorization code/state or error query parameters.
+- Let Google supply the callback code and state through the actual sign-in flow. Do not invent these values or reuse an already-consumed callback.
 
-**Success:** HTTP 302. Authentication-library redirect and session handling.
+Response codes of this API endpoint:
 
-**Behavior:** Validate the callback through the configured OAuth flow, not a hand-created code/state example. This callback is different from the optional calendar connection.
+| Code | Message | Description |
+| --- | --- | --- |
+| 302 | Redirect | Continue on the next page. |
 
-**Additional failure conditions:** OAuth state, code, account, or provider errors; redirects and library responses vary by outcome.
+**Response (Redirect):** The user is sent back to the website. Sign-in information is set only when the Google checks succeed.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 1.6. Read the Current Sign-In Session
+**Figure 14.** Complete Google Sign-In — Valid Request and Response
 
-**Method:** GET
+This figure demonstrates the request and returned response for “Complete Google Sign-In.”
 
-**Endpoint:** `/api/auth/get-session`
+[SCREENSHOT: Invalid request and response.]
 
-**Version:** Configured application/authentication version
+**Figure 15.** Complete Google Sign-In — Invalid Request and Response
 
-**Capture date:** Not yet supplied.
+This figure shows a rejected request for “Complete Google Sign-In” and the error message returned by the system.
 
-**Access:** Public; session cookie identifies a signed-in account
+### 1.1.10 Read the Current Sign-In Session
 
-**Parameters:** No business body/query fields.
+**Version:** 1.0
 
-**Success:** HTTP 200. Session and user object, or null when signed out.
+**Date:** November 14, 2026
 
-**Behavior:** Unwrapped authentication JSON, not data/ts. Session cookies are managed by the auth library.
+**Description:** This endpoint checks whether a user is signed in.
 
-**Additional failure conditions:** Authentication-library failures may occur.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 1.7. Sign Out
-
-**Method:** POST
-
-**Endpoint:** `/api/auth/sign-out`
-
-**Version:** Configured application/authentication version
-
-**Capture date:** Not yet supplied.
-
-**Access:** Signed-in session for normal use
-
-**Parameters:** No business body fields.
-
-**Success:** HTTP 200. Authentication-library success; clears session cookie.
-
-**Behavior:** The application hook also closes the adviser's open availability, releases active service, and removes adviser department assignments. Do not describe sign-out as only a browser-local action.
-
-**Additional failure conditions:** Library session/origin errors.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 1.8. Request an Emailed Password-Reset Link
-
-**Method:** POST
-
-**Endpoint:** `/api/auth/request-password-reset`
-
-**Version:** Configured application/authentication version
-
-**Capture date:** Not yet supplied.
-
-**Access:** Public
-
-**Parameters:** Body: email (required valid email), redirectTo (optional, trusted-origin restrictions).
-
-**Success:** HTTP 200. { status: true, message } whether or not an account exists.
-
-**Behavior:** The application sends a direct reset-page link with a one-hour token. A success response does not prove email delivery; production can log a delivery failure while still returning success. The current forgot-password screen directs users to staff rather than requesting this route itself. redirectTo does not alter the application's emailed destination.
-
-**Additional failure conditions:** 400 malformed email or disallowed redirect; normal responses do not disclose account existence.
-
-**Illustrative request body:**
-
-```json
-{
-  "email": "student@example.org"
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 1.9. Consume a Password-Reset Token
-
-**Method:** POST
-
-**Endpoint:** `/api/auth/reset-password`
-
-**Version:** Configured application/authentication version
-
-**Capture date:** Not yet supplied.
-
-**Access:** Public, authorized by reset token
-
-**Parameters:** Body: newPassword (required, 8–128 characters), token (body or query; one required; nonempty body value takes precedence).
-
-**Success:** HTTP 200. { status: true }.
-
-**Behavior:** Consumes the token once. Creates password credentials if absent. The configured application does not revoke existing sessions after this reset.
-
-**Additional failure conditions:** 400 invalid/expired/consumed token or password length.
-
-**Illustrative request body:**
-
-```json
-{
-  "token": "<token from reset email>",
-  "newPassword": "<new password>"
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 1.10. Library Password-Reset Callback
+**Endpoint:** [http://localhost:3001/api/auth/get-session](http://localhost:3001/api/auth/get-session)
 
 **Method:** GET
 
-**Endpoint:** `/api/auth/reset-password/:token`
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
 
-**Version:** Configured application/authentication version
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Public token callback
+**Important Notes:**
 
-**Parameters:** Path: token. Required query: callbackURL, subject to trusted-origin rules.
+- Unwrapped authentication JSON, not data/ts. Session cookies are managed by the auth library.
 
-**Success:** HTTP 302. 302 redirect carrying token, or error=INVALID_TOKEN.
+Response codes of this API endpoint:
 
-**Behavior:** The library callback is available, but application reset emails link directly to the website reset page.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
 
-**Additional failure conditions:** Invalid callback/token produces a redirect error rather than a JSON success.
+**Response (JSON):** The current user and session details are returned, or an empty result when the user is signed out.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 1.11. Read Sensitive-Action Verification Status
+**Figure 16.** Read the Current Sign-In Session — Valid Request and Response
+
+This figure shows the request and returned response for “Read the Current Sign-In Session.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 17.** Read the Current Sign-In Session — Invalid Request and Response
+
+This figure shows a rejected request for “Read the Current Sign-In Session” and the error message returned by the system.
+
+### 1.1.11 Sign Out
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint ends the user's sign-in session.
+
+**Endpoint:** [http://localhost:3001/api/auth/sign-out](http://localhost:3001/api/auth/sign-out)
+
+**Method:** POST
+
+**Configurations:** The user must be signed in. Record-permission checks may also apply.
+
+**Parameters:**
+
+- No additional request-body or query information is required.
+
+**Important Notes:**
+
+- For advisers, signing out also closes their open availability, releases active service, and removes their department assignments.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+
+**Response (JSON):** The sign-out result is returned and the browser's session cookie is cleared.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 18.** Sign Out — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Sign Out.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 19.** Sign Out — Invalid Request and Response
+
+This figure shows a rejected request for “Sign Out” and the error message returned by the system.
+
+### 1.1.12 Request an Emailed Password-Reset Link
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint requests an email link for replacing a forgotten password.
+
+**Endpoint:** [http://localhost:3001/api/auth/request-password-reset](http://localhost:3001/api/auth/request-password-reset)
+
+**Method:** POST
+
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
+
+**Parameters:**
+
+- Request body: email (required valid email), redirectTo (optional, trusted-origin restrictions).
+
+**Important Notes:**
+
+- The reset link lasts one hour. The current forgot-password screen directs students to staff instead of calling this endpoint. A confirmation does not prove delivery, and redirectTo does not change the application's emailed destination.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+
+**Response (JSON):** A general confirmation is returned without revealing whether the email address belongs to an account. This does not prove the email was delivered.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 20.** Request an Emailed Password-Reset Link — Valid Request and Response
+
+This figure shows the request and returned response for “Request an Emailed Password-Reset Link.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 21.** Request an Emailed Password-Reset Link — Invalid Request and Response
+
+This figure shows a rejected request for “Request an Emailed Password-Reset Link” and the error message returned by the system.
+
+### 1.1.13 Consume a Password-Reset Token
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint sets a new password using a valid reset link.
+
+**Endpoint:** [http://localhost:3001/api/auth/reset-password](http://localhost:3001/api/auth/reset-password)
+
+**Method:** POST
+
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
+
+**Parameters:**
+
+- Request body: newPassword (required, 8–128 characters), token (body or address filter
+- one required
+- not empty body value takes precedence).
+
+**Important Notes:**
+
+- The token can be used only once. All existing sessions for the account are ended after this reset. Sign in again before capturing protected endpoints.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+
+**Response (JSON):** A confirmation is returned when the password is changed.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 22.** Consume a Password-Reset Token — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Consume a Password-Reset Token.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 23.** Consume a Password-Reset Token — Invalid Request and Response
+
+This figure shows a rejected request for “Consume a Password-Reset Token” and the error message returned by the system.
+
+### 1.1.14 Library Password-Reset Callback
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint checks a password-reset link before sending the user to the website.
+
+**Endpoint:** [http://localhost:3001/api/auth/reset-password/:token](http://localhost:3001/api/auth/reset-password/:token)
 
 **Method:** GET
 
-**Endpoint:** `/api/auth/admin-gate/status`
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
 
-**Version:** Configured application/authentication version
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: token.
+- Required address filter: callbackURL, subject to trusted-origin rules.
 
-**Access:** Administrator session
+**Important Notes:**
 
-**Parameters:** No business body/query fields.
+- The library callback is available, but application reset emails link directly to the website reset page.
 
-**Success:** HTTP 200. { unlocked, unlockedUntil, next, enrolled }.
+Response codes of this API endpoint:
 
-**Behavior:** next is pin/password/code/totp. Use unlocked to decide whether protected integration operations are available; next alone is not authorization.
+| Code | Message | Description |
+| --- | --- | --- |
+| 302 | Redirect | Continue on the next page. |
 
-**Additional failure conditions:** 401 signed out; 403 not administrator.
+**Response (Redirect):** The browser is sent to the permitted reset page with the token, or with an invalid-token notice.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 1.12. Confirm the Administrator PIN
+**Figure 24.** Library Password-Reset Callback — Valid Request and Response
 
-**Method:** POST
+This figure shows the request and returned response for “Library Password-Reset Callback.”
 
-**Endpoint:** `/api/auth/admin-gate/pin`
+[SCREENSHOT: Invalid request and response.]
 
-**Version:** Configured application/authentication version
+**Figure 25.** Library Password-Reset Callback — Invalid Request and Response
 
-**Capture date:** Not yet supplied.
+This figure shows a rejected request for “Library Password-Reset Callback” and the error message returned by the system.
 
-**Access:** Administrator session
+### 1.1.15 Read Sensitive-Action Verification Status
 
-**Parameters:** Body: pin, exactly six decimal digits.
+**Version:** 1.0
 
-**Success:** HTTP 200. { ok: true }.
+**Date:** November 14, 2026
 
-**Behavior:** Starts/restarts PIN → password → emailed code → authenticator verification. Passwordless accounts automatically satisfy the password step. PIN budgets: eight per user and sixty globally per fifteen minutes.
+**Description:** This endpoint checks the administrator's progress through the security steps.
 
-**Additional failure conditions:** 400 malformed PIN; 403 incorrect; 429 budget exhausted; 503 PIN unconfigured.
-
-**Illustrative request body:**
-
-```json
-{
-  "pin": "<six-digit administrator PIN>"
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 1.13. Confirm the Administrator Password
-
-**Method:** POST
-
-**Endpoint:** `/api/auth/admin-gate/password`
-
-**Version:** Configured application/authentication version
-
-**Capture date:** Not yet supplied.
-
-**Access:** Administrator session
-
-**Parameters:** Body: password, 1–128 characters.
-
-**Success:** HTTP 200. { ok: true }.
-
-**Behavior:** Requires fresh PIN. Skip for passwordless accounts rather than sending an empty password. Eight attempts per fifteen minutes per account.
-
-**Additional failure conditions:** 403 STEP_ORDER; 400 invalid password; 429 limit.
-
-**Illustrative request body:**
-
-```json
-{
-  "password": "<administrator password>"
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 1.14. Send Administrator Confirmation Email
-
-**Method:** POST
-
-**Endpoint:** `/api/auth/admin-gate/code/send`
-
-**Version:** Configured application/authentication version
-
-**Capture date:** Not yet supplied.
-
-**Access:** Administrator session
-
-**Parameters:** No business body fields.
-
-**Success:** HTTP 200. { ok: true }.
-
-**Behavior:** Requires the fresh password step, including automatic passwordless satisfaction. Code freshness is ten minutes; wait sixty seconds before resending. Production delivery failure clears the chain.
-
-**Additional failure conditions:** 403 STEP_ORDER; 429 resend too soon; 503 production delivery failure.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 1.15. Verify the Emailed Administrator Code
-
-**Method:** POST
-
-**Endpoint:** `/api/auth/admin-gate/code/verify`
-
-**Version:** Configured application/authentication version
-
-**Capture date:** Not yet supplied.
-
-**Access:** Administrator session
-
-**Parameters:** Body: code, exactly six decimal digits.
-
-**Success:** HTTP 200. { ok: true }.
-
-**Behavior:** Five attempts per sent code; expired or consumed codes must be replaced. Auth ordering errors expose a STEP_ORDER code but do not preserve every service-level detail.
-
-**Additional failure conditions:** 403 STEP_ORDER; 400 wrong, expired, absent, consumed, or exhausted code.
-
-**Illustrative request body:**
-
-```json
-{
-  "code": "<six-digit emailed code>"
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 1.16. Prepare Authenticator Enrollment
-
-**Method:** POST
-
-**Endpoint:** `/api/auth/two-factor/enable`
-
-**Version:** Configured application/authentication version
-
-**Capture date:** Not yet supplied.
-
-**Access:** Administrator session after email-code verification
-
-**Parameters:** Body: password (schema-optional, required when the account has password credentials); issuer (optional, default ERPSYS).
-
-**Success:** HTTP 200. { totpURI, backupCodes }.
-
-**Behavior:** Returns setup material and normally ten backup codes. Keep both private. Does not unlock integrations until final verification. Already-enrolled users must use authorized reset rather than re-enable.
-
-**Additional failure conditions:** 403 STEP_ORDER/already enrolled; 400 invalid required password.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 1.17. Verify the Authenticator Code
-
-**Method:** POST
-
-**Endpoint:** `/api/auth/two-factor/verify-totp`
-
-**Version:** Configured application/authentication version
-
-**Capture date:** Not yet supplied.
-
-**Access:** Administrator session after email-code verification
-
-**Parameters:** Body: code (required string, six-digit 30-second authenticator code); trustDevice (optional, true rejected).
-
-**Success:** HTTP 200. { token, user }; may rotate the session cookie.
-
-**Behavior:** First successful verification completes enrollment. Success unlocks protected integration actions for five minutes. This is step-up authorization, not a mandatory MFA sign-in redirect.
-
-**Additional failure conditions:** 403 STEP_ORDER; 400 setup absent/trusted device requested; 401 invalid code; 429 after five shared authenticator/backup attempts, requiring restart from PIN.
-
-**Illustrative request body:**
-
-```json
-{
-  "code": "<current authenticator code>"
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 1.18. Use a One-Time Authenticator Backup Code
-
-**Method:** POST
-
-**Endpoint:** `/api/auth/two-factor/verify-backup-code`
-
-**Version:** Configured application/authentication version
-
-**Capture date:** Not yet supplied.
-
-**Access:** Administrator session after email-code verification
-
-**Parameters:** Body: code (required); disableSession (optional boolean), trustDevice (optional; true rejected).
-
-**Success:** HTTP 200. { token, user }.
-
-**Behavior:** Consumes one backup code and grants the five-minute unlock. It is not equivalent to completing pending authenticator enrollment. Other two-factor operations are forbidden by the application allowlist.
-
-**Additional failure conditions:** 400 backup setup absent; 401 invalid code; 403 STEP_ORDER; 409 concurrent use; 429 shared five-attempt chain budget.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-
-# 2. Application Resource API
-
-Each endpoint below is mounted by the current application. Shared envelope, error, and concurrency rules apply unless a specific exception is stated.
-
-## 2.1. Student Profiles and Records
-
-### 2.1.1. Read My Profile-Completion Status
+**Endpoint:** [http://localhost:3001/api/auth/admin-gate/status](http://localhost:3001/api/auth/admin-gate/status)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/me/student/profile`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** None.
+- next is pin/password/code/totp. Use unlocked to decide whether protected integration operations are available; next alone is not authorization.
 
-**Success:** HTTP 200. data: { hasProfile, studentNumber }.
+Response codes of this API endpoint:
 
-**Behavior:** Does not require an active year.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 401 | Sign-In Required | Sign in or check your sign-in details. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The result shows whether sensitive actions are unlocked, when the unlock ends, the next security step, and whether an authenticator is set up.
 
-### 2.1.2. Search Students or Read the Roster
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Method:** GET
+**Figure 26.** Read Sensitive-Action Verification Status — Valid Request and Response
 
-**Endpoint:** `/api/v1/students`
+This figure demonstrates the request and returned response for “Read Sensitive-Action Verification Status.”
 
-**Version:** Application API v1
+[SCREENSHOT: Invalid request and response.]
 
-**Capture date:** Not yet supplied.
+**Figure 27.** Read Sensitive-Action Verification Status — Invalid Request and Response
 
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
+This figure shows a rejected request for “Read Sensitive-Action Verification Status” and the error message returned by the system.
 
-**Parameters:** Optional query: q (max 100), page (default 1), pageSize and limit (1–100, each default 50), cursor, sort, dir (asc/desc, default desc), role, outside, academicYearId, departmentId, yearLevel. Optional query: academicYearId; scope (mine/all, default mine); sort (name/studentNumber/stepsVerified/yearLevel/enrolledAt); dir (asc/desc); q (up to 100 characters); departmentIds, yearLevels, buckets, steps (repeat array query keys for multiple selections); stepState; enrolled (true/false); unassigned (true). Buckets: NOT_STARTED, IN_PROGRESS, READY_FOR_QUEUE, ENROLLED. Step states: MISSING, PENDING, SUBMITTED, VERIFIED, RETURNED. Scope all is a roster filter, not an access-control bypass.
+### 1.1.16 Confirm the Administrator PIN
 
-**Success:** HTTP 200. data: role-dependent directory, roster, or student-picker rows, with page/pageSize/total.
+**Version:** 1.0
 
-**Behavior:** Staff only. Administrators normally receive the user directory; explicitly requesting scope, cursor, plural roster filters, enrolled, or unassigned selects roster mode. Advisers receive a cursor-based roster; page does not offset it. Officers receive a name/number picker, and blank q returns an empty list. Repeated query keys represent arrays; comma-separated strings are not split. Directory paging uses pageSize while metadata reports limit, so keep them equal. Roster scope all is an implemented filter, not a guarantee of department-only listing.
+**Date:** November 14, 2026
 
-**Additional failure conditions:** 403 for a student account.
+**Description:** This endpoint checks the administrator's six-digit security PIN.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.1.3. Read Roster Rows and Summary Together
-
-**Method:** GET
-
-**Endpoint:** `/api/v1/students/board`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
-
-**Parameters:** Optional query: academicYearId; scope (mine/all, default mine); sort (name/studentNumber/stepsVerified/yearLevel/enrolledAt); dir (asc/desc); q (up to 100 characters); departmentIds, yearLevels, buckets, steps (repeat array query keys for multiple selections); stepState; enrolled (true/false); unassigned (true). Buckets: NOT_STARTED, IN_PROGRESS, READY_FOR_QUEUE, ENROLLED. Step states: MISSING, PENDING, SUBMITTED, VERIFIED, RETURNED. Scope all is a roster filter, not an access-control bypass. Optional cursor; limit 1–100, default 50.
-
-**Success:** HTTP 200. data: { roster: { data, page: 1, pageSize, total }, stats: { year, stats } }.
-
-**Behavior:** Adviser working area. The summary deliberately ignores bucket filters. Use only the documented step states; invalid states are not normalized consistently across rows and summaries.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.1.4. Send In-App Requirement Reminders
+**Endpoint:** [http://localhost:3001/api/auth/admin-gate/pin](http://localhost:3001/api/auth/admin-gate/pin)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/students/reminders`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: pin, exactly six decimal digits.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Body: studentProfileIds (required array, 1–200 nonempty identifiers); academicYearId (optional).
+- Security checks run in order: PIN, password when the account has one, email code, then authenticator or backup code. Each completed step must still be fresh. PIN attempts are limited to eight per account and sixty overall per fifteen minutes.
 
-**Success:** HTTP 200. data: { sent, skipped }.
+Response codes of this API endpoint:
 
-**Behavior:** Deduplicates IDs. Skips missing users/profiles, completed students, and students placed in a department not assigned to the caller. An unplaced profile may still receive a reminder. This sends in-app notices, not email or SMS.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Additional failure conditions:** 412 if the year cannot be resolved.
+**Response (JSON):** A confirmation is returned when the PIN is accepted.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "studentProfileIds": [
-    "profile-example"
-  ]
-}
-```
+**Figure 28.** Confirm the Administrator PIN — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure shows the request and returned response for “Confirm the Administrator PIN.”
 
-### 2.1.5. Read My Enrollment Progress
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 29.** Confirm the Administrator PIN — Invalid Request and Response
+
+This figure shows a rejected request for “Confirm the Administrator PIN” and the error message returned by the system.
+
+### 1.1.17 Confirm the Administrator Password
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint checks the administrator's password during security verification.
+
+**Endpoint:** [http://localhost:3001/api/auth/admin-gate/password](http://localhost:3001/api/auth/admin-gate/password)
+
+**Method:** POST
+
+**Configurations:** An administrator must be signed in.
+
+**Parameters:**
+
+- Request body: password, 1–128 characters.
+
+**Important Notes:**
+
+- Complete the PIN step first. Accounts without a password skip this step. Password attempts are limited to eight per fifteen minutes per account.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** A confirmation is returned when the password is accepted.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 30.** Confirm the Administrator Password — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Confirm the Administrator Password.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 31.** Confirm the Administrator Password — Invalid Request and Response
+
+This figure shows a rejected request for “Confirm the Administrator Password” and the error message returned by the system.
+
+### 1.1.18 Send Administrator Confirmation Email
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint sends a security code to the administrator's email address.
+
+**Endpoint:** [http://localhost:3001/api/auth/admin-gate/code/send](http://localhost:3001/api/auth/admin-gate/code/send)
+
+**Method:** POST
+
+**Configurations:** An administrator must be signed in.
+
+**Parameters:**
+
+- No additional request-body or query information is required.
+
+**Important Notes:**
+
+- Complete the preceding security steps first. The code lasts ten minutes. Wait sixty seconds before requesting another. A production email failure clears the verification steps.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 429 | Too Many Attempts | Wait before trying again. |
+
+**Response (JSON):** A confirmation is returned when the email-code request succeeds.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 32.** Send Administrator Confirmation Email — Valid Request and Response
+
+This figure shows the request and returned response for “Send Administrator Confirmation Email.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 33.** Send Administrator Confirmation Email — Invalid Request and Response
+
+This figure shows a rejected request for “Send Administrator Confirmation Email” and the error message returned by the system.
+
+### 1.1.19 Verify the Emailed Administrator Code
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint checks the six-digit code sent to the administrator.
+
+**Endpoint:** [http://localhost:3001/api/auth/admin-gate/code/verify](http://localhost:3001/api/auth/admin-gate/code/verify)
+
+**Method:** POST
+
+**Configurations:** An administrator must be signed in.
+
+**Parameters:**
+
+- Request body: code, exactly six decimal digits.
+
+**Important Notes:**
+
+- Complete the preceding security steps first. Each sent code allows up to five attempts. Request another code if it is expired or used.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** A confirmation is returned when the code is accepted.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 34.** Verify the Emailed Administrator Code — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Verify the Emailed Administrator Code.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 35.** Verify the Emailed Administrator Code — Invalid Request and Response
+
+This figure shows a rejected request for “Verify the Emailed Administrator Code” and the error message returned by the system.
+
+### 1.1.20 Prepare Authenticator Enrollment
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint prepares an authenticator app for an administrator.
+
+**Endpoint:** [http://localhost:3001/api/auth/two-factor/enable](http://localhost:3001/api/auth/two-factor/enable)
+
+**Method:** POST
+
+**Configurations:** An administrator must be signed in.
+
+**Parameters:**
+
+- password — Include the administrator's password when the account has one.
+- issuer — Optional app label. The default is ERPSYS.
+
+**Important Notes:**
+
+- Complete the email-code step first. Keep the setup address and backup codes private. Setup alone does not unlock protected settings. An already-enrolled account must use the authorized reset process instead.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** Private setup information and backup codes are returned. Do not include these values in screenshots.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 36.** Prepare Authenticator Enrollment — Valid Request and Response
+
+This figure shows the request and returned response for “Prepare Authenticator Enrollment.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 37.** Prepare Authenticator Enrollment — Invalid Request and Response
+
+This figure shows a rejected request for “Prepare Authenticator Enrollment” and the error message returned by the system.
+
+### 1.1.21 Verify the Authenticator Code
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint checks the current code from the administrator's authenticator app.
+
+**Endpoint:** [http://localhost:3001/api/auth/two-factor/verify-totp](http://localhost:3001/api/auth/two-factor/verify-totp)
+
+**Method:** POST
+
+**Configurations:** An administrator must be signed in.
+
+**Parameters:**
+
+- Request body: code (required string, six-digit 30-second authenticator code)
+- trustDevice (optional, true rejected).
+
+**Important Notes:**
+
+- Complete the email-code step first. The first successful check finishes authenticator setup. A trusted-device request is not accepted. Five failed authenticator or backup-code attempts require starting again from the PIN.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 401 | Sign-In Required | Sign in or check your sign-in details. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** The verified account and session details are returned. Protected integration actions are unlocked for five minutes.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 38.** Verify the Authenticator Code — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Verify the Authenticator Code.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 39.** Verify the Authenticator Code — Invalid Request and Response
+
+This figure shows a rejected request for “Verify the Authenticator Code” and the error message returned by the system.
+
+### 1.1.22 Use a One-Time Authenticator Backup Code
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint checks an unused backup code when the authenticator is unavailable.
+
+**Endpoint:** [http://localhost:3001/api/auth/two-factor/verify-backup-code](http://localhost:3001/api/auth/two-factor/verify-backup-code)
+
+**Method:** POST
+
+**Configurations:** An administrator must be signed in.
+
+**Parameters:**
+
+- Request body: code (required)
+- disableSession (optional true or false), trustDevice (optional
+- true rejected).
+
+**Important Notes:**
+
+- Complete the email-code step first. Each backup code works once. It cannot finish an incomplete authenticator setup. Authenticator and backup-code checks share a five-attempt limit.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 401 | Sign-In Required | Sign in or check your sign-in details. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** The verified account and session details are returned. The code is used up and protected actions are unlocked for five minutes.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 40.** Use a One-Time Authenticator Backup Code — Valid Request and Response
+
+This figure shows the request and returned response for “Use a One-Time Authenticator Backup Code.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 41.** Use a One-Time Authenticator Backup Code — Invalid Request and Response
+
+This figure shows a rejected request for “Use a One-Time Authenticator Backup Code” and the error message returned by the system.
+
+## 1.2 STUDENT RECORDS MODULE API
+
+### 1.2.1 Module Description
+
+This module helps students view their enrollment progress. Authorized staff can search student records, review requirements, and send reminders.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/me/student/profile](http://localhost:3001/api/v1/me/student/profile)
+- GET [http://localhost:3001/api/v1/students](http://localhost:3001/api/v1/students)
+- GET [http://localhost:3001/api/v1/students/board](http://localhost:3001/api/v1/students/board)
+- POST [http://localhost:3001/api/v1/students/reminders](http://localhost:3001/api/v1/students/reminders)
+- GET [http://localhost:3001/api/v1/me/student](http://localhost:3001/api/v1/me/student)
+- PATCH [http://localhost:3001/api/v1/me/student](http://localhost:3001/api/v1/me/student)
+- GET [http://localhost:3001/api/v1/students/:id/record](http://localhost:3001/api/v1/students/:id/record)
+- PUT [http://localhost:3001/api/v1/students/:id/mugshot](http://localhost:3001/api/v1/students/:id/mugshot)
+- GET [http://localhost:3001/api/v1/students/:id](http://localhost:3001/api/v1/students/:id)
+- GET [http://localhost:3001/api/v1/me/record](http://localhost:3001/api/v1/me/record)
+- POST [http://localhost:3001/api/v1/me/assessment](http://localhost:3001/api/v1/me/assessment)
+
+### 1.2.2 Read My Profile-Completion Status
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint checks whether the student has completed a profile.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/student/profile](http://localhost:3001/api/v1/me/student/profile)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/me/student`
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** None.
+- Does not require an active year.
 
-**Success:** HTTP 200. data: { profile: { studentNumber, derivedStudentNumber, isOutsideOrg, enrollment, enrollments }, hasActiveYear, academicYearId, academicYearLabel, semesterLabel, steps, readyForQueue, allComplete, verifiedCount, progressPercent, queueStatus }.
+Response codes of this API endpoint:
 
-**Behavior:** Each step includes code/name/order/status, hint/chip, appliedAt, evidence, requirements, profilingFormUrl, socialMediaLinks, reply, and stamp. Missing profile/year is represented in the payload rather than automatically returning 412. No active year means null year fields and zero/false progress.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The result states whether a profile exists and gives the saved student number when available.
 
-### 2.1.6. Claim My Student Number
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 42.** Read My Profile-Completion Status — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Read My Profile-Completion Status.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 43.** Read My Profile-Completion Status — Invalid Request and Response
+
+This figure shows a rejected request for “Read My Profile-Completion Status” and the error message returned by the system.
+
+### 1.2.3 Search Students or Read the Roster
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint finds students for the user's permitted working area.
+
+**Endpoint:** [http://localhost:3001/api/v1/students](http://localhost:3001/api/v1/students)
+
+**Method:** GET
+
+**Configurations:** The user must be signed in. Record-permission checks may also apply.
+
+**Parameters:**
+
+- Optional address filter: q (up to 100), page (default 1), pageSize and limit (1–100, each default 50), cursor, sort, dir (asc/desc, default desc), role, outside, academicYearId, departmentId, yearLevel.
+- Optional address filter: academicYearId
+- scope (mine/all, default mine)
+- sort (name/studentNumber/stepsVerified/yearLevel/enrolledAt)
+- dir (asc/desc)
+- q (up to 100 characters)
+- departmentIds, yearLevels, buckets, steps (repeat array address filter keys for multiple selections)
+- stepState
+- enrolled (true/false)
+- unassigned (true). Buckets: NOT_STARTED, IN_PROGRESS, READY_FOR_QUEUE, ENROLLED. Step states: MISSING, PENDING, SUBMITTED, VERIFIED, RETURNED. Scope all is a roster filter, not an access-control bypass.
+
+**Important Notes:**
+
+- Administrators normally receive the account directory. Advisers receive a roster and use cursor to continue the list; page does not move that roster. Officers receive student-search choices, and an empty q gives no choices. Keep pageSize and limit equal. Repeat a filter name to choose several values; do not join the values with commas. Choosing scope all is a list filter, not a new permission.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** A page of account, roster, or student-search results is returned, depending on the caller and selected filters.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 44.** Search Students or Read the Roster — Valid Request and Response
+
+This figure shows the request and returned response for “Search Students or Read the Roster.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 45.** Search Students or Read the Roster — Invalid Request and Response
+
+This figure shows a rejected request for “Search Students or Read the Roster” and the error message returned by the system.
+
+### 1.2.4 Read Roster Rows and Summary Together
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint loads a student roster and its summary in one request.
+
+**Endpoint:** [http://localhost:3001/api/v1/students/board](http://localhost:3001/api/v1/students/board)
+
+**Method:** GET
+
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
+
+**Parameters:**
+
+- Optional address filter: academicYearId
+- scope (mine/all, default mine)
+- sort (name/studentNumber/stepsVerified/yearLevel/enrolledAt)
+- dir (asc/desc)
+- q (up to 100 characters)
+- departmentIds, yearLevels, buckets, steps (repeat array address filter keys for multiple selections)
+- stepState
+- enrolled (true/false)
+- unassigned (true). Buckets: NOT_STARTED, IN_PROGRESS, READY_FOR_QUEUE, ENROLLED. Step states: MISSING, PENDING, SUBMITTED, VERIFIED, RETURNED. Scope all is a roster filter, not an access-control bypass.
+- Optional cursor
+- limit 1–100, default 50.
+
+**Important Notes:**
+
+- The summary does not use progress-group filters. Its totals can therefore differ from a filtered student list.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** The student rows, paging information, selected year, and summary totals are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 46.** Read Roster Rows and Summary Together — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Read Roster Rows and Summary Together.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 47.** Read Roster Rows and Summary Together — Invalid Request and Response
+
+This figure shows a rejected request for “Read Roster Rows and Summary Together” and the error message returned by the system.
+
+### 1.2.5 Send In-App Requirement Reminders
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint sends requirement reminders to selected students.
+
+**Endpoint:** [http://localhost:3001/api/v1/students/reminders](http://localhost:3001/api/v1/students/reminders)
+
+**Method:** POST
+
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
+
+**Parameters:**
+
+- Request body: studentProfileIds (required array, 1–200 not empty identifiers)
+- academicYearId (optional).
+
+**Important Notes:**
+
+- Deduplicates IDs. Skips missing users/profiles, completed students, and students placed in a department not assigned to the person making the request. An unplaced profile may still receive a reminder. This sends in-app notices, not email or SMS.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+
+**Response (JSON):** The counts of sent and skipped reminders are returned. These are website notifications, not email or text messages.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 48.** Send In-App Requirement Reminders — Valid Request and Response
+
+This figure shows the request and returned response for “Send In-App Requirement Reminders.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 49.** Send In-App Requirement Reminders — Invalid Request and Response
+
+This figure shows a rejected request for “Send In-App Requirement Reminders” and the error message returned by the system.
+
+### 1.2.6 Read My Enrollment Progress
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint shows the student's placement and requirement progress.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/student](http://localhost:3001/api/v1/me/student)
+
+**Method:** GET
+
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
+
+**Parameters:**
+
+- No additional request-body or query information is required.
+
+**Important Notes:**
+
+- A missing profile or active year is shown in the result rather than always treated as an error. Without an active year, the year is empty and progress totals are zero.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** The profile, enrollment periods, requirement states, queue eligibility, progress totals, and queue status are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 50.** Read My Enrollment Progress — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Read My Enrollment Progress.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 51.** Read My Enrollment Progress — Invalid Request and Response
+
+This figure shows a rejected request for “Read My Enrollment Progress” and the error message returned by the system.
+
+### 1.2.7 Claim My Student Number
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint saves a missing student number for the signed-in student.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/student](http://localhost:3001/api/v1/me/student)
 
 **Method:** PATCH
 
-**Endpoint:** `/api/v1/me/student`
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: studentNumber (required with extra outside spaces removed, not empty digits-only string).
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** Body: studentNumber (required trimmed, nonempty digits-only string).
+- Claims a missing profile; it does not replace an already-saved number. Existing profile numbers are returned unchanged. No fixed nine-digit limit is enforced.
 
-**Success:** HTTP 200. data: { studentNumber }.
+Response codes of this API endpoint:
 
-**Behavior:** Claims a missing profile; it does not replace an already-saved number. Existing profile numbers are returned unchanged. No fixed nine-digit limit is enforced.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
 
-**Additional failure conditions:** 412 without active year; 409 for a number already owned.
+**Response (JSON):** The saved student number is returned. An existing number is kept unchanged.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "studentNumber": "202600001"
-}
-```
+**Figure 52.** Claim My Student Number — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure shows the request and returned response for “Claim My Student Number.”
 
-### 2.1.7. Read a Student's Record-Sheet Data
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 53.** Claim My Student Number — Invalid Request and Response
+
+This figure shows a rejected request for “Claim My Student Number” and the error message returned by the system.
+
+### 1.2.8 Read a Student's Record-Sheet Data
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint provides information for a student's record sheet.
+
+**Endpoint:** [http://localhost:3001/api/v1/students/:id/record](http://localhost:3001/api/v1/students/:id/record)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/students/:id/record`
+**Configurations:** The user must be signed in. Record-permission checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id is a student-profile identifier.
+- Optional address filter: academicYearId, scope (mine/all, default mine).
 
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
+**Important Notes:**
 
-**Parameters:** Path: id is a student-profile identifier. Optional query: academicYearId, scope (mine/all, default mine).
+- Staff can read an incomplete record. Adviser scope checks work as in the student-detail endpoint. The website uses the returned information to prepare a PDF.
 
-**Success:** HTTP 200. data: { student: { name, email, studentNumber, isOutsideOrg, createdAt }, year, enrollment, enrolledAt, steps, queue }.
+Response codes of this API endpoint:
 
-**Behavior:** Staff only, with the same adviser scope behavior as detail. Can return an incomplete record; unlike the student's own download, completion is not required. JSON supports website PDF generation.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 404 | Not Found | The requested record cannot be found. |
 
-**Additional failure conditions:** 403 scope/access failure; 404 missing profile; 412 unresolved year.
+**Response (JSON):** The student's details, school year, placement, requirement progress, enrollment completion time, and queue information are returned.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.1.8. Capture and Verify a Mugshot
+**Figure 54.** Read a Student's Record-Sheet Data — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Read a Student's Record-Sheet Data.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 55.** Read a Student's Record-Sheet Data — Invalid Request and Response
+
+This figure shows a rejected request for “Read a Student's Record-Sheet Data” and the error message returned by the system.
+
+### 1.2.9 Capture and Verify a Mugshot
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint saves a student's photo and approves the mugshot requirement.
+
+**Endpoint:** [http://localhost:3001/api/v1/students/:id/mugshot](http://localhost:3001/api/v1/students/:id/mugshot)
 
 **Method:** PUT
 
-**Endpoint:** `/api/v1/students/:id/mugshot`
+**Configurations:** An SBO officer or administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id is a step-verification identifier, despite the students path.
+- Request body: fileKey (required string, 1–500 characters), fileUrl (required string, 1–2,000,000 characters).
 
-**Access:** SBO officer or administrator.
+**Important Notes:**
 
-**Parameters:** Path: id is a step-verification identifier, despite the students path. Body: fileKey (required string, 1–500 characters), fileUrl (required string, 1–2,000,000 characters).
+- Use an existing, unverified MUGSHOT requirement-review identifier for the active year, not the student-profile identifier. Save the photo reference first. Revoke an existing approval before recapturing.
 
-**Success:** HTTP 200. data: { verificationId, status: VERIFIED, uploadId }.
+Response codes of this API endpoint:
 
-**Behavior:** Officer working area. The fileUrl field is not URL-validated here. Creates an upload, attaches it, and immediately verifies the mugshot step; do not send a student-profile ID as id.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
 
-**Additional failure conditions:** 404 missing verification; 412 no active year; 409 wrong step, archived year, or already verified.
+**Response (JSON):** The requirement-review identifier, verified status, and upload identifier are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "fileKey": "capture-example",
-  "fileUrl": "https://example.org/demo-photo.jpg"
-}
-```
+**Figure 56.** Capture and Verify a Mugshot — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure shows the request and returned response for “Capture and Verify a Mugshot.”
 
-### 2.1.9. Read a Student's Enrollment Detail
+[SCREENSHOT: Invalid request and response.]
 
-**Method:** GET
+**Figure 57.** Capture and Verify a Mugshot — Invalid Request and Response
 
-**Endpoint:** `/api/v1/students/:id`
+This figure shows a rejected request for “Capture and Verify a Mugshot” and the error message returned by the system.
 
-**Version:** Application API v1
+### 1.2.10 Read a Student's Enrollment Detail
 
-**Capture date:** Not yet supplied.
+**Version:** 1.0
 
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
+**Date:** November 14, 2026
 
-**Parameters:** Path: id is a student-profile identifier. Optional query: academicYearId, scope (mine/all, default mine).
+**Description:** This endpoint shows a selected student's enrollment and requirements.
 
-**Success:** HTTP 200. data: { student, year, enrollment, steps, queue, pendingRequirements }.
-
-**Behavior:** Staff only. For advisers, mine checks assigned department when placement exists; all bypasses that particular scope check in the current implementation. Other staff use all. Do not describe this as unconditional department-only access.
-
-**Additional failure conditions:** 403 for a student or out-of-scope adviser; 404 missing profile; 412 unresolved year.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.1.10. Read My Completed Enrollment Record
+**Endpoint:** [http://localhost:3001/api/v1/students/:id](http://localhost:3001/api/v1/students/:id)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/me/record`
+**Configurations:** The user must be signed in. Record-permission checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id is a student-profile identifier.
+- Optional address filter: academicYearId, scope (mine/all, default mine).
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** None.
+- Staff access is required. For advisers, scope mine checks the department when placement exists. The implemented scope all option skips that particular department check; do not describe access as always limited to one department.
 
-**Success:** HTTP 200. data: { student: { name, email, studentNumber, isOutsideOrg, createdAt }, year, enrollment, enrolledAt, steps, queue }, or null.
+Response codes of this API endpoint:
 
-**Behavior:** Returns null unless the active year's enrollment step is verified. No profile/year also produces null. JSON is formatted as a PDF by the website.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 404 | Not Found | The requested record cannot be found. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The student's details, selected year, placement, requirements, queue information, and pending items are returned.
 
-### 2.1.11. Request Assessment Review
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Method:** POST
+**Figure 58.** Read a Student's Enrollment Detail — Valid Request and Response
 
-**Endpoint:** `/api/v1/me/assessment`
+This figure demonstrates the request and returned response for “Read a Student's Enrollment Detail.”
 
-**Version:** Application API v1
+[SCREENSHOT: Invalid request and response.]
 
-**Capture date:** Not yet supplied.
+**Figure 59.** Read a Student's Enrollment Detail — Invalid Request and Response
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+This figure shows a rejected request for “Read a Student's Enrollment Detail” and the error message returned by the system.
 
-**Parameters:** None.
+### 1.2.11 Read My Completed Enrollment Record
 
-**Success:** HTTP 200. data: { status: APPLIED }, or { status: VERIFIED } if already verified.
+**Version:** 1.0
 
-**Behavior:** No evidence-upload body is required. Internally this creates or reopens pending assessment review; do not infer the saved status from the APPLIED response alone.
+**Date:** November 14, 2026
 
-**Additional failure conditions:** 412 no active year/profile; 404 assessment step not configured.
+**Description:** This endpoint provides the student's completed enrollment record.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-
-## 2.2. Enrollment Placement and Completion
-
-### 2.2.1. List My Enrollment Periods
+**Endpoint:** [http://localhost:3001/api/v1/me/record](http://localhost:3001/api/v1/me/record)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/me/enrollments`
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** None.
+- Capture after enrollment is verified for the active year. Before then, a successful request returns null rather than a completed record.
 
-**Success:** HTTP 200. data: [{ academicYearId, academicYearLabel, semesterLabel, departmentId, departmentName, departmentCode, yearLevel, isActiveYear }], page: 1, pageSize: row count, total: row count.
+Response codes of this API endpoint:
 
-**Behavior:** No consumed paging query. Sorted by enrollment-period creation time. No profile returns an empty list.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The completed record details are returned, or an empty result when enrollment is not yet verified. The website prepares the PDF.
 
-### 2.2.2. Save My Enrollment Placement
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Method:** POST
+**Figure 60.** Read My Completed Enrollment Record — Valid Request and Response
 
-**Endpoint:** `/api/v1/me/enrollments`
+This figure shows the request and returned response for “Read My Completed Enrollment Record.”
 
-**Version:** Application API v1
+[SCREENSHOT: Invalid request and response.]
 
-**Capture date:** Not yet supplied.
+**Figure 61.** Read My Completed Enrollment Record — Invalid Request and Response
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+This figure shows a rejected request for “Read My Completed Enrollment Record” and the error message returned by the system.
 
-**Parameters:** Body: academicYearId, departmentId, yearLevel (all required). Optional studentNumber (trimmed digits-only string). Year levels use FIRST, SECOND, THIRD, FOURTH, FIFTH. An empty year-level list means unrestricted responsibility within the department's offered levels.
+### 1.2.12 Request Assessment Review
 
-**Success:** HTTP 200. data: { enrollment, studentNumber }.
+**Version:** 1.0
 
-**Behavior:** Accepts an existing year, not only the active year. Existing number is retained. Changed placement is refused if a queue entry exists, including completed entries. Unchanged placement is accepted without the change checks.
+**Date:** November 14, 2026
 
-**Additional failure conditions:** 400 invalid year/department/level or missing number; 409 number collision or changed placement with queue activity.
+**Description:** This endpoint asks an SBO officer to review the student's assessment requirement.
 
-**Illustrative request body:**
-
-```json
-{
-  "academicYearId": "year-example",
-  "departmentId": "department-example",
-  "yearLevel": "FIRST",
-  "studentNumber": "202600001"
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.2.3. Revert Multiple Completed Enrollments
-
-**Method:** DELETE
-
-**Endpoint:** `/api/v1/enrollments/completions`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
-
-**Parameters:** Body: departmentId and reason (10–500 characters), required. Supply enrollmentIds and/or ids arrays; combine to 1–50 distinct queue-entry identifiers.
-
-**Success:** HTTP 200. data: { revertedCount, revertedIds, returnedEntryIds }.
-
-**Behavior:** Validates entries before sequential reversions. It is not a multi-record all-or-nothing database transaction.
-
-**Additional failure conditions:** 400 empty/over-limit selection; same permission/state errors as individual reversion.
-
-**Illustrative request body:**
-
-```json
-{
-  "departmentId": "department-example",
-  "enrollmentIds": [
-    "queue-example"
-  ],
-  "reason": "Enrollment marked complete in error."
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.2.4. Complete Enrollment from a Queue Entry
+**Endpoint:** [http://localhost:3001/api/v1/me/assessment](http://localhost:3001/api/v1/me/assessment)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/enrollments/:id/completion`
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Path: id is a queue-entry identifier, not a student-profile or placement identifier. Body: departmentId (required).
+- No evidence-upload body is required. Internally this creates or reopens pending assessment review; do not infer the saved status from the APPLIED response alone.
 
-**Success:** HTTP 200. data: { entryId, studentName, outcome: enrolled|already }.
+Response codes of this API endpoint:
 
-**Behavior:** Checks current-year department/year-level responsibility and the current serving adviser. Completed entries can return outcome already after permission checks.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
 
-**Additional failure conditions:** 403 assignment/current-server failure; 404 missing/wrong department entry; 409 wrong year/status, missing verified prerequisites, or concurrent transition; 412 no active year.
+**Response (JSON):** The result indicates that review was requested, or that the requirement was already verified.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "departmentId": "department-example"
-}
-```
+**Figure 62.** Request Assessment Review — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Request Assessment Review.”
 
-### 2.2.5. Revert One Completed Enrollment
+[SCREENSHOT: Invalid request and response.]
 
-**Method:** DELETE
+**Figure 63.** Request Assessment Review — Invalid Request and Response
 
-**Endpoint:** `/api/v1/enrollments/:id/completion`
+This figure shows a rejected request for “Request Assessment Review” and the error message returned by the system.
 
-**Version:** Application API v1
+## 1.3 ENROLLMENT MODULE API
 
-**Capture date:** Not yet supplied.
+### 1.3.1 Module Description
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+This module saves a student's course and year level. It also lets assigned advisers finish enrollment or correct an enrollment marked complete by mistake.
 
-**Parameters:** Path: id is a queue-entry identifier. Body: departmentId and reason (10–500 characters), both required.
+This module has the following endpoints:
 
-**Success:** HTTP 200. data: { enrollmentId, reverted: true, returnedEntryId }.
+- GET [http://localhost:3001/api/v1/me/enrollments](http://localhost:3001/api/v1/me/enrollments)
+- POST [http://localhost:3001/api/v1/me/enrollments](http://localhost:3001/api/v1/me/enrollments)
+- DELETE [http://localhost:3001/api/v1/enrollments/completions](http://localhost:3001/api/v1/enrollments/completions)
+- POST [http://localhost:3001/api/v1/enrollments/:id/completion](http://localhost:3001/api/v1/enrollments/:id/completion)
+- DELETE [http://localhost:3001/api/v1/enrollments/:id/completion](http://localhost:3001/api/v1/enrollments/:id/completion)
 
-**Behavior:** Returns the same entry to the front of the waiting line and withdraws enrollment verification.
+### 1.3.2 List My Enrollment Periods
 
-**Additional failure conditions:** 403 assignment failure; 404 missing entry; 409 wrong year/not completed/racing update; 412 no active year.
+**Version:** 1.0
 
-**Illustrative request body:**
+**Date:** November 14, 2026
 
-```json
-{
-  "departmentId": "department-example",
-  "reason": "Enrollment marked complete in error."
-}
-```
+**Description:** This endpoint shows the student's saved enrollment periods.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Endpoint:** [http://localhost:3001/api/v1/me/enrollments](http://localhost:3001/api/v1/me/enrollments)
 
+**Method:** GET
 
-## 2.3. Evidence and Requirement Submission
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
 
-### 2.3.1. Attach File Metadata to a Requirement
+**Parameters:**
+
+- No additional request-body or query information is required.
+
+**Important Notes:**
+
+- No consumed paging address filter. Sorted by enrollment-period creation time. No profile returns an empty list.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** The school years, semesters, departments, year levels, and active-period status are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 64.** List My Enrollment Periods — Valid Request and Response
+
+This figure shows the request and returned response for “List My Enrollment Periods.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 65.** List My Enrollment Periods — Invalid Request and Response
+
+This figure shows a rejected request for “List My Enrollment Periods” and the error message returned by the system.
+
+### 1.3.3 Save My Enrollment Placement
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint saves the student's selected school year, department, and year level.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/enrollments](http://localhost:3001/api/v1/me/enrollments)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/evidence`
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: academicYearId, departmentId, yearLevel (all required).
+- Optional studentNumber (with extra outside spaces removed digits-only string). Year levels use FIRST, SECOND, THIRD, FOURTH, FIFTH. An empty year-level list means unrestricted responsibility within the department's offered levels.
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** Body: stepCode (SOCIAL_MEDIA/PROFILING/MUGSHOT/CONSENT), fileKey (1–500 characters), fileUrl (valid URL, at most 1,000 characters), all required.
+- Accepts an existing year, not only the active year. Existing number is remaining. Changed course and year-level selection is refused if a queue entry exists, including completed entries. Unchanged course and year-level selection is accepted without the change checks.
 
-**Success:** HTTP 201. data: { evidence: [{ id, fileKey, fileUrl, kind, expiresAt, expired }] }.
+Response codes of this API endpoint:
 
-**Behavior:** Records the supplied key/URL; this call does not verify stored bytes exist. Without a verification, returns the new draft; with one, returns attached evidence. Adding to a returned verification changes it to submitted.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 404 step not configured; 409 if verified, including a concurrent verification.
+**Response (JSON):** The placement details and saved student number are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "stepCode": "SOCIAL_MEDIA",
-  "fileKey": "demo-file",
-  "fileUrl": "https://example.org/demo-evidence.png"
-}
-```
+**Figure 66.** Save My Enrollment Placement — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Save My Enrollment Placement.”
 
-### 2.3.2. Delete My Upload Metadata
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 67.** Save My Enrollment Placement — Invalid Request and Response
+
+This figure shows a rejected request for “Save My Enrollment Placement” and the error message returned by the system.
+
+### 1.3.4 Revert Multiple Completed Enrollments
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint corrects several enrollments marked complete by mistake.
+
+**Endpoint:** [http://localhost:3001/api/v1/enrollments/completions](http://localhost:3001/api/v1/enrollments/completions)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/evidence/:id`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: departmentId and reason (10–500 characters), required.
+- Supply enrollmentIds and/or ids arrays
+- combine to 1–50 distinct queue-entry identifiers.
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** Path: id is the upload identifier.
+- Entries are checked first, then reversed one at a time. A later failure must not be treated as proof that all earlier changes were undone.
 
-**Success:** HTTP 200. data: { deleted: true }.
+Response codes of this API endpoint:
 
-**Behavior:** Checks ownership and verified-step restrictions. Removes the upload row; existing verification identifier references are not rewritten by this handler. Object deletion is best-effort.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
 
-**Additional failure conditions:** 404 absent/not owned; 409 if protected by verified active-year work.
+**Response (JSON):** The number and identifiers of reversed enrollments and returned queue entries are returned.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.3.3. Save an External Evidence Link
+**Figure 68.** Revert Multiple Completed Enrollments — Valid Request and Response
+
+This figure shows the request and returned response for “Revert Multiple Completed Enrollments.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 69.** Revert Multiple Completed Enrollments — Invalid Request and Response
+
+This figure shows a rejected request for “Revert Multiple Completed Enrollments” and the error message returned by the system.
+
+### 1.3.5 Complete Enrollment from a Queue Entry
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint marks the student currently being served as enrolled.
+
+**Endpoint:** [http://localhost:3001/api/v1/enrollments/:id/completion](http://localhost:3001/api/v1/enrollments/:id/completion)
+
+**Method:** POST
+
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
+
+**Parameters:**
+
+- Path: id is a queue-entry identifier, not a student-profile or course and year-level selection identifier.
+- Request body: departmentId (required).
+
+**Important Notes:**
+
+- Use a current-year queue-entry identifier. All five earlier requirements must be verified, and this same assigned adviser must currently be serving the student. Repeating an already-completed entry returns already.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+
+**Response (JSON):** The queue-entry identifier, student name, and outcome are returned. An already-completed entry is reported as already enrolled.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 70.** Complete Enrollment from a Queue Entry — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Complete Enrollment from a Queue Entry.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 71.** Complete Enrollment from a Queue Entry — Invalid Request and Response
+
+This figure shows a rejected request for “Complete Enrollment from a Queue Entry” and the error message returned by the system.
+
+### 1.3.6 Revert One Completed Enrollment
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint corrects an enrollment marked complete by mistake.
+
+**Endpoint:** [http://localhost:3001/api/v1/enrollments/:id/completion](http://localhost:3001/api/v1/enrollments/:id/completion)
+
+**Method:** DELETE
+
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
+
+**Parameters:**
+
+- Path: id is a queue-entry identifier.
+- Request body: departmentId and reason (10–500 characters), both required.
+
+**Important Notes:**
+
+- Returns the same entry to the front of the waiting line and withdraws enrollment verification.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+
+**Response (JSON):** The reversal confirmation and returned queue-entry identifier are returned. The student goes back to the front of the waiting line.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 72.** Revert One Completed Enrollment — Valid Request and Response
+
+This figure shows the request and returned response for “Revert One Completed Enrollment.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 73.** Revert One Completed Enrollment — Invalid Request and Response
+
+This figure shows a rejected request for “Revert One Completed Enrollment” and the error message returned by the system.
+
+## 1.4 REQUIREMENT EVIDENCE MODULE API
+
+### 1.4.1 Module Description
+
+This module manages the files and links that students use as proof of completing a requirement. Students can submit or withdraw eligible requirements for review.
+
+This module has the following endpoints:
+
+- POST [http://localhost:3001/api/v1/evidence](http://localhost:3001/api/v1/evidence)
+- DELETE [http://localhost:3001/api/v1/evidence/:id](http://localhost:3001/api/v1/evidence/:id)
+- PUT [http://localhost:3001/api/v1/me/evidence-link](http://localhost:3001/api/v1/me/evidence-link)
+- DELETE [http://localhost:3001/api/v1/me/evidence-link](http://localhost:3001/api/v1/me/evidence-link)
+- POST [http://localhost:3001/api/v1/me/steps/:code/submission](http://localhost:3001/api/v1/me/steps/:code/submission)
+- DELETE [http://localhost:3001/api/v1/me/steps/:code/submission](http://localhost:3001/api/v1/me/steps/:code/submission)
+
+### 1.4.2 Attach File Metadata to a Requirement
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint records the file reference used as requirement evidence.
+
+**Endpoint:** [http://localhost:3001/api/v1/evidence](http://localhost:3001/api/v1/evidence)
+
+**Method:** POST
+
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
+
+**Parameters:**
+
+- Request body: stepCode (SOCIAL_MEDIA/PROFILING/MUGSHOT/CONSENT), fileKey (1–500 characters), fileUrl (valid URL, at most 1,000 characters), all required.
+
+**Important Notes:**
+
+- Records the supplied key/URL; this call does not verify stored bytes exist. Without a verification, returns the new draft; with one, returns attached evidence. Adding to a returned verification changes it to submitted.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 201 | Created | The new record was created. |
+| 404 | Not Found | The requested record cannot be found. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+
+**Response (JSON):** The file identifiers, links, type, and expiry details are returned. This action records file details; it does not prove a file was uploaded.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 74.** Attach File Metadata to a Requirement — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Attach File Metadata to a Requirement.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 75.** Attach File Metadata to a Requirement — Invalid Request and Response
+
+This figure shows a rejected request for “Attach File Metadata to a Requirement” and the error message returned by the system.
+
+### 1.4.3 Delete My Upload Metadata
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint removes the student's permitted upload record.
+
+**Endpoint:** [http://localhost:3001/api/v1/evidence/:id](http://localhost:3001/api/v1/evidence/:id)
+
+**Method:** DELETE
+
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
+
+**Parameters:**
+
+- Path: id is the upload identifier.
+
+**Important Notes:**
+
+- Checks ownership and verified-step restrictions. Removes the upload row; existing verification identifier references are not rewritten by this handler. Object deletion is best-effort.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+
+**Response (JSON):** A deletion confirmation is returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 76.** Delete My Upload Metadata — Valid Request and Response
+
+This figure shows the request and returned response for “Delete My Upload Metadata.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 77.** Delete My Upload Metadata — Invalid Request and Response
+
+This figure shows a rejected request for “Delete My Upload Metadata” and the error message returned by the system.
+
+### 1.4.4 Save an External Evidence Link
+
+**Version:** 1.0
+
+**Date:** November 14, 2026
+
+**Description:** This endpoint saves a web link as proof for a requirement.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/evidence-link](http://localhost:3001/api/v1/me/evidence-link)
 
 **Method:** PUT
 
-**Endpoint:** `/api/v1/me/evidence-link`
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: stepCode (SOCIAL_MEDIA/PROFILING/MUGSHOT/CONSENT), url (valid URL, at most 1,000 characters), both required.
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** Body: stepCode (SOCIAL_MEDIA/PROFILING/MUGSHOT/CONSENT), url (valid URL, at most 1,000 characters), both required.
+- A different address adds another link. This endpoint does not itself reject an already-verified step. Saving a link is separate from submitting the requirement.
 
-**Success:** HTTP 200. data: { evidence: [{ id, fileKey, fileUrl, kind, expiresAt, expired }] }.
+Response codes of this API endpoint:
 
-**Behavior:** Stores/upserts the link but does not itself create a verification or submit the requirement. Returns all external links for the profile, not only this step. A different URL adds another link. This handler does not itself reject a verified step.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Illustrative request body:**
+**Response (JSON):** The student's saved external evidence links are returned. Saving the link does not submit the requirement for review.
 
-```json
-{
-  "stepCode": "SOCIAL_MEDIA",
-  "url": "https://example.org/demo-proof"
-}
-```
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Figure 78.** Save an External Evidence Link — Valid Request and Response
 
-### 2.3.4. Remove External Evidence Links
+This figure demonstrates the request and returned response for “Save an External Evidence Link.”
 
-**Method:** DELETE
+[SCREENSHOT: Invalid request and response.]
 
-**Endpoint:** `/api/v1/me/evidence-link`
+**Figure 79.** Save an External Evidence Link — Invalid Request and Response
 
-**Version:** Application API v1
+This figure shows a rejected request for “Save an External Evidence Link” and the error message returned by the system.
 
-**Capture date:** Not yet supplied.
+### 1.4.5 Remove External Evidence Links
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Version:** 1.0
 
-**Parameters:** Body: stepCode (required upload-capable step code).
+**Date:** November 14, 2026
 
-**Success:** HTTP 200. data: { evidence: [{ id, fileKey, fileUrl, kind, expiresAt, expired }] }.
+**Description:** This endpoint removes external proof links for a selected requirement.
 
-**Behavior:** Without a verification, removes links for that step and returns remaining file drafts of that kind. With a verification, removes its referenced external links and may delete an empty verification.
-
-**Additional failure conditions:** 404 if step is not configured; 409 if verified.
-
-**Illustrative request body:**
-
-```json
-{
-  "stepCode": "SOCIAL_MEDIA"
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.3.5. Submit a Requirement for Review
-
-**Method:** POST
-
-**Endpoint:** `/api/v1/me/steps/:code/submission`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
-
-**Parameters:** Path: code is SOCIAL_MEDIA, PROFILING, MUGSHOT, or CONSENT. No business body fields.
-
-**Success:** HTTP 201. data: { status: SUBMITTED, evidence: [...] }.
-
-**Behavior:** For profiling, checks the latest Google Form response matching the session email; screenshots/links are not the profiling completion check. Other steps collect eligible non-expired uploads and step links. Profiling evidence may be empty.
-
-**Additional failure conditions:** 404 unconfigured step; 409 verified; 412 absent/expired evidence, missing form, or no matching response; 503 Forms disabled.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.3.6. Cancel a Submitted Requirement
+**Endpoint:** [http://localhost:3001/api/v1/me/evidence-link](http://localhost:3001/api/v1/me/evidence-link)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/me/steps/:code/submission`
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: stepCode (required upload-capable step code).
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** Path: code is an upload-capable step. No business body fields.
+- Without a verification, removes links for that step and returns remaining file drafts of that kind. With a verification, removes its referenced external links and may delete an empty verification.
 
-**Success:** HTTP 200. data: { status: PENDING }.
+Response codes of this API endpoint:
 
-**Behavior:** Deletes a submitted verification and retains eligible file evidence as drafts with a fresh 24-hour expiry.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 404 step/submission missing; 409 unless status is submitted.
+**Response (JSON):** The remaining evidence details are returned.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
+**Figure 80.** Remove External Evidence Links — Valid Request and Response
 
-## 2.4. Private Uploads and File Access
+This figure shows the request and returned response for “Remove External Evidence Links.”
 
-### 2.4.1. Start an Authorized Upload
+[SCREENSHOT: Invalid request and response.]
 
-**Method:** POST
+**Figure 81.** Remove External Evidence Links — Invalid Request and Response
 
-**Endpoint:** `/api/v1/storage/session`
+This figure shows a rejected request for “Remove External Evidence Links” and the error message returned by the system.
 
-**Version:** Application API v1
+### 1.4.6 Submit a Requirement for Review
 
-**Capture date:** Not yet supplied.
+**Version:** 1.0
 
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
+**Date:** November 14, 2026
 
-**Parameters:** Body: route (evidenceImage/mugshotCapture/stampImage), mime (string, max 100), size (positive integer bytes), all required. evidenceImage requires stepCode and forbids studentProfileId. mugshotCapture and stampImage require studentProfileId. Supported MIME: image/jpeg, image/png, image/webp, application/pdf. Effective caps: 10 MiB evidence/mugshot, 5 MiB stamp (even though the generic size schema allows up to 100 MiB).
+**Description:** This endpoint sends the student's requirement to an SBO officer for checking.
 
-**Success:** HTTP 201. data: { uploadId, uploadUrl, sessionExpiresAt }.
-
-**Behavior:** Student-facing access for evidenceImage; officer access for capture/stamp. Requires active year and applicable profile/email ownership checks. Student upload email must be the university student domain; officer-target uploads require a student with that domain. Upload directly to the returned URL, then finalize. Sessions last 24 hours. Twenty mint requests per minute per user/IP. Storage outages/quotas return a direct { code: STORAGE_QUOTA_EXCEEDED, message } body, not the standard error wrapper.
-
-**Additional failure conditions:** 400 invalid route fields; 403 role/owner/email; 404 profile/step; 409 verified step; 412 no active year/profile; 413 file too large; 415 MIME unsupported; 429 limit; 502 presign failure; 503 disabled/paused storage or byte/operation quota.
-
-**Illustrative request body:**
-
-```json
-{
-  "route": "evidenceImage",
-  "stepCode": "SOCIAL_MEDIA",
-  "mime": "image/png",
-  "size": 1024
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.4.2. Finalize an Upload
+**Endpoint:** [http://localhost:3001/api/v1/me/steps/:code/submission](http://localhost:3001/api/v1/me/steps/:code/submission)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/storage/complete`
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: code is SOCIAL_MEDIA, PROFILING, MUGSHOT, or CONSENT. No business body fields.
 
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
+**Important Notes:**
 
-**Parameters:** Body: uploadId (required); stepCode (optional string, 1–64 characters).
+- For profiling, checks the latest Google Form response matching the session email; screenshots/links are not the profiling completion check. Other steps collect eligible non-expired uploads and step links. Profiling evidence may be empty.
 
-**Success:** HTTP 200. data: { id, fileKey, fileUrl, kind, expiresAt, expired: false }.
+Response codes of this API endpoint:
 
-**Behavior:** Checks visibility and stored object metadata. Normal object-storage completion uses fileKey with a storage reference and fileUrl null. Repeated completion of an already-complete row is accepted. An expired timestamp alone is not an explicit rejection in this handler; do not rely on it as an expiry-enforcement promise.
+| Code | Message | Description |
+| --- | --- | --- |
+| 201 | Created | The new record was created. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
 
-**Additional failure conditions:** 403 not visible; 404 upload/bytes absent; 400 conflicting step; 409 wrong backend; 422 MIME/size verification failure.
+**Response (JSON):** The submitted status and attached evidence are returned. Profiling checks the Google Form answer and may have no attached file.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "uploadId": "upload-example",
-  "stepCode": "SOCIAL_MEDIA"
-}
-```
+**Figure 82.** Submit a Requirement for Review — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Submit a Requirement for Review.”
 
-### 2.4.3. Read Upload Session Status
+[SCREENSHOT: Invalid request and response.]
 
-**Method:** GET
+**Figure 83.** Submit a Requirement for Review — Invalid Request and Response
 
-**Endpoint:** `/api/v1/storage/session-status`
+This figure shows a rejected request for “Submit a Requirement for Review” and the error message returned by the system.
 
-**Version:** Application API v1
+### 1.4.7 Cancel a Submitted Requirement
 
-**Capture date:** Not yet supplied.
+**Version:** 1.0
 
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
+**Date:** November 14, 2026
 
-**Parameters:** Required query: uploadId.
+**Description:** This endpoint withdraws a requirement that is still awaiting review.
 
-**Success:** HTTP 200. data: { status: pending|complete|abandoned, bytesReceived?, r2Key? }.
-
-**Behavior:** Uploader, profile owner, officer, and administrator have applicable visibility. Advisers have department-related visibility and some unplaced-student access; this is not access to all uploads. bytesReceived is conditional. Time expiry alone does not change status here.
-
-**Additional failure conditions:** 403 not visible; 404 unknown upload.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.4.4. Read Authorized File Content
-
-**Method:** GET
-
-**Endpoint:** `/api/v1/uploads/:id/content`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
-
-**Parameters:** Path: id is the upload identifier. Optional HTTP Range header.
-
-**Success:** HTTP 200. 200 or 206 binary file content, not a JSON envelope.
-
-**Behavior:** Uses the upload visibility checks. Content-Disposition is inline; storage MIME and range headers are forwarded when available. Current cache policy is private, immutable for one year. Missing/non-storage rows fall through to not-found handling.
-
-**Additional failure conditions:** 403 unauthorized; 404 missing/unusable upload.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-
-## 2.5. Officer Review
-
-### 2.5.1. List Requirement Submissions
-
-**Method:** GET
-
-**Endpoint:** `/api/v1/submissions`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** SBO officer or administrator.
-
-**Parameters:** Optional query: step (ASSESSMENT, SOCIAL_MEDIA, PROFILING, MUGSHOT, CONSENT); page (default 1), pageSize (1–100, default 50); sort (submittedAt, studentName, status; default submittedAt); dir (asc/desc, default asc); q (up to 100 characters); status (ALL, PENDING, SUBMITTED, VERIFIED, RETURNED); evidence (ALL, HAS, NONE); range (ALL, today, 7d, 30d, year).
-
-**Success:** HTTP 200. data: submission rows, with list metadata.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.5.2. Read a Submission in Full
-
-**Method:** GET
-
-**Endpoint:** `/api/v1/submissions/:verificationId`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** SBO officer or administrator.
-
-**Parameters:** Path: verificationId is a step-verification identifier.
-
-**Success:** HTTP 200. data: { verificationId, step, student, status, submittedAt, appliedAt, answers, evidence, requirements, stamp, ...review history }.
-
-**Additional failure conditions:** 404 if missing.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.5.3. Verify a Submission
-
-**Method:** POST
-
-**Endpoint:** `/api/v1/submissions/:id/verification`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** SBO officer or administrator.
-
-**Parameters:** Path: id is a step-verification identifier. No business body fields.
-
-**Success:** HTTP 200. data: { verificationId, status: VERIFIED }.
-
-**Behavior:** Uses the officer's configured stamp; saved stamp changes use the separate stamp endpoint.
-
-**Additional failure conditions:** 404 missing submission; 409 unsuitable review state or year.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.5.4. Withdraw a Verification
+**Endpoint:** [http://localhost:3001/api/v1/me/steps/:code/submission](http://localhost:3001/api/v1/me/steps/:code/submission)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/submissions/:id/verification`
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: code is an upload-capable step. No business body fields.
 
-**Access:** SBO officer or administrator.
+**Important Notes:**
 
-**Parameters:** Path: id is a step-verification identifier. No business body fields.
+- Deletes a submitted verification and retains eligible file evidence as drafts with a fresh 24-hour expiry.
 
-**Success:** HTTP 200. data: { verificationId, status: PENDING }.
+Response codes of this API endpoint:
 
-**Additional failure conditions:** 404 missing submission; 409 unsuitable review state or year.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The requirement returns to pending. Eligible files remain as drafts for 24 hours.
 
-### 2.5.5. Return a Submission with Feedback
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 84.** Cancel a Submitted Requirement — Valid Request and Response
+
+This figure shows the request and returned response for “Cancel a Submitted Requirement.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 85.** Cancel a Submitted Requirement — Invalid Request and Response
+
+This figure shows a rejected request for “Cancel a Submitted Requirement” and the error message returned by the system.
+
+## 1.5 FILE UPLOAD MODULE API
+
+### 1.5.1 Module Description
+
+This module gives permitted users a secure way to upload files and view stored evidence. Starting an upload and finishing an upload are separate steps.
+
+This module has the following endpoints:
+
+- POST [http://localhost:3001/api/v1/storage/session](http://localhost:3001/api/v1/storage/session)
+- POST [http://localhost:3001/api/v1/storage/complete](http://localhost:3001/api/v1/storage/complete)
+- GET [http://localhost:3001/api/v1/storage/session-status](http://localhost:3001/api/v1/storage/session-status)
+- GET [http://localhost:3001/api/v1/uploads/:id/content](http://localhost:3001/api/v1/uploads/:id/content)
+
+### 1.5.2 Start an Authorized Upload
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint requests permission and an address for uploading a file.
+
+**Endpoint:** [http://localhost:3001/api/v1/storage/session](http://localhost:3001/api/v1/storage/session)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/submissions/:id/replies`
+**Configurations:** The user must be signed in. Record-permission checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- route — Required upload purpose: evidenceImage, mugshotCapture, or stampImage.
+- mime — Required file type: image/jpeg, image/png, image/webp, or application/pdf.
+- size — Required file size in bytes. Evidence and mugshot files may be up to 10 MiB; stamp files may be up to 5 MiB.
+- stepCode — Required for evidenceImage. Do not send studentProfileId for this route.
+- studentProfileId — Required for mugshotCapture and stampImage. Use the student's profile identifier.
 
-**Access:** SBO officer or administrator.
+**Important Notes:**
 
-**Parameters:** Path: id is a step-verification identifier. Body: chips (optional nonempty strings, at most ten, default []), note (optional string, max 500).
+- Student-facing access for evidenceImage; officer access for capture/stamp. Requires active year and applicable profile/email ownership checks. Student upload email must be the university student domain; officer-target uploads require a student with that domain. Upload directly to the returned URL, then finalize. Sessions last 24 hours. Twenty mint requests per minute per user/IP. Storage outages/quotas return a direct the fields code: STORAGE_QUOTA_EXCEEDED, message body, not the standard error wrapper.
 
-**Success:** HTTP 200. data: { verificationId, status: RETURNED }.
+Response codes of this API endpoint:
 
-**Additional failure conditions:** 404 missing submission; 409 unsuitable review state or year.
+| Code | Message | Description |
+| --- | --- | --- |
+| 201 | Created | The new record was created. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
 
-**Illustrative request body:**
+**Response (JSON):** The upload identifier, upload address, and expiry time are returned. The file must then be sent to that address and the upload finalized.
 
-```json
-{
-  "chips": [
-    "Unreadable evidence"
-  ],
-  "note": "Please submit a clearer image."
-}
-```
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Figure 86.** Start an Authorized Upload — Valid Request and Response
 
+This figure demonstrates the request and returned response for “Start an Authorized Upload.”
 
-## 2.6. Queues and Adviser Service
+[SCREENSHOT: Invalid request and response.]
 
-### 2.6.1. Read My Queue Position
+**Figure 87.** Start an Authorized Upload — Invalid Request and Response
+
+This figure shows a rejected request for “Start an Authorized Upload” and the error message returned by the system.
+
+### 1.5.3 Finalize an Upload
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint checks a transferred file and completes its upload record.
+
+**Endpoint:** [http://localhost:3001/api/v1/storage/complete](http://localhost:3001/api/v1/storage/complete)
+
+**Method:** POST
+
+**Configurations:** The user must be signed in. Record-permission checks may also apply.
+
+**Parameters:**
+
+- Request body: uploadId (required)
+- stepCode (optional string, 1–64 characters).
+
+**Important Notes:**
+
+- Start a session, PUT the actual file bytes to its returned uploadUrl with the matching content type and size, then finalize using that uploadId. Starting a session alone is not an uploaded file. Repeating a completed upload is accepted.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+
+**Response (JSON):** The file identifier, storage reference, type, and expiry details are returned. A private stored file may have no public file link.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 88.** Finalize an Upload — Valid Request and Response
+
+This figure shows the request and returned response for “Finalize an Upload.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 89.** Finalize an Upload — Invalid Request and Response
+
+This figure shows a rejected request for “Finalize an Upload” and the error message returned by the system.
+
+### 1.5.4 Read Upload Session Status
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint checks the progress of an upload.
+
+**Endpoint:** [http://localhost:3001/api/v1/storage/session-status](http://localhost:3001/api/v1/storage/session-status)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/me/queue`
+**Configurations:** The user must be signed in. Record-permission checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Required address filter: uploadId.
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** None.
+- Only users allowed to see the upload can check it. Passing the expiry time alone does not change the status to abandoned.
 
-**Success:** HTTP 200. data: current queue state, or null.
+Response codes of this API endpoint:
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 404 | Not Found | The requested record cannot be found. |
 
-### 2.6.2. Join My Enrollment Queue
+**Response (JSON):** The result shows whether the upload is pending, complete, or abandoned. Received size and storage details are included when available.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 90.** Read Upload Session Status — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Read Upload Session Status.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 91.** Read Upload Session Status — Invalid Request and Response
+
+This figure shows a rejected request for “Read Upload Session Status” and the error message returned by the system.
+
+### 1.5.5 Read Authorized File Content
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint opens a stored file for a user who is allowed to view it.
+
+**Endpoint:** [http://localhost:3001/api/v1/uploads/:id/content](http://localhost:3001/api/v1/uploads/:id/content)
+
+**Method:** GET
+
+**Configurations:** The user must be signed in. Record-permission checks may also apply.
+
+**Parameters:**
+
+- Path: id is the upload identifier.
+- Optional HTTP Range header.
+
+**Important Notes:**
+
+- Use an actual completed private-storage upload identifier and an account allowed to view it. This endpoint returns file bytes, not JSON.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | OK / Partial Content (206) | The file or requested part is returned. |
+| 403 | Access Denied | You cannot view this file. |
+| 404 | Not Found | The file cannot be found. |
+
+**Response (File content):** The file itself, or the requested portion of it, is returned rather than a normal information response.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 92.** Read Authorized File Content — Valid Request and Response
+
+This figure shows the request and returned response for “Read Authorized File Content.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 93.** Read Authorized File Content — Invalid Request and Response
+
+This figure shows a rejected request for “Read Authorized File Content” and the error message returned by the system.
+
+## 1.6 REQUIREMENT REVIEW MODULE API
+
+### 1.6.1 Module Description
+
+This module lets SBO officers review student submissions, approve requirements, and return unclear or incomplete evidence with feedback.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/submissions](http://localhost:3001/api/v1/submissions)
+- GET [http://localhost:3001/api/v1/submissions/:verificationId](http://localhost:3001/api/v1/submissions/:verificationId)
+- POST [http://localhost:3001/api/v1/submissions/:id/verification](http://localhost:3001/api/v1/submissions/:id/verification)
+- DELETE [http://localhost:3001/api/v1/submissions/:id/verification](http://localhost:3001/api/v1/submissions/:id/verification)
+- POST [http://localhost:3001/api/v1/submissions/:id/replies](http://localhost:3001/api/v1/submissions/:id/replies)
+
+### 1.6.2 List Requirement Submissions
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint shows student requirements waiting for or undergoing review.
+
+**Endpoint:** [http://localhost:3001/api/v1/submissions](http://localhost:3001/api/v1/submissions)
+
+**Method:** GET
+
+**Configurations:** An SBO officer or administrator must be signed in.
+
+**Parameters:**
+
+- Optional address filter: step (ASSESSMENT, SOCIAL_MEDIA, PROFILING, MUGSHOT, CONSENT)
+- page (default 1), pageSize (1–100, default 50)
+- sort (submittedAt, studentName, status
+- default submittedAt)
+- dir (asc/desc, default asc)
+- q (up to 100 characters)
+- status (ALL, PENDING, SUBMITTED, VERIFIED, RETURNED)
+- evidence (ALL, HAS, NONE)
+- range (ALL, today, 7d, 30d, year).
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** Matching submission rows and paging information are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 94.** List Requirement Submissions — Valid Request and Response
+
+This figure demonstrates the request and returned response for “List Requirement Submissions.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 95.** List Requirement Submissions — Invalid Request and Response
+
+This figure shows a rejected request for “List Requirement Submissions” and the error message returned by the system.
+
+### 1.6.3 Read a Submission in Full
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint shows the evidence and history for one requirement submission.
+
+**Endpoint:** [http://localhost:3001/api/v1/submissions/:verificationId](http://localhost:3001/api/v1/submissions/:verificationId)
+
+**Method:** GET
+
+**Configurations:** An SBO officer or administrator must be signed in.
+
+**Parameters:**
+
+- Path: verificationId is a step-verification identifier.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
+
+**Response (JSON):** The student, requirement, review status, evidence, checklist, stamp, and review history are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 96.** Read a Submission in Full — Valid Request and Response
+
+This figure shows the request and returned response for “Read a Submission in Full.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 97.** Read a Submission in Full — Invalid Request and Response
+
+This figure shows a rejected request for “Read a Submission in Full” and the error message returned by the system.
+
+### 1.6.4 Verify a Submission
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint approves a student's requirement submission.
+
+**Endpoint:** [http://localhost:3001/api/v1/submissions/:id/verification](http://localhost:3001/api/v1/submissions/:id/verification)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/me/queue`
+**Configurations:** An SBO officer or administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id is a step-verification identifier. No business body fields.
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** Body: departmentId (required).
+- Uses the officer's configured stamp; saved stamp changes use the separate stamp endpoint.
 
-**Success:** HTTP 201. data: { entryId, departmentName, position }.
+Response codes of this API endpoint:
 
-**Behavior:** Requires verified pre-enrollment steps, eligible course/year level, and a currently available adviser. Switching queues requires leaving the previous one first; opening a share link does not join automatically.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 409 for unmet prerequisites, unsuitable queue state, or unavailable service.
+**Response (JSON):** The requirement-review identifier and verified status are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "departmentId": "department-example"
-}
-```
+**Figure 98.** Verify a Submission — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Verify a Submission.”
 
-### 2.6.3. Leave My Waiting Queue
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 99.** Verify a Submission — Invalid Request and Response
+
+This figure shows a rejected request for “Verify a Submission” and the error message returned by the system.
+
+### 1.6.5 Withdraw a Verification
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint removes a requirement's previous approval.
+
+**Endpoint:** [http://localhost:3001/api/v1/submissions/:id/verification](http://localhost:3001/api/v1/submissions/:id/verification)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/me/queue`
+**Configurations:** An SBO officer or administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id is a step-verification identifier. No business body fields.
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** None.
+- Use a currently VERIFIED requirement in the active enrollment year. Revoking a pending or returned requirement is refused.
 
-**Success:** HTTP 200. data: { left: true }.
+Response codes of this API endpoint:
 
-**Behavior:** Repeated exit when no entry exists is accepted. A student being served cannot leave.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 409 while being served.
+**Response (JSON):** The requirement-review identifier and pending status are returned.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.6.4. Monitor My Department Queues
+**Figure 100.** Withdraw a Verification — Valid Request and Response
 
-**Method:** GET
+This figure shows the request and returned response for “Withdraw a Verification.”
 
-**Endpoint:** `/api/v1/queues`
+[SCREENSHOT: Invalid request and response.]
 
-**Version:** Application API v1
+**Figure 101.** Withdraw a Verification — Invalid Request and Response
 
-**Capture date:** Not yet supplied.
+This figure shows a rejected request for “Withdraw a Verification” and the error message returned by the system.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+### 1.6.6 Return a Submission with Feedback
 
-**Parameters:** None.
+**Version:** 1.0
 
-**Success:** HTTP 200. data: department queues and serving state.
+**Date:** November 15, 2026
 
-**Behavior:** The current implementation uses resource reads; there is no mounted queue-event stream.
+**Description:** This endpoint returns a requirement to the student with correction notes.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.6.5. Serve the Next Eligible Student
+**Endpoint:** [http://localhost:3001/api/v1/submissions/:id/replies](http://localhost:3001/api/v1/submissions/:id/replies)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/queues/serving`
+**Configurations:** An SBO officer or administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id is a step-verification identifier.
+- Request body: chips (optional not empty strings, at most ten, default an empty list), note (optional string, up to 500).
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Body: departmentId and entryId (required nonempty identifiers).
+- Use an existing requirement in the active year that is not VERIFIED. Revoke an approval before returning the requirement with feedback.
 
-**Success:** HTTP 201. data: { entryId, status }.
+Response codes of this API endpoint:
 
-**Behavior:** Assignment, current service, and queue order are checked. Sending an arbitrary waiting entry does not bypass first-in-first-out service.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 404 if entry is missing; 409 for a changed or unsuitable service state.
+**Response (JSON):** The requirement-review identifier and returned status are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "departmentId": "department-example",
-  "entryId": "queue-example"
-}
-```
+**Figure 102.** Return a Submission with Feedback — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Return a Submission with Feedback.”
 
-### 2.6.6. Release the Served Student
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 103.** Return a Submission with Feedback — Invalid Request and Response
+
+This figure shows a rejected request for “Return a Submission with Feedback” and the error message returned by the system.
+
+## 1.7 ENROLLMENT QUEUE MODULE API
+
+### 1.7.1 Module Description
+
+This module manages the waiting line for enrollment. Students can join or leave the line, while assigned advisers serve eligible students.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/me/queue](http://localhost:3001/api/v1/me/queue)
+- POST [http://localhost:3001/api/v1/me/queue](http://localhost:3001/api/v1/me/queue)
+- DELETE [http://localhost:3001/api/v1/me/queue](http://localhost:3001/api/v1/me/queue)
+- GET [http://localhost:3001/api/v1/queues](http://localhost:3001/api/v1/queues)
+- POST [http://localhost:3001/api/v1/queues/serving](http://localhost:3001/api/v1/queues/serving)
+- DELETE [http://localhost:3001/api/v1/queues/serving](http://localhost:3001/api/v1/queues/serving)
+- POST [http://localhost:3001/api/v1/queues/serving/position](http://localhost:3001/api/v1/queues/serving/position)
+- POST [http://localhost:3001/api/v1/queue-entries/:id/removal](http://localhost:3001/api/v1/queue-entries/:id/removal)
+- POST [http://localhost:3001/api/v1/queue-entries/:id/restoration](http://localhost:3001/api/v1/queue-entries/:id/restoration)
+
+### 1.7.2 Read My Queue Position
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint shows the student's current place in the enrollment line.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/queue](http://localhost:3001/api/v1/me/queue)
+
+**Method:** GET
+
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
+
+**Parameters:**
+
+- No additional request-body or query information is required.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** The current queue details are returned, or an empty result when the student is not in a queue.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 104.** Read My Queue Position — Valid Request and Response
+
+This figure shows the request and returned response for “Read My Queue Position.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 105.** Read My Queue Position — Invalid Request and Response
+
+This figure shows a rejected request for “Read My Queue Position” and the error message returned by the system.
+
+### 1.7.3 Join My Enrollment Queue
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint adds an eligible student to the department's enrollment line.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/queue](http://localhost:3001/api/v1/me/queue)
+
+**Method:** POST
+
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
+
+**Parameters:**
+
+- Request body: departmentId (required).
+
+**Important Notes:**
+
+- Requires verified pre-enrollment steps, eligible course/year level, and a currently available adviser. Switching queues requires leaving the previous one first; opening a share link does not join automatically.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 201 | Created | The new record was created. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+
+**Response (JSON):** The queue-entry identifier, department name, and waiting position are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 106.** Join My Enrollment Queue — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Join My Enrollment Queue.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 107.** Join My Enrollment Queue — Invalid Request and Response
+
+This figure shows a rejected request for “Join My Enrollment Queue” and the error message returned by the system.
+
+### 1.7.4 Leave My Waiting Queue
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint removes the student from the waiting line.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/queue](http://localhost:3001/api/v1/me/queue)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/queues/serving`
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Body: departmentId and entryId (required nonempty identifiers).
+- Repeated exit when no entry exists is accepted. A student being served cannot leave.
 
-**Success:** HTTP 200. data: { entryId, status }.
+Response codes of this API endpoint:
 
-**Behavior:** Assignment, current service, and queue order are checked. Sending an arbitrary waiting entry does not bypass first-in-first-out service.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 404 if entry is missing; 409 for a changed or unsuitable service state.
+**Response (JSON):** A confirmation is returned. A student currently being served cannot leave through this action.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "departmentId": "department-example",
-  "entryId": "queue-example"
-}
-```
+**Figure 108.** Leave My Waiting Queue — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure shows the request and returned response for “Leave My Waiting Queue.”
 
-### 2.6.7. Move the Served Student to the End
+[SCREENSHOT: Invalid request and response.]
 
-**Method:** POST
+**Figure 109.** Leave My Waiting Queue — Invalid Request and Response
 
-**Endpoint:** `/api/v1/queues/serving/position`
+This figure shows a rejected request for “Leave My Waiting Queue” and the error message returned by the system.
 
-**Version:** Application API v1
+### 1.7.5 Monitor My Department Queues
 
-**Capture date:** Not yet supplied.
+**Version:** 1.0
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Date:** November 15, 2026
 
-**Parameters:** Body: departmentId and entryId (required nonempty identifiers). Optional to: end.
+**Description:** This endpoint shows the waiting lines handled by the adviser.
 
-**Success:** HTTP 200. data: { entryId, position }.
-
-**Behavior:** Assignment, current service, and queue order are checked. Sending an arbitrary waiting entry does not bypass first-in-first-out service.
-
-**Additional failure conditions:** 404 if entry is missing; 409 for a changed or unsuitable service state.
-
-**Illustrative request body:**
-
-```json
-{
-  "departmentId": "department-example",
-  "entryId": "queue-example"
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.6.8. Remove a Waiting Queue Entry
-
-**Method:** POST
-
-**Endpoint:** `/api/v1/queue-entries/:id/removal`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
-
-**Parameters:** Path: id. No business body fields.
-
-**Success:** HTTP 200. data: { removed, reason, snapshot: { entryId, departmentId, studentProfileId, academicYearId, joinedAt, studentName, token } }.
-
-**Behavior:** Only waiting entries may be removed. Keep the returned snapshot unchanged for Undo. A concurrent change can return removed false with a reason, not a successful deletion.
-
-**Additional failure conditions:** 404 if missing; 409 for served/completed or unsuitable entry state.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.6.9. Restore a Removed Queue Entry
-
-**Method:** POST
-
-**Endpoint:** `/api/v1/queue-entries/:id/restoration`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
-
-**Parameters:** Path: id. Body: departmentId, studentProfileId, academicYearId, joinedAt, studentName, token (all required; copy the removal snapshot).
-
-**Success:** HTTP 200. data: { restored: true, entryId }.
-
-**Behavior:** The website offers Undo for five seconds; server token validation allows a 60-second window. The token is signed for the removing adviser and snapshot. Restoration preserves joinedAt, not a client-selected queue number.
-
-**Additional failure conditions:** 403 for invalid/expired token; 409 for a changed year or existing/rejoined entry; 404 for missing related data.
-
-**Illustrative request body:**
-
-```json
-{
-  "departmentId": "department-example",
-  "studentProfileId": "profile-example",
-  "academicYearId": "year-example",
-  "joinedAt": "2026-08-01T01:00:00.000Z",
-  "studentName": "Example Student",
-  "token": "<token from removal response>"
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-
-## 2.7. Queue Invitations
-
-### 2.7.1. Create a Queue Invitation
-
-**Method:** POST
-
-**Endpoint:** `/api/v1/queue-shares`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
-
-**Parameters:** Body: departmentId (required).
-
-**Success:** HTTP 201. data: { url, token, departmentId, departmentName, inviterName, academicYearId }.
-
-**Behavior:** Requires an assigned adviser, active department/year, and configured public site address. Links are tied to the academic year, not documented as a fixed-duration expiry.
-
-**Additional failure conditions:** 412 for missing or unsuitable public address/active year; 404 for missing/inactive department.
-
-**Illustrative request body:**
-
-```json
-{
-  "departmentId": "department-example"
-}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.7.2. Resolve a Queue Invitation
+**Endpoint:** [http://localhost:3001/api/v1/queues](http://localhost:3001/api/v1/queues)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/queue-shares/:token`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** Path: token (1–2,000 characters).
+- The current implementation uses resource reads; there is no mounted queue-event stream.
 
-**Success:** HTTP 200. data: { status, departmentId, departmentName, departmentCode, inviterName, isOpen, openByName, waitingCount, academicYearId }.
+Response codes of this API endpoint:
 
-**Behavior:** Invalid tokens return HTTP 200 with status INVALID. A different/no active year returns 200 with status STALE. Valid invitations return status OK even when isOpen is false; resolving never joins the queue.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The department queues and information about students being served are returned.
 
+[SCREENSHOT: Valid Request; include the request and response.]
 
-## 2.8. Departments
+**Figure 110.** Monitor My Department Queues — Valid Request and Response
 
-### 2.8.1. Read My Student Department
+This figure demonstrates the request and returned response for “Monitor My Department Queues.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 111.** Monitor My Department Queues — Invalid Request and Response
+
+This figure shows a rejected request for “Monitor My Department Queues” and the error message returned by the system.
+
+### 1.7.6 Serve the Next Eligible Student
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint starts service for the next eligible student in the line.
+
+**Endpoint:** [http://localhost:3001/api/v1/queues/serving](http://localhost:3001/api/v1/queues/serving)
+
+**Method:** POST
+
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
+
+**Parameters:**
+
+- Request body: departmentId and entryId (required not empty identifiers).
+
+**Important Notes:**
+
+- Assignment, current service, and queue order are checked. Sending an arbitrary waiting entry does not bypass first-in-first-out service.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 201 | Created | The new record was created. |
+| 404 | Not Found | The requested record cannot be found. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+
+**Response (JSON):** The queue-entry identifier and service status are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 112.** Serve the Next Eligible Student — Valid Request and Response
+
+This figure shows the request and returned response for “Serve the Next Eligible Student.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 113.** Serve the Next Eligible Student — Invalid Request and Response
+
+This figure shows a rejected request for “Serve the Next Eligible Student” and the error message returned by the system.
+
+### 1.7.7 Release the Served Student
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint ends the adviser's current service for a student.
+
+**Endpoint:** [http://localhost:3001/api/v1/queues/serving](http://localhost:3001/api/v1/queues/serving)
+
+**Method:** DELETE
+
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
+
+**Parameters:**
+
+- Request body: departmentId and entryId (required not empty identifiers).
+
+**Important Notes:**
+
+- Assignment, current service, and queue order are checked. Sending an arbitrary waiting entry does not bypass first-in-first-out service.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+
+**Response (JSON):** The queue-entry identifier and updated status are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 114.** Release the Served Student — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Release the Served Student.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 115.** Release the Served Student — Invalid Request and Response
+
+This figure shows a rejected request for “Release the Served Student” and the error message returned by the system.
+
+### 1.7.8 Move the Served Student to the End
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint returns the served student to the end of the waiting line.
+
+**Endpoint:** [http://localhost:3001/api/v1/queues/serving/position](http://localhost:3001/api/v1/queues/serving/position)
+
+**Method:** POST
+
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
+
+**Parameters:**
+
+- Request body: departmentId and entryId (required not empty identifiers).
+- Optional to: end.
+
+**Important Notes:**
+
+- Assignment, current service, and queue order are checked. Sending an arbitrary waiting entry does not bypass first-in-first-out service.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+
+**Response (JSON):** The queue-entry identifier and new position are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 116.** Move the Served Student to the End — Valid Request and Response
+
+This figure shows the request and returned response for “Move the Served Student to the End.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 117.** Move the Served Student to the End — Invalid Request and Response
+
+This figure shows a rejected request for “Move the Served Student to the End” and the error message returned by the system.
+
+### 1.7.9 Remove a Waiting Queue Entry
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint removes a waiting student from the line.
+
+**Endpoint:** [http://localhost:3001/api/v1/queue-entries/:id/removal](http://localhost:3001/api/v1/queue-entries/:id/removal)
+
+**Method:** POST
+
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
+
+**Parameters:**
+
+- Path: id. No business body fields.
+
+**Important Notes:**
+
+- Only waiting entries may be removed. Keep the returned snapshot unchanged for Undo. A simultaneous change can return removed false with a reason, not a successful deletion.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+
+**Response (JSON):** The result states whether removal happened and includes the information needed for Undo. A changed entry may return a reason instead.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 118.** Remove a Waiting Queue Entry — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Remove a Waiting Queue Entry.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 119.** Remove a Waiting Queue Entry — Invalid Request and Response
+
+This figure shows a rejected request for “Remove a Waiting Queue Entry” and the error message returned by the system.
+
+### 1.7.10 Restore a Removed Queue Entry
+
+**Version:** 1.0
+
+**Date:** November 15, 2026
+
+**Description:** This endpoint puts a recently removed student back in the line.
+
+**Endpoint:** [http://localhost:3001/api/v1/queue-entries/:id/restoration](http://localhost:3001/api/v1/queue-entries/:id/restoration)
+
+**Method:** POST
+
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
+
+**Parameters:**
+
+- Path: id.
+- Request body: departmentId, studentProfileId, academicYearId, joinedAt, studentName, token (all required
+- copy the removal snapshot).
+
+**Important Notes:**
+
+- Copy the removal information without changing it. The website offers Undo for five seconds; the server accepts its signed token for up to sixty seconds. The student's original joining time is kept.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+
+**Response (JSON):** The restoration confirmation and queue-entry identifier are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 120.** Restore a Removed Queue Entry — Valid Request and Response
+
+This figure shows the request and returned response for “Restore a Removed Queue Entry.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 121.** Restore a Removed Queue Entry — Invalid Request and Response
+
+This figure shows a rejected request for “Restore a Removed Queue Entry” and the error message returned by the system.
+
+## 1.8 QUEUE INVITATION MODULE API
+
+### 1.8.1 Module Description
+
+This module creates and checks invitation links to a department's enrollment queue. Opening a link does not automatically add a student to the line.
+
+This module has the following endpoints:
+
+- POST [http://localhost:3001/api/v1/queue-shares](http://localhost:3001/api/v1/queue-shares)
+- GET [http://localhost:3001/api/v1/queue-shares/:token](http://localhost:3001/api/v1/queue-shares/:token)
+
+### 1.8.2 Create a Queue Invitation
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint creates a shareable link to a department's enrollment queue.
+
+**Endpoint:** [http://localhost:3001/api/v1/queue-shares](http://localhost:3001/api/v1/queue-shares)
+
+**Method:** POST
+
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
+
+**Parameters:**
+
+- Request body: departmentId (required).
+
+**Important Notes:**
+
+- Requires an assigned adviser, active department/year, and configured public site address. Links are tied to the academic year, not documented as a fixed-duration expiry.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 201 | Created | The new record was created. |
+| 404 | Not Found | The requested record cannot be found. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+
+**Response (JSON):** The invitation link, token, department, inviter, and school-year details are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 122.** Create a Queue Invitation — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Create a Queue Invitation.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 123.** Create a Queue Invitation — Invalid Request and Response
+
+This figure shows a rejected request for “Create a Queue Invitation” and the error message returned by the system.
+
+### 1.8.3 Resolve a Queue Invitation
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint checks an invitation link and shows the related queue.
+
+**Endpoint:** [http://localhost:3001/api/v1/queue-shares/:token](http://localhost:3001/api/v1/queue-shares/:token)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/me/departments`
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: token (1–2,000 characters).
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** None.
+- Invalid tokens return HTTP 200 with status INVALID. A different/no active year returns 200 with status STALE. Valid invitations return status OK even when isOpen is false; resolving never joins the queue.
 
-**Success:** HTTP 200. data: department information with schedule { current, next }, or null.
+Response codes of this API endpoint:
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-### 2.8.2. Set My Department Responsibility
+**Response (JSON):** The invitation status and queue details are returned. INVALID means the link is not valid; STALE means it is for a different enrollment period. Neither joins the queue.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 124.** Resolve a Queue Invitation — Valid Request and Response
+
+This figure shows the request and returned response for “Resolve a Queue Invitation.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 125.** Resolve a Queue Invitation — Invalid Request and Response
+
+This figure shows a rejected request for “Resolve a Queue Invitation” and the error message returned by the system.
+
+## 1.9 DEPARTMENT MODULE API
+
+### 1.9.1 Module Description
+
+This module manages departments, their offered year levels, and related enrollment records.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/me/departments](http://localhost:3001/api/v1/me/departments)
+- PUT [http://localhost:3001/api/v1/me/departments](http://localhost:3001/api/v1/me/departments)
+- GET [http://localhost:3001/api/v1/departments](http://localhost:3001/api/v1/departments)
+- POST [http://localhost:3001/api/v1/departments](http://localhost:3001/api/v1/departments)
+- PATCH [http://localhost:3001/api/v1/departments/:id](http://localhost:3001/api/v1/departments/:id)
+- PUT [http://localhost:3001/api/v1/departments/:id/year-levels](http://localhost:3001/api/v1/departments/:id/year-levels)
+- DELETE [http://localhost:3001/api/v1/departments/:id](http://localhost:3001/api/v1/departments/:id)
+- GET [http://localhost:3001/api/v1/departments/:id/enrollments](http://localhost:3001/api/v1/departments/:id/enrollments)
+
+### 1.9.2 Read My Student Department
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint shows the department linked to the student's placement.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/departments](http://localhost:3001/api/v1/me/departments)
+
+**Method:** GET
+
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
+
+**Parameters:**
+
+- No additional request-body or query information is required.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** The department details and current and next office hours are returned, or an empty result when no department applies.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 126.** Read My Student Department — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Read My Student Department.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 127.** Read My Student Department — Invalid Request and Response
+
+This figure shows a rejected request for “Read My Student Department” and the error message returned by the system.
+
+### 1.9.3 Set My Department Responsibility
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint saves the adviser's department and year-level responsibility.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/departments](http://localhost:3001/api/v1/me/departments)
 
 **Method:** PUT
 
-**Endpoint:** `/api/v1/me/departments`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: departmentIds (required array, at most one identifier), yearLevels (optional, at most five
+- default an empty list). Year levels use FIRST, SECOND, THIRD, FOURTH, FIFTH. An empty year-level list means unrestricted responsibility within the department's offered levels.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Body: departmentIds (required array, at most one identifier), yearLevels (optional, at most five; default []). Year levels use FIRST, SECOND, THIRD, FOURTH, FIFTH. An empty year-level list means unrestricted responsibility within the department's offered levels.
+- Checks offered levels and overlapping claims.
 
-**Success:** HTTP 200. data: assignment result.
+Response codes of this API endpoint:
 
-**Behavior:** Checks offered levels and overlapping claims.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 409 if an existing holder overlaps; 400 for unsuitable offered levels.
+**Response (JSON):** The saved assignment result is returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "departmentIds": [
-    "department-example"
-  ],
-  "yearLevels": [
-    "FIRST"
-  ]
-}
-```
+**Figure 128.** Set My Department Responsibility — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure shows the request and returned response for “Set My Department Responsibility.”
 
-### 2.8.3. List Departments and Assignments
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 129.** Set My Department Responsibility — Invalid Request and Response
+
+This figure shows a rejected request for “Set My Department Responsibility” and the error message returned by the system.
+
+### 1.9.4 List Departments and Assignments
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint shows departments and their adviser assignments.
+
+**Endpoint:** [http://localhost:3001/api/v1/departments](http://localhost:3001/api/v1/departments)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/departments`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Optional address filter: page (positive whole number, default 1), pageSize or limit (default 50, maximum 200). Some small-list endpoints return the full list with page details rather than slicing
+- see endpoint notes.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Optional query: page (positive integer, default 1), pageSize or limit (default 50, maximum 200). Some small-list endpoints return the full list with paging metadata rather than slicing; see endpoint notes.
+- Administrators see all departments; advisers receive their applicable listing. This list is sliced by page.
 
-**Success:** HTTP 200. data: department rows with assignment information, with list metadata.
+Response codes of this API endpoint:
 
-**Behavior:** Administrators see all departments; advisers receive their applicable listing. This list is sliced by page.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** A page of department details and assignment information is returned.
 
-### 2.8.4. Create a Department
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 130.** List Departments and Assignments — Valid Request and Response
+
+This figure demonstrates the request and returned response for “List Departments and Assignments.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 131.** List Departments and Assignments — Invalid Request and Response
+
+This figure shows a rejected request for “List Departments and Assignments” and the error message returned by the system.
+
+### 1.9.5 Create a Department
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint adds a department to the system.
+
+**Endpoint:** [http://localhost:3001/api/v1/departments](http://localhost:3001/api/v1/departments)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/departments`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: name (required with extra outside spaces removed string, 1–120 characters).
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Body: name (required trimmed string, 1–120 characters).
+- Code is derived from the name, not supplied. An adviser holding no department is assigned automatically; administrators do not receive that self-assignment.
 
-**Success:** HTTP 201. data: { id, name, code, yearLevels, isActive, assigned? }.
+Response codes of this API endpoint:
 
-**Behavior:** Code is derived from the name, not supplied. An adviser holding no department is assigned automatically; administrators do not receive that self-assignment.
+| Code | Message | Description |
+| --- | --- | --- |
+| 201 | Created | The new record was created. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 409 if the name or derived code already exists.
+**Response (JSON):** The department's identifier, name, generated code, year levels, active status, and any new assignment are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "name": "Information Technology"
-}
-```
+**Figure 132.** Create a Department — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure shows the request and returned response for “Create a Department.”
 
-### 2.8.5. Rename or Change Department Status
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 133.** Create a Department — Invalid Request and Response
+
+This figure shows a rejected request for “Create a Department” and the error message returned by the system.
+
+### 1.9.6 Rename or Change Department Status
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint changes a department's name or active status.
+
+**Endpoint:** [http://localhost:3001/api/v1/departments/:id](http://localhost:3001/api/v1/departments/:id)
 
 **Method:** PATCH
 
-**Endpoint:** `/api/v1/departments/:id`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
+- Request body: name (optional, 1–120 characters), isActive (optional true or false). At least one field is required.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Path: id. Body: name (optional, 1–120 characters), isActive (optional boolean). At least one field is required.
+- isActive is administrator-only. Do not assume every department action uses identical ownership checks.
 
-**Success:** HTTP 200. data: changed department fields.
+Response codes of this API endpoint:
 
-**Behavior:** isActive is administrator-only. Do not assume every department action uses identical ownership checks.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 403 for adviser status changes; 404 if missing; 409 for duplicate identity or deactivation with students in line.
+**Response (JSON):** The changed department details are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "name": "Information Technology"
-}
-```
+**Figure 134.** Rename or Change Department Status — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Rename or Change Department Status.”
 
-### 2.8.6. Set Offered Department Year Levels
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 135.** Rename or Change Department Status — Invalid Request and Response
+
+This figure shows a rejected request for “Rename or Change Department Status” and the error message returned by the system.
+
+### 1.9.7 Set Offered Department Year Levels
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint saves the year levels offered by a department.
+
+**Endpoint:** [http://localhost:3001/api/v1/departments/:id/year-levels](http://localhost:3001/api/v1/departments/:id/year-levels)
 
 **Method:** PUT
 
-**Endpoint:** `/api/v1/departments/:id/year-levels`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
+- Request body: yearLevels (required array, at most five). Year levels use FIRST, SECOND, THIRD, FOURTH, FIFTH. An empty year-level list means unrestricted responsibility within the department's offered levels.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Path: id. Body: yearLevels (required array, at most five). Year levels use FIRST, SECOND, THIRD, FOURTH, FIFTH. An empty year-level list means unrestricted responsibility within the department's offered levels.
+- Requires the assigned adviser or an administrator.
 
-**Success:** HTTP 200. data: { id, yearLevels }.
+Response codes of this API endpoint:
 
-**Behavior:** Requires the assigned adviser or an administrator.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 404 | Not Found | The requested record cannot be found. |
 
-**Additional failure conditions:** 403 if not assigned; 404 if missing.
+**Response (JSON):** The department identifier and saved year levels are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "yearLevels": [
-    "FIRST",
-    "SECOND"
-  ]
-}
-```
+**Figure 136.** Set Offered Department Year Levels — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure shows the request and returned response for “Set Offered Department Year Levels.”
 
-### 2.8.7. Delete an Eligible Department
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 137.** Set Offered Department Year Levels — Invalid Request and Response
+
+This figure shows a rejected request for “Set Offered Department Year Levels” and the error message returned by the system.
+
+### 1.9.8 Delete an Eligible Department
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint removes a department when its records allow deletion.
+
+**Endpoint:** [http://localhost:3001/api/v1/departments/:id](http://localhost:3001/api/v1/departments/:id)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/departments/:id`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Path: id.
+- Requires assignment or administrator permission. Cleans related availability, assignments, and schedules.
 
-**Success:** HTTP 200. data: { id, deleted: true }.
+Response codes of this API endpoint:
 
-**Behavior:** Requires assignment or administrator permission. Cleans related availability, assignments, and schedules.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 403 if not assigned; 404 if missing; 409 if queue entries prevent deletion.
+**Response (JSON):** The department identifier and deletion confirmation are returned.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.8.8. Read the Department Enrollment Register
+**Figure 138.** Delete an Eligible Department — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Delete an Eligible Department.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 139.** Delete an Eligible Department — Invalid Request and Response
+
+This figure shows a rejected request for “Delete an Eligible Department” and the error message returned by the system.
+
+### 1.9.9 Read the Department Enrollment Register
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint shows the students enrolled under a department.
+
+**Endpoint:** [http://localhost:3001/api/v1/departments/:id/enrollments](http://localhost:3001/api/v1/departments/:id/enrollments)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/departments/:id/enrollments`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
+- Optional address filter: range (today/ay/all, default ay), q (up to 100 characters), cursor, limit (1–500, default 50).
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Path: id. Optional query: range (today/ay/all, default ay), q (up to 100 characters), cursor, limit (1–500, default 50).
+- Read the X-Next-Cursor response header for continuation. Uses the current active academic year context.
 
-**Success:** HTTP 200. data: register entries, page: 1, pageSize: limit, total.
+Response codes of this API endpoint:
 
-**Behavior:** Read the X-Next-Cursor response header for continuation. Uses the current active academic year context.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** Enrollment entries and a total are returned. When more entries are available, the X-Next-Cursor response header provides the next-page marker.
 
+[SCREENSHOT: Valid Request; include the request and response.]
 
-## 2.9. Adviser Assignments and Availability
+**Figure 140.** Read the Department Enrollment Register — Valid Request and Response
 
-### 2.9.1. List Adviser Assignments
+This figure shows the request and returned response for “Read the Department Enrollment Register.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 141.** Read the Department Enrollment Register — Invalid Request and Response
+
+This figure shows a rejected request for “Read the Department Enrollment Register” and the error message returned by the system.
+
+## 1.10 ADVISER ASSIGNMENT MODULE API
+
+### 1.10.1 Module Description
+
+This module manages adviser assignments and live queue availability. An adviser must be available before eligible students can join the queue.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/advisers](http://localhost:3001/api/v1/advisers)
+- PATCH [http://localhost:3001/api/v1/advisers/:adviserId](http://localhost:3001/api/v1/advisers/:adviserId)
+- PUT [http://localhost:3001/api/v1/me/availability](http://localhost:3001/api/v1/me/availability)
+- POST [http://localhost:3001/api/v1/me/availability/heartbeat](http://localhost:3001/api/v1/me/availability/heartbeat)
+
+### 1.10.2 List Adviser Assignments
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint shows advisers and the departments they handle.
+
+**Endpoint:** [http://localhost:3001/api/v1/advisers](http://localhost:3001/api/v1/advisers)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/advisers`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Optional address filter: page (positive whole number, default 1), pageSize or limit (default 50, maximum 200). Some small-list endpoints return the full list with page details rather than slicing
+- see endpoint notes.
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Optional query: page (positive integer, default 1), pageSize or limit (default 50, maximum 200). Some small-list endpoints return the full list with paging metadata rather than slicing; see endpoint notes.
+- Returns the complete roster with page details.
 
-**Success:** HTTP 200. data: [{ id, name, email, departments: [{ id, name, code, yearLevels }] }], with list metadata.
+Response codes of this API endpoint:
 
-**Behavior:** Returns the complete roster with paging metadata.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The adviser names, emails, departments, and assigned year levels are returned.
 
-### 2.9.2. Replace an Adviser's Assignments
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 142.** List Adviser Assignments — Valid Request and Response
+
+This figure demonstrates the request and returned response for “List Adviser Assignments.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 143.** List Adviser Assignments — Invalid Request and Response
+
+This figure shows a rejected request for “List Adviser Assignments” and the error message returned by the system.
+
+### 1.10.3 Replace an Adviser's Assignments
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint replaces an adviser's department and year-level assignments.
+
+**Endpoint:** [http://localhost:3001/api/v1/advisers/:adviserId](http://localhost:3001/api/v1/advisers/:adviserId)
 
 **Method:** PATCH
 
-**Endpoint:** `/api/v1/advisers/:adviserId`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- adviserId — Required adviser account identifier in the endpoint address.
+- assignments — Required list of up to 50 department assignments. This replaces the whole assignment list.
+- departmentId — Required for each assignment.
+- yearLevels — Optional list for each assignment, using FIRST, SECOND, THIRD, FOURTH, or FIFTH. An empty list means all offered year levels.
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Path: adviserId. Body: assignments (required array, at most 50) of { departmentId, yearLevels? }; levels default to []. Year levels use FIRST, SECOND, THIRD, FOURTH, FIFTH. An empty year-level list means unrestricted responsibility within the department's offered levels.
+- Administrator-only. Replaces the whole mapping, not a partial append.
 
-**Success:** HTTP 200. data: assignment result.
+Response codes of this API endpoint:
 
-**Behavior:** Administrator-only. Replaces the whole mapping, not a partial append.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Illustrative request body:**
+**Response (JSON):** The saved assignment result is returned.
 
-```json
-{
-  "assignments": [
-    {
-      "departmentId": "department-example",
-      "yearLevels": [
-        "FIRST"
-      ]
-    }
-  ]
-}
-```
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Figure 144.** Replace an Adviser's Assignments — Valid Request and Response
 
-### 2.9.3. Open or Close My Queue Availability
+This figure shows the request and returned response for “Replace an Adviser's Assignments.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 145.** Replace an Adviser's Assignments — Invalid Request and Response
+
+This figure shows a rejected request for “Replace an Adviser's Assignments” and the error message returned by the system.
+
+### 1.10.4 Open or Close My Queue Availability
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint changes whether an adviser is ready to serve students.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/availability](http://localhost:3001/api/v1/me/availability)
 
 **Method:** PUT
 
-**Endpoint:** `/api/v1/me/availability`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: departmentId (required identifier), isOpen (required true or false).
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Body: departmentId (required identifier), isOpen (required boolean).
+- Closing releases a student currently served by this adviser. isOpen can remain true if another adviser is open.
 
-**Success:** HTTP 200. data: { departmentId, myOpen, isOpen, openBy }.
+Response codes of this API endpoint:
 
-**Behavior:** Closing releases a student currently served by this adviser. isOpen can remain true if another adviser is open.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Illustrative request body:**
+**Response (JSON):** The department, the adviser's open status, and the department's combined availability are returned.
 
-```json
-{
-  "departmentId": "department-example",
-  "isOpen": true
-}
-```
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Figure 146.** Open or Close My Queue Availability — Valid Request and Response
 
-### 2.9.4. Refresh My Availability
+This figure demonstrates the request and returned response for “Open or Close My Queue Availability.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 147.** Open or Close My Queue Availability — Invalid Request and Response
+
+This figure shows a rejected request for “Open or Close My Queue Availability” and the error message returned by the system.
+
+### 1.10.5 Refresh My Availability
+
+**Version:** 1.0
+
+**Date:** November 16, 2026
+
+**Description:** This endpoint keeps the adviser's open availability current.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/availability/heartbeat](http://localhost:3001/api/v1/me/availability/heartbeat)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/me/availability/heartbeat`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** None.
+- Refreshes the person making the request's open availability; no departmentId business body is required.
 
-**Success:** HTTP 200. data: { touched }.
+Response codes of this API endpoint:
 
-**Behavior:** Refreshes the caller's open availability; no departmentId business body is required.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The number of availability records refreshed is returned.
 
+[SCREENSHOT: Valid Request; include the request and response.]
 
-## 2.10. Department Handovers
+**Figure 148.** Refresh My Availability — Valid Request and Response
 
-### 2.10.1. List Incoming and Outgoing Handovers
+This figure shows the request and returned response for “Refresh My Availability.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 149.** Refresh My Availability — Invalid Request and Response
+
+This figure shows a rejected request for “Refresh My Availability” and the error message returned by the system.
+
+## 1.11 DEPARTMENT HANDOVER MODULE API
+
+### 1.11.1 Module Description
+
+This module lets advisers request, accept, decline, or cancel a change in department responsibility.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/transfers](http://localhost:3001/api/v1/transfers)
+- POST [http://localhost:3001/api/v1/transfers](http://localhost:3001/api/v1/transfers)
+- PATCH [http://localhost:3001/api/v1/transfers/:id](http://localhost:3001/api/v1/transfers/:id)
+- DELETE [http://localhost:3001/api/v1/transfers/:id](http://localhost:3001/api/v1/transfers/:id)
+- POST [http://localhost:3001/api/v1/departments/:id/takeover](http://localhost:3001/api/v1/departments/:id/takeover)
+
+### 1.11.2 List Incoming and Outgoing Handovers
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint shows department handover requests involving the adviser.
+
+**Endpoint:** [http://localhost:3001/api/v1/transfers](http://localhost:3001/api/v1/transfers)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/transfers`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** None.
+- Resolves expired requests first. Automatic response windows are ten minutes for an active holder and one minute for an inactive holder.
 
-**Success:** HTTP 200. data: transfer list.
+Response codes of this API endpoint:
 
-**Behavior:** Resolves expired requests first. Automatic response windows are ten minutes for an active holder and one minute for an inactive holder.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The incoming and outgoing handover requests are returned.
 
-### 2.10.2. Request Department or Year-Level Handover
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 150.** List Incoming and Outgoing Handovers — Valid Request and Response
+
+This figure demonstrates the request and returned response for “List Incoming and Outgoing Handovers.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 151.** List Incoming and Outgoing Handovers — Invalid Request and Response
+
+This figure shows a rejected request for “List Incoming and Outgoing Handovers” and the error message returned by the system.
+
+### 1.11.3 Request Department or Year-Level Handover
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint asks the current adviser to hand over department responsibility.
+
+**Endpoint:** [http://localhost:3001/api/v1/transfers](http://localhost:3001/api/v1/transfers)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/transfers`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: departmentId (required), yearLevels (optional, default an empty list). Year levels use FIRST, SECOND, THIRD, FOURTH, FIFTH. An empty year-level list means unrestricted responsibility within the department's offered levels.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Body: departmentId (required), yearLevels (optional, default []). Year levels use FIRST, SECOND, THIRD, FOURTH, FIFTH. An empty year-level list means unrestricted responsibility within the department's offered levels.
+- The person making the request requests responsibility from the overlapping current holder; do not supply ownerId or accept in this request.
 
-**Success:** HTTP 201. data: serialized transfer including its expiry and parties.
+Response codes of this API endpoint:
 
-**Behavior:** The caller requests responsibility from the overlapping current holder; do not supply ownerId or accept in this request.
+| Code | Message | Description |
+| --- | --- | --- |
+| 201 | Created | The new record was created. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
 
-**Additional failure conditions:** 409 if no overlapping holder exists or department is inactive; 412 without an active year.
+**Response (JSON):** The request details, involved advisers, and response deadline are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "departmentId": "department-example",
-  "yearLevels": [
-    "FIRST"
-  ]
-}
-```
+**Figure 152.** Request Department or Year-Level Handover — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure shows the request and returned response for “Request Department or Year-Level Handover.”
 
-### 2.10.3. Accept or Decline a Handover
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 153.** Request Department or Year-Level Handover — Invalid Request and Response
+
+This figure shows a rejected request for “Request Department or Year-Level Handover” and the error message returned by the system.
+
+### 1.11.4 Accept or Decline a Handover
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint records the current owner's answer to a handover request.
+
+**Endpoint:** [http://localhost:3001/api/v1/transfers/:id](http://localhost:3001/api/v1/transfers/:id)
 
 **Method:** PATCH
 
-**Endpoint:** `/api/v1/transfers/:id`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
+- Request body: accept (required true or false).
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Path: id. Body: accept (required boolean).
+- Only the recorded owner may respond to a pending request.
 
-**Success:** HTTP 200. data: { id, status, transferredFromName }.
+Response codes of this API endpoint:
 
-**Behavior:** Only the recorded owner may respond to a pending request.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 403 if not owner; 404 if missing; 409 if already resolved or ownership changed.
+**Response (JSON):** The request identifier, final status, and previous adviser's name are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "accept": true
-}
-```
+**Figure 154.** Accept or Decline a Handover — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Accept or Decline a Handover.”
 
-### 2.10.4. Cancel My Handover Request
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 155.** Accept or Decline a Handover — Invalid Request and Response
+
+This figure shows a rejected request for “Accept or Decline a Handover” and the error message returned by the system.
+
+### 1.11.5 Cancel My Handover Request
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint withdraws the caller's pending handover request.
+
+**Endpoint:** [http://localhost:3001/api/v1/transfers/:id](http://localhost:3001/api/v1/transfers/:id)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/transfers/:id`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Path: id.
+- Only the requester may cancel a pending request.
 
-**Success:** HTTP 200. data: { id, cancelled: true }.
+Response codes of this API endpoint:
 
-**Behavior:** Only the requester may cancel a pending request.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 403 if not requester; 404 if missing; 409 if resolved.
+**Response (JSON):** The request identifier and cancellation confirmation are returned.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.10.5. Take Over Department Responsibility
+**Figure 156.** Cancel My Handover Request — Valid Request and Response
+
+This figure shows the request and returned response for “Cancel My Handover Request.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 157.** Cancel My Handover Request — Invalid Request and Response
+
+This figure shows a rejected request for “Cancel My Handover Request” and the error message returned by the system.
+
+### 1.11.6 Take Over Department Responsibility
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint takes over department or year-level responsibility under the system's rules.
+
+**Endpoint:** [http://localhost:3001/api/v1/departments/:id/takeover](http://localhost:3001/api/v1/departments/:id/takeover)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/departments/:id/takeover`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
+- Request body: yearLevels (optional, default an empty list). Year levels use FIRST, SECOND, THIRD, FOURTH, FIFTH. An empty year-level list means unrestricted responsibility within the department's offered levels.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Path: id. Body: yearLevels (optional, default []). Year levels use FIRST, SECOND, THIRD, FOURTH, FIFTH. An empty year-level list means unrestricted responsibility within the department's offered levels.
+- Uses the current takeover service and offered-level checks; this is separate from accepting a pending transfer.
 
-**Success:** HTTP 200. data: { departmentId, name, code, transferredFromName }.
+Response codes of this API endpoint:
 
-**Behavior:** Uses the current takeover service and offered-level checks; this is separate from accepting a pending transfer.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Illustrative request body:**
+**Response (JSON):** The department details and previous adviser's name are returned.
 
-```json
-{
-  "yearLevels": [
-    "FIRST"
-  ]
-}
-```
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Figure 158.** Take Over Department Responsibility — Valid Request and Response
 
+This figure demonstrates the request and returned response for “Take Over Department Responsibility.”
 
-## 2.11. Office-Hour Schedules
+[SCREENSHOT: Invalid request and response.]
 
-### 2.11.1. Read My Department Office Hours
+**Figure 159.** Take Over Department Responsibility — Invalid Request and Response
+
+This figure shows a rejected request for “Take Over Department Responsibility” and the error message returned by the system.
+
+## 1.12 OFFICE-HOUR SCHEDULE MODULE API
+
+### 1.12.1 Module Description
+
+This module saves an adviser's weekly office hours and date-specific changes. A posted schedule does not automatically open the live enrollment queue.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/me/schedule](http://localhost:3001/api/v1/me/schedule)
+- PUT [http://localhost:3001/api/v1/me/schedule](http://localhost:3001/api/v1/me/schedule)
+
+### 1.12.2 Read My Department Office Hours
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint shows an adviser's saved hours for a department.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/schedule](http://localhost:3001/api/v1/me/schedule)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/me/schedule`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Required address filter: departmentId.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Required query: departmentId.
+- Returns the person making the request's windows for the current year. Past dated exceptions are filtered out. Does not open or close queue availability.
 
-**Success:** HTTP 200. data: { departmentId, windows, sync }.
+Response codes of this API endpoint:
 
-**Behavior:** Returns the caller's windows for the current year. Past dated exceptions are filtered out. Does not open or close queue availability.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The department identifier, schedule entries, and calendar-copy status are returned.
 
-### 2.11.2. Replace Department Office Hours
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 160.** Read My Department Office Hours — Valid Request and Response
+
+This figure shows the request and returned response for “Read My Department Office Hours.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 161.** Read My Department Office Hours — Invalid Request and Response
+
+This figure shows a rejected request for “Read My Department Office Hours” and the error message returned by the system.
+
+### 1.12.3 Replace Department Office Hours
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint replaces an adviser's office-hour schedule for a department.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/schedule](http://localhost:3001/api/v1/me/schedule)
 
 **Method:** PUT
 
-**Endpoint:** `/api/v1/me/schedule`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- departmentId — Required department identifier in the request body.
+- windows — Required list of schedule entries. An empty list clears the schedule. At most 100 entries can be sent; no more than 30 may remain after past dated entries are removed.
+- kind — WEEKLY for regular hours, EXTRA for additional hours on a date, or CANCEL for a closed date.
+- weekday — Required for WEEKLY; use 1 for Monday through 7 for Sunday.
+- date — Required for EXTRA and CANCEL, in YYYY-MM-DD form.
+- startMinute and endMinute — Required for WEEKLY and EXTRA. Count minutes from midnight on a 30-minute grid. Start at 0 or later; end at 1440 or earlier. Each period must last at least 30 minutes. Times use Asia/Manila.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** Body: departmentId and windows required. Input parsing allows at most 100 submitted entries; business validation permits at most 30 remaining entries after past dated exceptions are removed. Each item has kind WEEKLY, EXTRA, or CANCEL. WEEKLY requires weekday 1–7 (Monday–Sunday), startMinute, endMinute. EXTRA requires date YYYY-MM-DD and start/end minutes. CANCEL requires date. Timed values use a 30-minute grid, start >= 0, end <= 1440, with at least 30 minutes duration. Times use Asia/Manila.
+- Replaces the complete schedule, including removal when windows is empty. Past dated exceptions are filtered before validation. May trigger optional calendar sync without changing live availability.
 
-**Success:** HTTP 200. data: { departmentId, windows, sync }.
+Response codes of this API endpoint:
 
-**Behavior:** Replaces the complete schedule, including removal when windows is empty. Past dated exceptions are filtered before validation. May trigger optional calendar sync without changing live availability.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 400 for invalid windows or more than 30 retained entries; 403 if not assigned; 409 for overlapping windows.
+**Response (JSON):** The saved schedule entries and calendar-copy status are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "departmentId": "department-example",
-  "windows": [
-    {
-      "kind": "WEEKLY",
-      "weekday": 1,
-      "startMinute": 540,
-      "endMinute": 660
-    }
-  ]
-}
-```
+**Figure 162.** Replace Department Office Hours — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Replace Department Office Hours.”
 
+[SCREENSHOT: Invalid request and response.]
 
-## 2.12. Google Calendar Connection
+**Figure 163.** Replace Department Office Hours — Invalid Request and Response
 
-### 2.12.1. Read My Calendar Connection
+This figure shows a rejected request for “Replace Department Office Hours” and the error message returned by the system.
 
-**Method:** GET
+## 1.13 GOOGLE CALENDAR MODULE API
 
-**Endpoint:** `/api/v1/me/calendar`
+### 1.13.1 Module Description
 
-**Version:** Application API v1
+This module connects an adviser's Google Calendar and copies office-hour schedules to it. Disconnecting Google Calendar does not erase the schedule saved in ERPSYS.
 
-**Capture date:** Not yet supplied.
+This module has the following endpoints:
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+- GET [http://localhost:3001/api/v1/me/calendar](http://localhost:3001/api/v1/me/calendar)
+- GET [http://localhost:3001/api/v1/me/calendar/connect](http://localhost:3001/api/v1/me/calendar/connect)
+- GET [http://localhost:3001/api/v1/calendar/callback](http://localhost:3001/api/v1/calendar/callback)
+- POST [http://localhost:3001/api/v1/me/calendar/sync](http://localhost:3001/api/v1/me/calendar/sync)
+- DELETE [http://localhost:3001/api/v1/me/calendar](http://localhost:3001/api/v1/me/calendar)
 
-**Parameters:** None.
+### 1.13.2 Read My Calendar Connection
 
-**Success:** HTTP 200. data: { available, status, sync, googleEmail, lastSyncAt, lastError }.
+**Version:** 1.0
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Date:** November 17, 2026
 
-### 2.12.2. Start Calendar Authorization
+**Description:** This endpoint checks the adviser's Google Calendar connection.
 
-**Method:** GET
-
-**Endpoint:** `/api/v1/me/calendar/connect`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
-
-**Parameters:** None.
-
-**Success:** HTTP 200. data: { url }.
-
-**Behavior:** Open the returned Google consent URL. Limited to ten calendar requests per minute per account for connect/callback/sync.
-
-**Additional failure conditions:** 412 if integration is unavailable; 429 when rate limited.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.12.3. Complete Calendar Authorization
+**Endpoint:** [http://localhost:3001/api/v1/me/calendar](http://localhost:3001/api/v1/me/calendar)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/calendar/callback`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+Response codes of this API endpoint:
 
-**Parameters:** Query: code and state for successful authorization; error can be supplied by Google.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Success:** HTTP 302. 302 Location: /instructor?calendar=connected or /instructor?calendar=error.
+**Response (JSON):** The service availability, connection status, Google email, last update time, and any last error are returned.
 
-**Behavior:** This is a redirect, not a JSON resource envelope. Missing/invalid consent data redirects to the error outcome after permission checks.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Additional failure conditions:** 401/403 for session/permission failure; 429 for the calendar limit.
+**Figure 164.** Read My Calendar Connection — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure shows the request and returned response for “Read My Calendar Connection.”
 
-### 2.12.4. Synchronize Calendar Again
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 165.** Read My Calendar Connection — Invalid Request and Response
+
+This figure shows a rejected request for “Read My Calendar Connection” and the error message returned by the system.
+
+### 1.13.3 Start Calendar Authorization
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint starts the adviser's permission request for Google Calendar.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/calendar/connect](http://localhost:3001/api/v1/me/calendar/connect)
+
+**Method:** GET
+
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
+
+**Parameters:**
+
+- No additional request-body or query information is required.
+
+**Important Notes:**
+
+- Open the returned Google consent URL. Limited to ten calendar requests per minute per account for connect/callback/sync.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+
+**Response (JSON):** A Google permission-page address is returned. The adviser must open it and complete Google's steps.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 166.** Start Calendar Authorization — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Start Calendar Authorization.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 167.** Start Calendar Authorization — Invalid Request and Response
+
+This figure shows a rejected request for “Start Calendar Authorization” and the error message returned by the system.
+
+### 1.13.4 Complete Calendar Authorization
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint receives Google's answer to the calendar permission request.
+
+**Endpoint:** [http://localhost:3001/api/v1/calendar/callback](http://localhost:3001/api/v1/calendar/callback)
+
+**Method:** GET
+
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
+
+**Parameters:**
+
+- Query: code and state for successful authorization
+- error can be supplied by Google.
+
+**Important Notes:**
+
+- Start calendar authorization and finish Google's consent flow in the same signed-in browser. A 302 redirect to calendar=error is not a successful connection.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 302 | Redirect | Continue on the next page. |
+| 401 | Sign-In Required | Sign in or check your sign-in details. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (Redirect):** The browser returns to the adviser page with a connected or error notice.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 168.** Complete Calendar Authorization — Valid Request and Response
+
+This figure shows the request and returned response for “Complete Calendar Authorization.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 169.** Complete Calendar Authorization — Invalid Request and Response
+
+This figure shows a rejected request for “Complete Calendar Authorization” and the error message returned by the system.
+
+### 1.13.5 Synchronize Calendar Again
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint requests another copy of the office-hour schedule to Google Calendar.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/calendar/sync](http://localhost:3001/api/v1/me/calendar/sync)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/me/calendar/sync`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** None.
+- Resets the retry count and requests another schedule synchronization.
 
-**Success:** HTTP 200. data: calendar status.
+Response codes of this API endpoint:
 
-**Behavior:** Resets the retry count and requests another schedule synchronization.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
 
-**Additional failure conditions:** 412 if unavailable; 429 for the calendar limit.
+**Response (JSON):** The current calendar connection and update status are returned.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.12.5. Disconnect Calendar
+**Figure 170.** Synchronize Calendar Again — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Synchronize Calendar Again.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 171.** Synchronize Calendar Again — Invalid Request and Response
+
+This figure shows a rejected request for “Synchronize Calendar Again” and the error message returned by the system.
+
+### 1.13.6 Disconnect Calendar
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint removes the adviser's Google Calendar connection.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/calendar](http://localhost:3001/api/v1/me/calendar)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/me/calendar`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+**Important Notes:**
 
-**Parameters:** None.
+- Removes the mirrored calendar and stored connection token; office hours in ERPSYS remain.
 
-**Success:** HTTP 200. data: calendar status.
+Response codes of this API endpoint:
 
-**Behavior:** Removes the mirrored calendar and stored connection token; office hours in ERPSYS remain.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The disconnected calendar status is returned. The ERPSYS office-hour schedule remains saved.
 
+[SCREENSHOT: Valid Request; include the request and response.]
 
-## 2.13. Academic Years
+**Figure 172.** Disconnect Calendar — Valid Request and Response
 
-### 2.13.1. List Academic Years
+This figure shows the request and returned response for “Disconnect Calendar.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 173.** Disconnect Calendar — Invalid Request and Response
+
+This figure shows a rejected request for “Disconnect Calendar” and the error message returned by the system.
+
+## 1.14 ACADEMIC YEAR MODULE API
+
+### 1.14.1 Module Description
+
+This module manages school years and semesters. An administrator can choose which enrollment period is currently active.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/academic-years](http://localhost:3001/api/v1/academic-years)
+- POST [http://localhost:3001/api/v1/academic-years](http://localhost:3001/api/v1/academic-years)
+- PATCH [http://localhost:3001/api/v1/academic-years/:id](http://localhost:3001/api/v1/academic-years/:id)
+- DELETE [http://localhost:3001/api/v1/academic-years/:id](http://localhost:3001/api/v1/academic-years/:id)
+- GET [http://localhost:3001/api/v1/academic-years/:id/activation](http://localhost:3001/api/v1/academic-years/:id/activation)
+- POST [http://localhost:3001/api/v1/academic-years/:id/activation](http://localhost:3001/api/v1/academic-years/:id/activation)
+
+### 1.14.2 List Academic Years
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint shows the available school years and semesters.
+
+**Endpoint:** [http://localhost:3001/api/v1/academic-years](http://localhost:3001/api/v1/academic-years)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/academic-years`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Optional address filter: page (positive whole number, default 1), pageSize or limit (default 50, maximum 200). Some small-list endpoints return the full list with page details rather than slicing
+- see endpoint notes.
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Optional query: page (positive integer, default 1), pageSize or limit (default 50, maximum 200). Some small-list endpoints return the full list with paging metadata rather than slicing; see endpoint notes.
+- Returns the complete year list with page details.
 
-**Success:** HTTP 200. data: [{ id, label, semesterLabel, isActive, createdAt, hasData }], with list metadata.
+Response codes of this API endpoint:
 
-**Behavior:** Returns the complete year list with paging metadata.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The school-year list is returned with each period's name, semester, active status, and whether it contains records.
 
-### 2.13.2. Create an Academic Year
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 174.** List Academic Years — Valid Request and Response
+
+This figure demonstrates the request and returned response for “List Academic Years.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 175.** List Academic Years — Invalid Request and Response
+
+This figure shows a rejected request for “List Academic Years” and the error message returned by the system.
+
+### 1.14.3 Create an Academic Year
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint adds a school year and semester.
+
+**Endpoint:** [http://localhost:3001/api/v1/academic-years](http://localhost:3001/api/v1/academic-years)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/academic-years`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: label and semesterLabel (required with extra outside spaces removed strings, 1–30 characters)
+- activate (true or false, default false).
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Body: label and semesterLabel (required trimmed strings, 1–30 characters); activate (boolean, default false).
+- Activation is refused while another current year still has waiting or served students.
 
-**Success:** HTTP 201. data: { id, label, semesterLabel, isActive }.
+Response codes of this API endpoint:
 
-**Behavior:** Activation is refused while another current year still has waiting or served students.
+| Code | Message | Description |
+| --- | --- | --- |
+| 201 | Created | The new record was created. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 409 if activation would interrupt an open queue.
+**Response (JSON):** The new period's details and active status are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "label": "2026–2027",
-  "semesterLabel": "First Semester",
-  "activate": false
-}
-```
+**Figure 176.** Create an Academic Year — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure shows the request and returned response for “Create an Academic Year.”
 
-### 2.13.3. Edit the Current Academic Year
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 177.** Create an Academic Year — Invalid Request and Response
+
+This figure shows a rejected request for “Create an Academic Year” and the error message returned by the system.
+
+### 1.14.4 Edit the Current Academic Year
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint changes the name and semester of the active enrollment period.
+
+**Endpoint:** [http://localhost:3001/api/v1/academic-years/:id](http://localhost:3001/api/v1/academic-years/:id)
 
 **Method:** PATCH
 
-**Endpoint:** `/api/v1/academic-years/:id`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
+- Request body: label and semesterLabel (both required, 1–30 characters).
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Path: id. Body: label and semesterLabel (both required, 1–30 characters).
+- Only the active year can be edited.
 
-**Success:** HTTP 200. data: { id, label, semesterLabel }.
+Response codes of this API endpoint:
 
-**Behavior:** Only the active year can be edited.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 404 | Not Found | The requested record cannot be found. |
 
-**Additional failure conditions:** 403 for an inactive year; 404 if missing.
+**Response (JSON):** The updated period's details are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "label": "2026–2027",
-  "semesterLabel": "First Semester"
-}
-```
+**Figure 178.** Edit the Current Academic Year — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Edit the Current Academic Year.”
 
-### 2.13.4. Delete an Empty Academic Year
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 179.** Edit the Current Academic Year — Invalid Request and Response
+
+This figure shows a rejected request for “Edit the Current Academic Year” and the error message returned by the system.
+
+### 1.14.5 Delete an Empty Academic Year
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint removes a school year that has no protected enrollment activity.
+
+**Endpoint:** [http://localhost:3001/api/v1/academic-years/:id](http://localhost:3001/api/v1/academic-years/:id)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/academic-years/:id`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
 
-**Access:** Administrator session.
+Response codes of this API endpoint:
 
-**Parameters:** Path: id.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Success:** HTTP 200. data: { id }.
+**Response (JSON):** The identifier of the removed period is returned.
 
-**Additional failure conditions:** 404 if missing; 409 if verification, queue, or profiling-form records exist.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Figure 180.** Delete an Empty Academic Year — Valid Request and Response
 
-### 2.13.5. Preview Academic-Year Activation
+This figure shows the request and returned response for “Delete an Empty Academic Year.”
 
-**Method:** GET
+[SCREENSHOT: Invalid request and response.]
 
-**Endpoint:** `/api/v1/academic-years/:id/activation`
+**Figure 181.** Delete an Empty Academic Year — Invalid Request and Response
 
-**Version:** Application API v1
+This figure shows a rejected request for “Delete an Empty Academic Year” and the error message returned by the system.
 
-**Capture date:** Not yet supplied.
+### 1.14.6 Preview Academic-Year Activation
 
-**Access:** Administrator session.
+**Version:** 1.0
 
-**Parameters:** Path: id.
+**Date:** November 17, 2026
 
-**Success:** HTTP 200. data: { currentYearLabel, studentsWithProgress, openQueueCount }.
+**Description:** This endpoint checks the effect of switching the active school year.
 
-**Additional failure conditions:** 404 if year is missing.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.13.6. Activate an Academic Year
-
-**Method:** POST
-
-**Endpoint:** `/api/v1/academic-years/:id/activation`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** Administrator session.
-
-**Parameters:** Path: id. No business body fields.
-
-**Success:** HTTP 200. data: { id, label, semesterLabel }.
-
-**Behavior:** Activates this year and deactivates the others. Repeating activation of the active year is accepted.
-
-**Additional failure conditions:** 404 if missing; 409 while the current year has an open queue.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-
-## 2.14. Assessment Requirements
-
-### 2.14.1. List Assessment Requirements
+**Endpoint:** [http://localhost:3001/api/v1/academic-years/:id/activation](http://localhost:3001/api/v1/academic-years/:id/activation)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/requirements`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
 
-**Access:** Administrator session.
+Response codes of this API endpoint:
 
-**Parameters:** Optional query: page (positive integer, default 1), pageSize or limit (default 50, maximum 200). Some small-list endpoints return the full list with paging metadata rather than slicing; see endpoint notes.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
 
-**Success:** HTTP 200. data: [{ id, label, order, isActive }], with list metadata.
+**Response (JSON):** The current year name, number of students with progress, and number of open queue entries are returned.
 
-**Behavior:** Returns the complete requirement list with paging metadata.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Figure 182.** Preview Academic-Year Activation — Valid Request and Response
 
-### 2.14.2. Add an Assessment Requirement
+This figure demonstrates the request and returned response for “Preview Academic-Year Activation.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 183.** Preview Academic-Year Activation — Invalid Request and Response
+
+This figure shows a rejected request for “Preview Academic-Year Activation” and the error message returned by the system.
+
+### 1.14.7 Activate an Academic Year
+
+**Version:** 1.0
+
+**Date:** November 17, 2026
+
+**Description:** This endpoint sets a selected school year as the active enrollment period.
+
+**Endpoint:** [http://localhost:3001/api/v1/academic-years/:id/activation](http://localhost:3001/api/v1/academic-years/:id/activation)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/requirements`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id. No business body fields.
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Body: label (required trimmed string, 1–200 characters).
+- Activates this year and deactivates the others. Repeating activation of the active year is accepted.
 
-**Success:** HTTP 201. data: { id, label, order, isActive }.
+Response codes of this API endpoint:
 
-**Illustrative request body:**
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-```json
-{
-  "label": "Assessment balance checked"
-}
-```
+**Response (JSON):** The selected period's details are returned. Other periods are no longer active.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.14.3. Reorder Assessment Requirements
+**Figure 184.** Activate an Academic Year — Valid Request and Response
+
+This figure shows the request and returned response for “Activate an Academic Year.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 185.** Activate an Academic Year — Invalid Request and Response
+
+This figure shows a rejected request for “Activate an Academic Year” and the error message returned by the system.
+
+## 1.15 ASSESSMENT REQUIREMENT MODULE API
+
+### 1.15.1 Module Description
+
+This module manages the assessment checklist used during student clearance and enrollment.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/requirements](http://localhost:3001/api/v1/requirements)
+- POST [http://localhost:3001/api/v1/requirements](http://localhost:3001/api/v1/requirements)
+- PUT [http://localhost:3001/api/v1/requirements/order](http://localhost:3001/api/v1/requirements/order)
+- PATCH [http://localhost:3001/api/v1/requirements/:id](http://localhost:3001/api/v1/requirements/:id)
+- DELETE [http://localhost:3001/api/v1/requirements/:id](http://localhost:3001/api/v1/requirements/:id)
+
+### 1.15.2 List Assessment Requirements
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint shows the assessment checklist.
+
+**Endpoint:** [http://localhost:3001/api/v1/requirements](http://localhost:3001/api/v1/requirements)
+
+**Method:** GET
+
+**Configurations:** An administrator must be signed in.
+
+**Parameters:**
+
+- Optional address filter: page (positive whole number, default 1), pageSize or limit (default 50, maximum 200). Some small-list endpoints return the full list with page details rather than slicing
+- see endpoint notes.
+
+**Important Notes:**
+
+- Returns the complete requirement list with page details.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** The checklist items, display order, and active status are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 186.** List Assessment Requirements — Valid Request and Response
+
+This figure demonstrates the request and returned response for “List Assessment Requirements.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 187.** List Assessment Requirements — Invalid Request and Response
+
+This figure shows a rejected request for “List Assessment Requirements” and the error message returned by the system.
+
+### 1.15.3 Add an Assessment Requirement
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint adds an item to the assessment checklist.
+
+**Endpoint:** [http://localhost:3001/api/v1/requirements](http://localhost:3001/api/v1/requirements)
+
+**Method:** POST
+
+**Configurations:** An administrator must be signed in.
+
+**Parameters:**
+
+- Request body: label (required with extra outside spaces removed string, 1–200 characters).
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 201 | Created | The new record was created. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** The new checklist item's details are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 188.** Add an Assessment Requirement — Valid Request and Response
+
+This figure shows the request and returned response for “Add an Assessment Requirement.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 189.** Add an Assessment Requirement — Invalid Request and Response
+
+This figure shows a rejected request for “Add an Assessment Requirement” and the error message returned by the system.
+
+### 1.15.4 Reorder Assessment Requirements
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint changes the order of assessment checklist items.
+
+**Endpoint:** [http://localhost:3001/api/v1/requirements/order](http://localhost:3001/api/v1/requirements/order)
 
 **Method:** PUT
 
-**Endpoint:** `/api/v1/requirements/order`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: orderedIds (required array of not empty identifiers, at most 500).
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Body: orderedIds (required array of nonempty identifiers, at most 500).
+- Unlisted existing items are appended. The response is the submitted identifier list, not full requirement rows.
 
-**Success:** HTTP 200. data: { orderedIds }.
+Response codes of this API endpoint:
 
-**Behavior:** Unlisted existing items are appended. The response is the submitted identifier list, not full requirement rows.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
 
-**Additional failure conditions:** 404 for unknown identifiers.
+**Response (JSON):** The submitted list of item identifiers is returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "orderedIds": [
-    "requirement-example"
-  ]
-}
-```
+**Figure 190.** Reorder Assessment Requirements — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Reorder Assessment Requirements.”
 
-### 2.14.4. Update an Assessment Requirement
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 191.** Reorder Assessment Requirements — Invalid Request and Response
+
+This figure shows a rejected request for “Reorder Assessment Requirements” and the error message returned by the system.
+
+### 1.15.5 Update an Assessment Requirement
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint changes an assessment item's label or active status.
+
+**Endpoint:** [http://localhost:3001/api/v1/requirements/:id](http://localhost:3001/api/v1/requirements/:id)
 
 **Method:** PATCH
 
-**Endpoint:** `/api/v1/requirements/:id`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
+- Request body: label (optional, 1–200 characters), isActive (optional true or false).
 
-**Access:** Administrator session.
+Response codes of this API endpoint:
 
-**Parameters:** Path: id. Body: label (optional, 1–200 characters), isActive (optional boolean).
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
 
-**Success:** HTTP 200. data: { id, label, order, isActive }.
+**Response (JSON):** The updated checklist item's details are returned.
 
-**Additional failure conditions:** 404 if missing.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Illustrative request body:**
+**Figure 192.** Update an Assessment Requirement — Valid Request and Response
 
-```json
-{
-  "isActive": false
-}
-```
+This figure shows the request and returned response for “Update an Assessment Requirement.”
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Invalid request and response.]
 
-### 2.14.5. Delete an Assessment Requirement
+**Figure 193.** Update an Assessment Requirement — Invalid Request and Response
+
+This figure shows a rejected request for “Update an Assessment Requirement” and the error message returned by the system.
+
+### 1.15.6 Delete an Assessment Requirement
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint removes an assessment checklist item.
+
+**Endpoint:** [http://localhost:3001/api/v1/requirements/:id](http://localhost:3001/api/v1/requirements/:id)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/requirements/:id`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
 
-**Access:** Administrator session.
+Response codes of this API endpoint:
 
-**Parameters:** Path: id.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
 
-**Success:** HTTP 200. data: { id }.
+**Response (JSON):** The identifier of the removed item is returned.
 
-**Additional failure conditions:** 404 if missing.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Figure 194.** Delete an Assessment Requirement — Valid Request and Response
 
+This figure demonstrates the request and returned response for “Delete an Assessment Requirement.”
 
-## 2.15. Forms, Links, and Assistant Knowledge
+[SCREENSHOT: Invalid request and response.]
 
-### 2.15.1. Read Assistant Knowledge
+**Figure 195.** Delete an Assessment Requirement — Invalid Request and Response
+
+This figure shows a rejected request for “Delete an Assessment Requirement” and the error message returned by the system.
+
+## 1.16 FORMS AND INFORMATION MODULE API
+
+### 1.16.1 Module Description
+
+This module manages the profiling form, required social-media links, and information used by the enrollment assistant.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/chatbot-knowledge](http://localhost:3001/api/v1/chatbot-knowledge)
+- PUT [http://localhost:3001/api/v1/chatbot-knowledge](http://localhost:3001/api/v1/chatbot-knowledge)
+- GET [http://localhost:3001/api/v1/profiling-form](http://localhost:3001/api/v1/profiling-form)
+- POST [http://localhost:3001/api/v1/profiling-form](http://localhost:3001/api/v1/profiling-form)
+- DELETE [http://localhost:3001/api/v1/profiling-form](http://localhost:3001/api/v1/profiling-form)
+- GET [http://localhost:3001/api/v1/social-links](http://localhost:3001/api/v1/social-links)
+- POST [http://localhost:3001/api/v1/social-links](http://localhost:3001/api/v1/social-links)
+- PUT [http://localhost:3001/api/v1/social-links/order](http://localhost:3001/api/v1/social-links/order)
+- PATCH [http://localhost:3001/api/v1/social-links/:id](http://localhost:3001/api/v1/social-links/:id)
+- DELETE [http://localhost:3001/api/v1/social-links/:id](http://localhost:3001/api/v1/social-links/:id)
+- GET [http://localhost:3001/api/v1/signup-options](http://localhost:3001/api/v1/signup-options)
+
+### 1.16.2 Read Assistant Knowledge
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint shows the saved information used by the enrollment assistant.
+
+**Endpoint:** [http://localhost:3001/api/v1/chatbot-knowledge](http://localhost:3001/api/v1/chatbot-knowledge)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/chatbot-knowledge`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Administrator session.
+Response codes of this API endpoint:
 
-**Parameters:** None.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Success:** HTTP 200. data: { content, version, updatedById, updatedByName, updatedAt }, or null.
+**Response (JSON):** The saved text, revision number, and last editor are returned. The result can be empty if nothing has been saved.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.15.2. Replace Assistant Knowledge
+**Figure 196.** Read Assistant Knowledge — Valid Request and Response
+
+This figure shows the request and returned response for “Read Assistant Knowledge.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 197.** Read Assistant Knowledge — Invalid Request and Response
+
+This figure shows a rejected request for “Read Assistant Knowledge” and the error message returned by the system.
+
+### 1.16.3 Replace Assistant Knowledge
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint replaces the information used by the enrollment assistant.
+
+**Endpoint:** [http://localhost:3001/api/v1/chatbot-knowledge](http://localhost:3001/api/v1/chatbot-knowledge)
 
 **Method:** PUT
 
-**Endpoint:** `/api/v1/chatbot-knowledge`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: content (required string, up to 200,000 characters).
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Body: content (required string, up to 200,000 characters).
+- Increments the version and invalidates the assistant's knowledge cache.
 
-**Success:** HTTP 200. data: { version, updatedAt }.
+Response codes of this API endpoint:
 
-**Behavior:** Increments the version and invalidates the assistant's knowledge cache.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Illustrative request body:**
+**Response (JSON):** The new revision number and update time are returned.
 
-```json
-{
-  "content": "Ask an SBO officer when a requirement is unclear."
-}
-```
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Figure 198.** Replace Assistant Knowledge — Valid Request and Response
 
-### 2.15.3. Read the Linked Profiling Form
+This figure demonstrates the request and returned response for “Replace Assistant Knowledge.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 199.** Replace Assistant Knowledge — Invalid Request and Response
+
+This figure shows a rejected request for “Replace Assistant Knowledge” and the error message returned by the system.
+
+### 1.16.4 Read the Linked Profiling Form
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint shows the profiling form linked to the current school year.
+
+**Endpoint:** [http://localhost:3001/api/v1/profiling-form](http://localhost:3001/api/v1/profiling-form)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/profiling-form`
+**Configurations:** An SBO officer or administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** SBO officer or administrator.
+Response codes of this API endpoint:
 
-**Parameters:** None.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Success:** HTTP 200. data: { formId, title, responderUri, editUrl, updatedByName, updatedAt }, or null.
+**Response (JSON):** The form title, answer link, edit link, and last update details are returned, or an empty result if no form is linked.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.15.4. Create and Link the Profiling Form
+**Figure 200.** Read the Linked Profiling Form — Valid Request and Response
+
+This figure shows the request and returned response for “Read the Linked Profiling Form.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 201.** Read the Linked Profiling Form — Invalid Request and Response
+
+This figure shows a rejected request for “Read the Linked Profiling Form” and the error message returned by the system.
+
+### 1.16.5 Create and Link the Profiling Form
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint creates a Google profiling form for the current school year.
+
+**Endpoint:** [http://localhost:3001/api/v1/profiling-form](http://localhost:3001/api/v1/profiling-form)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/profiling-form`
+**Configurations:** An SBO officer or administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: title (required with extra outside spaces removed string, 1–200 characters).
 
-**Access:** SBO officer or administrator.
+**Important Notes:**
 
-**Parameters:** Body: title (required trimmed string, 1–200 characters).
+- Creates a verified-email-collection Google Form, publishes it, and shares it with the person making the request. It does not accept a recourse and year-level selection form URL.
 
-**Success:** HTTP 201. data: linked form details.
+Response codes of this API endpoint:
 
-**Behavior:** Creates a verified-email-collection Google Form, publishes it, and shares it with the caller. It does not accept a replacement form URL.
+| Code | Message | Description |
+| --- | --- | --- |
+| 201 | Created | The new record was created. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
 
-**Additional failure conditions:** 409 if already linked; 412 without an active year; 503 if Forms is off; provider failures can prevent creation.
+**Response (JSON):** The new form's details and links are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "title": "Student Profiling"
-}
-```
+**Figure 202.** Create and Link the Profiling Form — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Create and Link the Profiling Form.”
 
-### 2.15.5. Unlink the Profiling Form
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 203.** Create and Link the Profiling Form — Invalid Request and Response
+
+This figure shows a rejected request for “Create and Link the Profiling Form” and the error message returned by the system.
+
+### 1.16.6 Unlink the Profiling Form
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint removes the current school year's link to the profiling form.
+
+**Endpoint:** [http://localhost:3001/api/v1/profiling-form](http://localhost:3001/api/v1/profiling-form)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/profiling-form`
+**Configurations:** An SBO officer or administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** SBO officer or administrator.
+**Important Notes:**
 
-**Parameters:** None.
+- Removes the current-year link, not the underlying Google Form.
 
-**Success:** HTTP 200. data: { ok: true }.
+Response codes of this API endpoint:
 
-**Behavior:** Removes the current-year link, not the underlying Google Form.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** A confirmation is returned. The Google Form itself is not deleted.
 
-### 2.15.6. List Required Social-Media Links
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 204.** Unlink the Profiling Form — Valid Request and Response
+
+This figure shows the request and returned response for “Unlink the Profiling Form.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 205.** Unlink the Profiling Form — Invalid Request and Response
+
+This figure shows a rejected request for “Unlink the Profiling Form” and the error message returned by the system.
+
+### 1.16.7 List Required Social-Media Links
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint shows the social-media pages required for student clearance.
+
+**Endpoint:** [http://localhost:3001/api/v1/social-links](http://localhost:3001/api/v1/social-links)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/social-links`
+**Configurations:** An SBO officer or administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Optional address filter: page (positive whole number, default 1), pageSize or limit (default 50, maximum 200). Some small-list endpoints return the full list with page details rather than slicing
+- see endpoint notes.
 
-**Access:** SBO officer or administrator.
+**Important Notes:**
 
-**Parameters:** Optional query: page (positive integer, default 1), pageSize or limit (default 50, maximum 200). Some small-list endpoints return the full list with paging metadata rather than slicing; see endpoint notes.
+- Returns the complete ordered list with page details.
 
-**Success:** HTTP 200. data: ordered social-link rows, with list metadata.
+Response codes of this API endpoint:
 
-**Behavior:** Returns the complete ordered list with paging metadata.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The saved links are returned in display order.
 
-### 2.15.7. Add or Update a Social-Media Link
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 206.** List Required Social-Media Links — Valid Request and Response
+
+This figure demonstrates the request and returned response for “List Required Social-Media Links.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 207.** List Required Social-Media Links — Invalid Request and Response
+
+This figure shows a rejected request for “List Required Social-Media Links” and the error message returned by the system.
+
+### 1.16.8 Add or Update a Social-Media Link
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint saves a required social-media page.
+
+**Endpoint:** [http://localhost:3001/api/v1/social-links](http://localhost:3001/api/v1/social-links)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/social-links`
+**Configurations:** An SBO officer or administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: name (1–120 characters), url (valid URL, at most 1,000 characters)
+- id (optional existing identifier).
 
-**Access:** SBO officer or administrator.
+**Important Notes:**
 
-**Parameters:** Body: name (1–120 characters), url (valid URL, at most 1,000 characters); id (optional existing identifier).
+- 201 when creating; 200 when id selects an existing link.
 
-**Success:** HTTP 201. data: social-link row.
+Response codes of this API endpoint:
 
-**Behavior:** 201 when creating; 200 when id selects an existing link.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Updated / Created (201) | The link was updated or created. |
+| 400 | Invalid Request | Check the link name and address. |
+| 404 | Not Found | The selected existing link cannot be found. |
 
-**Additional failure conditions:** 404 for an unknown supplied id.
+**Response (JSON):** The new or updated link details are returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "name": "College page",
-  "url": "https://example.org/college"
-}
-```
+**Figure 208.** Add or Update a Social-Media Link — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure shows the request and returned response for “Add or Update a Social-Media Link.”
 
-### 2.15.8. Reorder Social-Media Links
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 209.** Add or Update a Social-Media Link — Invalid Request and Response
+
+This figure shows a rejected request for “Add or Update a Social-Media Link” and the error message returned by the system.
+
+### 1.16.9 Reorder Social-Media Links
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint changes the display order of required social-media links.
+
+**Endpoint:** [http://localhost:3001/api/v1/social-links/order](http://localhost:3001/api/v1/social-links/order)
 
 **Method:** PUT
 
-**Endpoint:** `/api/v1/social-links/order`
+**Configurations:** An SBO officer or administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: orderedIds (required array of not empty identifiers).
 
-**Access:** SBO officer or administrator.
+Response codes of this API endpoint:
 
-**Parameters:** Body: orderedIds (required array of nonempty identifiers).
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Success:** HTTP 200. data: { ok: true }.
+**Response (JSON):** A confirmation is returned when the order is saved.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "orderedIds": [
-    "link-example"
-  ]
-}
-```
+**Figure 210.** Reorder Social-Media Links — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Reorder Social-Media Links.”
 
-### 2.15.9. Edit a Social-Media Link
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 211.** Reorder Social-Media Links — Invalid Request and Response
+
+This figure shows a rejected request for “Reorder Social-Media Links” and the error message returned by the system.
+
+### 1.16.10 Edit a Social-Media Link
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint changes the name and address of a required social-media page.
+
+**Endpoint:** [http://localhost:3001/api/v1/social-links/:id](http://localhost:3001/api/v1/social-links/:id)
 
 **Method:** PATCH
 
-**Endpoint:** `/api/v1/social-links/:id`
+**Configurations:** An SBO officer or administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
+- Request body: name and url (both required
+- same limits as creation).
 
-**Access:** SBO officer or administrator.
+Response codes of this API endpoint:
 
-**Parameters:** Path: id. Body: name and url (both required; same limits as creation).
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
 
-**Success:** HTTP 200. data: social-link row.
+**Response (JSON):** The updated link details are returned.
 
-**Additional failure conditions:** 404 if missing.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Illustrative request body:**
+**Figure 212.** Edit a Social-Media Link — Valid Request and Response
 
-```json
-{
-  "name": "College page",
-  "url": "https://example.org/college"
-}
-```
+This figure shows the request and returned response for “Edit a Social-Media Link.”
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Invalid request and response.]
 
-### 2.15.10. Delete a Social-Media Link
+**Figure 213.** Edit a Social-Media Link — Invalid Request and Response
+
+This figure shows a rejected request for “Edit a Social-Media Link” and the error message returned by the system.
+
+### 1.16.11 Delete a Social-Media Link
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint removes a required social-media page from the list.
+
+**Endpoint:** [http://localhost:3001/api/v1/social-links/:id](http://localhost:3001/api/v1/social-links/:id)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/social-links/:id`
+**Configurations:** An SBO officer or administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: id.
 
-**Access:** SBO officer or administrator.
+Response codes of this API endpoint:
 
-**Parameters:** Path: id.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Success:** HTTP 200. data: { ok: true }.
+**Response (JSON):** A confirmation is returned when the link is removed.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.15.11. Read Registration Options
+**Figure 214.** Delete a Social-Media Link — Valid Request and Response
 
-**Method:** GET
+This figure demonstrates the request and returned response for “Delete a Social-Media Link.”
 
-**Endpoint:** `/api/v1/signup-options`
+[SCREENSHOT: Invalid request and response.]
 
-**Version:** Application API v1
+**Figure 215.** Delete a Social-Media Link — Invalid Request and Response
 
-**Capture date:** Not yet supplied.
+This figure shows a rejected request for “Delete a Social-Media Link” and the error message returned by the system.
 
-**Access:** Public.
+### 1.16.12 Read Registration Options
 
-**Parameters:** None.
+**Version:** 1.0
 
-**Success:** HTTP 200. data: { academicYears: [{ id, label, semesterLabel, isActive }], departments: [...] }.
+**Date:** November 18, 2026
 
-**Behavior:** Public. Year-level choices are represented by department data; the response is not a top-level yearLevels array.
+**Description:** This endpoint shows the school years and departments available for registration.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-
-## 2.16. Launch, Overview, Stamps, and Notifications
-
-### 2.16.1. Load the Landing-Screen Bundle
+**Endpoint:** [http://localhost:3001/api/v1/signup-options](http://localhost:3001/api/v1/signup-options)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/me/launch`
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
+**Important Notes:**
 
-**Parameters:** None.
+- Public. Year-level choices are represented by department data; the response is not a top-level yearLevels array.
 
-**Success:** HTTP 200. data: role-appropriate launch bundle.
+Response codes of this API endpoint:
 
-**Behavior:** All signed-in accounts. Cache-Control: private, no-store; Vary: Cookie. The bundle varies by the caller's working area.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The available school years and departments are returned. Year-level choices are included in the department information.
 
-### 2.16.2. Read the Officer or Administrator Overview
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 216.** Read Registration Options — Valid Request and Response
+
+This figure shows the request and returned response for “Read Registration Options.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 217.** Read Registration Options — Invalid Request and Response
+
+This figure shows a rejected request for “Read Registration Options” and the error message returned by the system.
+
+## 1.17 PERSONAL DASHBOARD MODULE API
+
+### 1.17.1 Module Description
+
+This module loads the signed-in user's dashboard, digital stamp, and notifications. The information shown depends on the user's permitted working area.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/me/launch](http://localhost:3001/api/v1/me/launch)
+- GET [http://localhost:3001/api/v1/me/overview](http://localhost:3001/api/v1/me/overview)
+- GET [http://localhost:3001/api/v1/me/stamp](http://localhost:3001/api/v1/me/stamp)
+- PATCH [http://localhost:3001/api/v1/me/stamp](http://localhost:3001/api/v1/me/stamp)
+- GET [http://localhost:3001/api/v1/me/notifications](http://localhost:3001/api/v1/me/notifications)
+
+### 1.17.2 Load the Landing-Screen Bundle
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint loads the information needed for the signed-in user's starting page.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/launch](http://localhost:3001/api/v1/me/launch)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/me/overview`
+**Configurations:** The user must be signed in. Record-permission checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
+**Important Notes:**
 
-**Parameters:** None.
+- All signed-in accounts. Cache-Control: private, no-store; Vary: Cookie. The bundle varies by the person making the request's working area.
 
-**Success:** HTTP 200. data: role-appropriate overview.
+Response codes of this API endpoint:
 
-**Behavior:** The administrator receives administrator statistics; the officer receives the officer overview. A session alone is insufficient.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Additional failure conditions:** 403 for users without officer or administrator overview permission.
+**Response (JSON):** The dashboard information allowed for the user's working area is returned.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.16.3. Read My Digital Stamp
+**Figure 218.** Load the Landing-Screen Bundle — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Load the Landing-Screen Bundle.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 219.** Load the Landing-Screen Bundle — Invalid Request and Response
+
+This figure shows a rejected request for “Load the Landing-Screen Bundle” and the error message returned by the system.
+
+### 1.17.3 Read the Officer or Administrator Overview
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint shows the summary for an SBO officer or administrator.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/overview](http://localhost:3001/api/v1/me/overview)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/me/stamp`
+**Configurations:** The user must be signed in. Record-permission checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** SBO officer or administrator.
+**Important Notes:**
 
-**Parameters:** None.
+- Use an SBO officer or administrator account. A student or adviser session receives access denied even though a sign-in session exists.
 
-**Success:** HTTP 200. data: stamp details.
+Response codes of this API endpoint:
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-### 2.16.4. Update My Digital Stamp
+**Response (JSON):** The summary for the user's permitted working area is returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 220.** Read the Officer or Administrator Overview — Valid Request and Response
+
+This figure shows the request and returned response for “Read the Officer or Administrator Overview.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 221.** Read the Officer or Administrator Overview — Invalid Request and Response
+
+This figure shows a rejected request for “Read the Officer or Administrator Overview” and the error message returned by the system.
+
+### 1.17.4 Read My Digital Stamp
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint shows the signed-in user's digital stamp.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/stamp](http://localhost:3001/api/v1/me/stamp)
+
+**Method:** GET
+
+**Configurations:** An SBO officer or administrator must be signed in.
+
+**Parameters:**
+
+- No additional request-body or query information is required.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** The saved stamp details are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 222.** Read My Digital Stamp — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Read My Digital Stamp.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 223.** Read My Digital Stamp — Invalid Request and Response
+
+This figure shows a rejected request for “Read My Digital Stamp” and the error message returned by the system.
+
+### 1.17.5 Update My Digital Stamp
+
+**Version:** 1.0
+
+**Date:** November 18, 2026
+
+**Description:** This endpoint changes the signed-in user's digital stamp.
+
+**Endpoint:** [http://localhost:3001/api/v1/me/stamp](http://localhost:3001/api/v1/me/stamp)
 
 **Method:** PATCH
 
-**Endpoint:** `/api/v1/me/stamp`
+**Configurations:** An SBO officer or administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: name (optional, at most 80 characters)
+- graphicUrl and signatureUrl (optional URL up to 1,000 characters, or null).
 
-**Access:** SBO officer or administrator.
+Response codes of this API endpoint:
 
-**Parameters:** Body: name (optional, at most 80 characters); graphicUrl and signatureUrl (optional URL up to 1,000 characters, or null).
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 404 | Not Found | The requested record cannot be found. |
 
-**Success:** HTTP 200. data: stamp details.
+**Response (JSON):** The updated stamp details are returned.
 
-**Additional failure conditions:** 404 if account cannot be updated.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Illustrative request body:**
+**Figure 224.** Update My Digital Stamp — Valid Request and Response
 
-```json
-{
-  "name": "Reviewing Officer",
-  "graphicUrl": null
-}
-```
+This figure shows the request and returned response for “Update My Digital Stamp.”
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Invalid request and response.]
 
-### 2.16.5. Read My Notifications
+**Figure 225.** Update My Digital Stamp — Invalid Request and Response
 
-**Method:** GET
+This figure shows a rejected request for “Update My Digital Stamp” and the error message returned by the system.
 
-**Endpoint:** `/api/v1/me/notifications`
+### 1.17.6 Read My Notifications
 
-**Version:** Application API v1
+**Version:** 1.0
 
-**Capture date:** Not yet supplied.
+**Date:** November 18, 2026
 
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
+**Description:** This endpoint shows the signed-in user's latest notifications.
 
-**Parameters:** None.
-
-**Success:** HTTP 200. data: notification rows, page: 1, pageSize: 50, total: returned-row count.
-
-**Behavior:** Newest first, capped at 50. This handler does not expose arbitrary notification pagination. New read markers live in account-scoped browser storage, capped at 1,000 IDs; they do not synchronize across devices and clearing browser storage resets them. Existing server read markers remain honored. There is no mark-read write endpoint.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-
-## 2.17. Report Data
-
-### 2.17.1. Read User-Directory Report Data
+**Endpoint:** [http://localhost:3001/api/v1/me/notifications](http://localhost:3001/api/v1/me/notifications)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/reports/user-directory`
+**Configurations:** The user must be signed in. Record-permission checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Optional query: q (up to 100 characters), role (permitted account category; omit for all), outside (ALL/INSIDE/OUTSIDE), academicYearId, departmentId, yearLevel; sort (joined/studentNumber/name, default joined), dir (asc/desc, default desc). Account-category labels in this document are descriptive, not wire values; use the account-management client for role-filtered requests.
+- Newest first, capped at 50. This handler does not expose arbitrary notification pagination. New read markers live in account-scoped browser storage, capped at 1,000 IDs; they do not synchronize across devices and clearing browser storage resets them. Existing server read markers remain honored. There is no mark-read write endpoint.
 
-**Success:** HTTP 200. data: { year, rows, matchedCount, truncated }.
+Response codes of this API endpoint:
 
-**Behavior:** At most 1,000 rows. The API returns JSON; PDF layout, preview, and download happen in the website.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** Up to 50 notifications are returned, with the newest first.
 
-### 2.17.2. Read Department-Roster Report Data
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Method:** GET
+**Figure 226.** Read My Notifications — Valid Request and Response
 
-**Endpoint:** `/api/v1/reports/roster`
+This figure demonstrates the request and returned response for “Read My Notifications.”
 
-**Version:** Application API v1
+[SCREENSHOT: Invalid request and response.]
 
-**Capture date:** Not yet supplied.
+**Figure 227.** Read My Notifications — Invalid Request and Response
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
+This figure shows a rejected request for “Read My Notifications” and the error message returned by the system.
 
-**Parameters:** Optional query: academicYearId; scope (mine/all, default mine); sort (name/studentNumber/stepsVerified/yearLevel/enrolledAt); dir (asc/desc); q (up to 100 characters); departmentIds, yearLevels, buckets, steps (repeat array query keys for multiple selections); stepState; enrolled (true/false); unassigned (true). Buckets: NOT_STARTED, IN_PROGRESS, READY_FOR_QUEUE, ENROLLED. Step states: MISSING, PENDING, SUBMITTED, VERIFIED, RETURNED. Scope all is a roster filter, not an access-control bypass.
+## 1.18 REPORT MODULE API
 
-**Success:** HTTP 200. data: { year, rows, stats, matchedCount, truncated }.
+### 1.18.1 Module Description
 
-**Behavior:** At most 1,000 rows. Embedded stats summarize the returned rows. The separate roster-stats endpoint is uncapped but deliberately ignores bucket filters, so its totals may differ from a bucket-filtered report. Without a year, returns empty rows and year null.
+This module supplies student lists, requirement registers, and totals for reports. The website prepares the printable PDF; these endpoints provide the information.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This module has the following endpoints:
 
-### 2.17.3. Read Uncapped Roster Totals
+- GET [http://localhost:3001/api/v1/reports/user-directory](http://localhost:3001/api/v1/reports/user-directory)
+- GET [http://localhost:3001/api/v1/reports/roster](http://localhost:3001/api/v1/reports/roster)
+- GET [http://localhost:3001/api/v1/reports/roster-stats](http://localhost:3001/api/v1/reports/roster-stats)
+- GET [http://localhost:3001/api/v1/reports/step-register](http://localhost:3001/api/v1/reports/step-register)
 
-**Method:** GET
+### 1.18.2 Read User-Directory Report Data
 
-**Endpoint:** `/api/v1/reports/roster-stats`
+**Version:** 1.0
 
-**Version:** Application API v1
+**Date:** November 19, 2026
 
-**Capture date:** Not yet supplied.
+**Description:** This endpoint provides account information for a user-directory report.
 
-**Access:** Enrollment adviser or administrator, with any additional assignment checks described below.
-
-**Parameters:** Optional query: academicYearId; scope (mine/all, default mine); sort (name/studentNumber/stepsVerified/yearLevel/enrolledAt); dir (asc/desc); q (up to 100 characters); departmentIds, yearLevels, buckets, steps (repeat array query keys for multiple selections); stepState; enrolled (true/false); unassigned (true). Buckets: NOT_STARTED, IN_PROGRESS, READY_FOR_QUEUE, ENROLLED. Step states: MISSING, PENDING, SUBMITTED, VERIFIED, RETURNED. Scope all is a roster filter, not an access-control bypass.
-
-**Success:** HTTP 200. data: { year, stats: { byCourse, byCourseYearLevel, distribution, unassignedTotal, total } }.
-
-**Behavior:** Aggregates without the PDF row cap and deliberately ignores buckets. Other applicable roster filters remain; totals are not necessarily the count of a bucket-filtered report.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.17.4. Read Step-Register Report Data
+**Endpoint:** [http://localhost:3001/api/v1/reports/user-directory](http://localhost:3001/api/v1/reports/user-directory)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/reports/step-register`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Optional address filter: q (up to 100 characters), role (permitted account category
+- omit for all), outside (ALL/INSIDE/OUTSIDE), academicYearId, departmentId, yearLevel
+- sort (joined/studentNumber/name, default joined), dir (asc/desc, default desc). Account-category labels in this document are descriptive, not values used by the account-management screen
+- use the account-management client for role-filtered requests.
 
-**Access:** SBO officer or administrator.
+**Important Notes:**
 
-**Parameters:** Query: step is required. Other submission filters apply, except page and pageSize. Optional query: step (ASSESSMENT, SOCIAL_MEDIA, PROFILING, MUGSHOT, CONSENT); page (default 1), pageSize (1–100, default 50); sort (submittedAt, studentName, status; default submittedAt); dir (asc/desc, default asc); q (up to 100 characters); status (ALL, PENDING, SUBMITTED, VERIFIED, RETURNED); evidence (ALL, HAS, NONE); range (ALL, today, 7d, 30d, year).
+- At most 1,000 report rows are returned. Check the matched count and shortened-results notice before presenting the report as complete.
 
-**Success:** HTTP 200. data: { year, step: { code, name }, rows, matchedCount, truncated }.
+Response codes of this API endpoint:
 
-**Behavior:** At most 1,000 rows. No PDF bytes are returned.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The selected year, matching account rows, total matches, and a notice of any shortened results are returned.
 
+[SCREENSHOT: Valid Request; include the request and response.]
 
-## 2.18. Account Administration
+**Figure 228.** Read User-Directory Report Data — Valid Request and Response
 
-### 2.18.1. Search the User Directory
+This figure shows the request and returned response for “Read User-Directory Report Data.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 229.** Read User-Directory Report Data — Invalid Request and Response
+
+This figure shows a rejected request for “Read User-Directory Report Data” and the error message returned by the system.
+
+### 1.18.3 Read Department-Roster Report Data
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint provides student information for a department roster report.
+
+**Endpoint:** [http://localhost:3001/api/v1/reports/roster](http://localhost:3001/api/v1/reports/roster)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/users`
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Optional address filter: academicYearId
+- scope (mine/all, default mine)
+- sort (name/studentNumber/stepsVerified/yearLevel/enrolledAt)
+- dir (asc/desc)
+- q (up to 100 characters)
+- departmentIds, yearLevels, buckets, steps (repeat array address filter keys for multiple selections)
+- stepState
+- enrolled (true/false)
+- unassigned (true). Buckets: NOT_STARTED, IN_PROGRESS, READY_FOR_QUEUE, ENROLLED. Step states: MISSING, PENDING, SUBMITTED, VERIFIED, RETURNED. Scope all is a roster filter, not an access-control bypass.
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Optional query: q (up to 100 characters), role (permitted account category; omit for all), outside (ALL/INSIDE/OUTSIDE), academicYearId, departmentId, yearLevel; sort (joined/studentNumber/name, default joined), dir (asc/desc, default desc). Account-category labels in this document are descriptive, not wire values; use the account-management client for role-filtered requests. Optional page (>=1, default 1), pageSize (1–100, default 50).
+- At most 1,000 rows are returned. Summary totals describe the returned rows. The separate total-count endpoint ignores progress-group filters, so its totals can differ. Without a selected year, the result is empty.
 
-**Success:** HTTP 200. data: [{ id, name, email, image, role, isOutsideOrg, blocked, studentNumber, studentProfileId, department, yearLevel, joinedAt }], with list metadata.
+Response codes of this API endpoint:
 
-**Behavior:** The year defaults to active, otherwise newest. Academic year alone does not restrict account membership. Name/student-number sorting occurs within the page already selected by joined date, not globally. These endpoints do not require the integration step-up.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The selected year, student rows, summary totals, total matches, and a notice of shortened results are returned.
 
-### 2.18.2. Change Student or Officer Permissions in Bulk
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 230.** Read Department-Roster Report Data — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Read Department-Roster Report Data.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 231.** Read Department-Roster Report Data — Invalid Request and Response
+
+This figure shows a rejected request for “Read Department-Roster Report Data” and the error message returned by the system.
+
+### 1.18.4 Read Uncapped Roster Totals
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint counts the students matching the roster filters.
+
+**Endpoint:** [http://localhost:3001/api/v1/reports/roster-stats](http://localhost:3001/api/v1/reports/roster-stats)
+
+**Method:** GET
+
+**Configurations:** An enrollment adviser or administrator must be signed in. Department and year-level checks may also apply.
+
+**Parameters:**
+
+- Optional address filter: academicYearId
+- scope (mine/all, default mine)
+- sort (name/studentNumber/stepsVerified/yearLevel/enrolledAt)
+- dir (asc/desc)
+- q (up to 100 characters)
+- departmentIds, yearLevels, buckets, steps (repeat array address filter keys for multiple selections)
+- stepState
+- enrolled (true/false)
+- unassigned (true). Buckets: NOT_STARTED, IN_PROGRESS, READY_FOR_QUEUE, ENROLLED. Step states: MISSING, PENDING, SUBMITTED, VERIFIED, RETURNED. Scope all is a roster filter, not an access-control bypass.
+
+**Important Notes:**
+
+- These totals have no report row limit. Progress-group filters are not applied; other supported roster filters still apply.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** Totals by course, course and year level, progress group, and unassigned students are returned without the report row limit.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 232.** Read Uncapped Roster Totals — Valid Request and Response
+
+This figure shows the request and returned response for “Read Uncapped Roster Totals.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 233.** Read Uncapped Roster Totals — Invalid Request and Response
+
+This figure shows a rejected request for “Read Uncapped Roster Totals” and the error message returned by the system.
+
+### 1.18.5 Read Step-Register Report Data
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint provides submissions for a requirement register report.
+
+**Endpoint:** [http://localhost:3001/api/v1/reports/step-register](http://localhost:3001/api/v1/reports/step-register)
+
+**Method:** GET
+
+**Configurations:** An SBO officer or administrator must be signed in.
+
+**Parameters:**
+
+- Query: step is required.
+- Other submission filters apply, except page and pageSize.
+- Optional address filter: step (ASSESSMENT, SOCIAL_MEDIA, PROFILING, MUGSHOT, CONSENT)
+- page (default 1), pageSize (1–100, default 50)
+- sort (submittedAt, studentName, status
+- default submittedAt)
+- dir (asc/desc, default asc)
+- q (up to 100 characters)
+- status (ALL, PENDING, SUBMITTED, VERIFIED, RETURNED)
+- evidence (ALL, HAS, NONE)
+- range (ALL, today, 7d, 30d, year).
+
+**Important Notes:**
+
+- At most 1,000 rows are returned. The website creates the PDF from these rows.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** The year, selected requirement, matching rows, total matches, and a notice of shortened results are returned.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 234.** Read Step-Register Report Data — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Read Step-Register Report Data.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 235.** Read Step-Register Report Data — Invalid Request and Response
+
+This figure shows a rejected request for “Read Step-Register Report Data” and the error message returned by the system.
+
+## 1.19 ACCOUNT MANAGEMENT MODULE API
+
+### 1.19.1 Module Description
+
+This module lets administrators find accounts, change supported permissions, block accounts, and help students replace passwords.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/users](http://localhost:3001/api/v1/users)
+- PATCH [http://localhost:3001/api/v1/users](http://localhost:3001/api/v1/users)
+- DELETE [http://localhost:3001/api/v1/users](http://localhost:3001/api/v1/users)
+- PATCH [http://localhost:3001/api/v1/users/:userId](http://localhost:3001/api/v1/users/:userId)
+- DELETE [http://localhost:3001/api/v1/users/:userId](http://localhost:3001/api/v1/users/:userId)
+- POST [http://localhost:3001/api/v1/users/:userId/password-reset](http://localhost:3001/api/v1/users/:userId/password-reset)
+
+### 1.19.2 Search the User Directory
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint finds accounts in the administrator's user directory.
+
+**Endpoint:** [http://localhost:3001/api/v1/users](http://localhost:3001/api/v1/users)
+
+**Method:** GET
+
+**Configurations:** An administrator must be signed in.
+
+**Parameters:**
+
+- Optional address filter: q (up to 100 characters), role (permitted account category
+- omit for all), outside (ALL/INSIDE/OUTSIDE), academicYearId, departmentId, yearLevel
+- sort (joined/studentNumber/name, default joined), dir (asc/desc, default desc). Account-category labels in this document are descriptive, not values used by the account-management screen
+- use the account-management client for role-filtered requests.
+- Optional page (at least 1, default 1), pageSize (1–100, default 50).
+
+**Important Notes:**
+
+- The year defaults to active, otherwise newest. Academic year alone does not restrict account membership. Name/student-number sorting occurs within the page already selected by joined date, not globally. These endpoints do not require the integration extra administrator verification.
+
+Response codes of this API endpoint:
+
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+
+**Response (JSON):** A page of account details is returned, including placement, permissions, and blocked status where available.
+
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 236.** Search the User Directory — Valid Request and Response
+
+This figure shows the request and returned response for “Search the User Directory.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 237.** Search the User Directory — Invalid Request and Response
+
+This figure shows a rejected request for “Search the User Directory” and the error message returned by the system.
+
+### 1.19.3 Change Student or Officer Permissions in Bulk
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint changes supported student or officer permissions for selected accounts.
+
+**Endpoint:** [http://localhost:3001/api/v1/users](http://localhost:3001/api/v1/users)
 
 **Method:** PATCH
 
-**Endpoint:** `/api/v1/users`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: userIds (required array, 0–500 not empty identifiers), role (required permitted student/officer value used by the account-management screen).
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Body: userIds (required array, 0–500 nonempty identifiers), role (required permitted student/officer wire value).
+- Only student-to-officer or officer-to-student changes are allowed. Human role labels are not accepted values used by the account-management screen; use the administrative account client for this request. Already-matching/unsupported targets are skipped; missing IDs are absent from the result. Empty selection succeeds with zero updates.
 
-**Success:** HTTP 200. data: { updated, skipped: [...] }.
+Response codes of this API endpoint:
 
-**Behavior:** Only student-to-officer or officer-to-student changes are allowed. Human role labels are not accepted wire values; use the administrative account client for this request. Already-matching/unsupported targets are skipped; missing IDs are absent from the result. Empty selection succeeds with zero updates.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The number of updated accounts and details of skipped accounts are returned.
 
-### 2.18.3. Block or Delete Selected Accounts
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 238.** Change Student or Officer Permissions in Bulk — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Change Student or Officer Permissions in Bulk.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 239.** Change Student or Officer Permissions in Bulk — Invalid Request and Response
+
+This figure shows a rejected request for “Change Student or Officer Permissions in Bulk” and the error message returned by the system.
+
+### 1.19.4 Block or Delete Selected Accounts
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint blocks or deletes selected accounts according to their activity.
+
+**Endpoint:** [http://localhost:3001/api/v1/users](http://localhost:3001/api/v1/users)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/users`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Request body: userIds (required array, 0–500 not empty identifiers).
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Body: userIds (required array, 0–500 nonempty identifiers).
+- Accounts with activity are blocked, their sessions revoked, and queue/availability state cleaned. Inactive accounts take the narrower delete path. Administrators, already-blocked accounts, and missing accounts are skipped. This is not the separate permanent-purge operation.
 
-**Success:** HTTP 200. data: { hardDeleted: [...], blocked: [...], skipped: [{ userId, reason }] }.
+Response codes of this API endpoint:
 
-**Behavior:** Accounts with activity are blocked, their sessions revoked, and queue/availability state cleaned. Inactive accounts take the narrower delete path. Administrators, already-blocked accounts, and missing accounts are skipped. This is not the separate permanent-purge operation.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Illustrative request body:**
+**Response (JSON):** Lists of deleted, blocked, and skipped accounts are returned. Accounts with activity are blocked rather than immediately erased.
 
-```json
-{
-  "userIds": [
-    "user-example"
-  ]
-}
-```
+[SCREENSHOT: Valid Request; include the request and response.]
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Figure 240.** Block or Delete Selected Accounts — Valid Request and Response
 
-### 2.18.4. Change One Student or Officer Permission
+This figure shows the request and returned response for “Block or Delete Selected Accounts.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 241.** Block or Delete Selected Accounts — Invalid Request and Response
+
+This figure shows a rejected request for “Block or Delete Selected Accounts” and the error message returned by the system.
+
+### 1.19.5 Change One Student or Officer Permission
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint changes the supported student or officer permission for one account.
+
+**Endpoint:** [http://localhost:3001/api/v1/users/:userId](http://localhost:3001/api/v1/users/:userId)
 
 **Method:** PATCH
 
-**Endpoint:** `/api/v1/users/:userId`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: userId.
+- Request body: role (required permitted student/officer value used by the account-management screen).
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Path: userId. Body: role (required permitted student/officer wire value).
+- Use the account-management client rather than substituting a human label. Other email-derived account categories cannot be changed through this action. Repeating the same allowed value is a no-change success.
 
-**Success:** HTTP 200. data: { userId, role }.
+Response codes of this API endpoint:
 
-**Behavior:** Use the account-management client rather than substituting a human label. Other email-derived account categories cannot be changed through this action. Repeating the same allowed value is a no-op success.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 404 missing user; 409 unsupported current category; 403 attempted self-demotion.
+**Response (JSON):** The account identifier and saved permission are returned.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.18.5. Permanently Purge a Blocked Account
+**Figure 242.** Change One Student or Officer Permission — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Change One Student or Officer Permission.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 243.** Change One Student or Officer Permission — Invalid Request and Response
+
+This figure shows a rejected request for “Change One Student or Officer Permission” and the error message returned by the system.
+
+### 1.19.6 Permanently Purge a Blocked Account
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint permanently removes an eligible blocked account and related records.
+
+**Endpoint:** [http://localhost:3001/api/v1/users/:userId](http://localhost:3001/api/v1/users/:userId)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/users/:userId`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: userId.
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Path: userId.
+- Permanent removal and related-record cleanup require an already-blocked non-administrator account.
 
-**Success:** HTTP 200. data: { userId }.
+Response codes of this API endpoint:
 
-**Behavior:** Permanent removal and related-record cleanup require an already-blocked non-administrator account.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 404 missing user; 403 administrator target; 409 target not blocked.
+**Response (JSON):** The identifier of the removed account is returned.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.18.6. Set a Replacement Student Password
+**Figure 244.** Permanently Purge a Blocked Account — Valid Request and Response
+
+This figure shows the request and returned response for “Permanently Purge a Blocked Account.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 245.** Permanently Purge a Blocked Account — Invalid Request and Response
+
+This figure shows a rejected request for “Permanently Purge a Blocked Account” and the error message returned by the system.
+
+### 1.19.7 Set a Replacement Student Password
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint lets an administrator set a student's replacement password.
+
+**Endpoint:** [http://localhost:3001/api/v1/users/:userId/password-reset](http://localhost:3001/api/v1/users/:userId/password-reset)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/users/:userId/password-reset`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: userId.
+- Request body: newPassword (required string, 8–128 characters).
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Path: userId. Body: newPassword (required string, 8–128 characters).
+- Immediately sets credentials, not an emailed link. Only a student target other than the person making the request is allowed. This handler does not revoke existing target sessions or exclude blocked targets.
 
-**Success:** HTTP 200. data: { success: true, message }.
+Response codes of this API endpoint:
 
-**Behavior:** Immediately sets credentials, not an emailed link. Only a student target other than the caller is allowed. This handler does not revoke existing target sessions or exclude blocked targets.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Additional failure conditions:** 404 missing user; 403 self/other account category; 400 invalid password.
+**Response (JSON):** A confirmation and message are returned. This changes the password directly rather than sending a reset email.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "newPassword": "<new password chosen securely>"
-}
-```
+**Figure 246.** Set a Replacement Student Password — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Set a Replacement Student Password.”
 
+[SCREENSHOT: Invalid request and response.]
 
-## 2.19. Integration Administration
+**Figure 247.** Set a Replacement Student Password — Invalid Request and Response
 
-### 2.19.1. List Administrator Authenticator Status
+This figure shows a rejected request for “Set a Replacement Student Password” and the error message returned by the system.
+
+## 1.20 INTEGRATION SETTINGS MODULE API
+
+### 1.20.1 Module Description
+
+This module shows the connected services and their settings. Sensitive changes require additional administrator verification. Better Auth stays enabled because the system needs it for sign-in.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/integrations/authenticators](http://localhost:3001/api/v1/integrations/authenticators)
+- DELETE [http://localhost:3001/api/v1/integrations/authenticators/:userId](http://localhost:3001/api/v1/integrations/authenticators/:userId)
+- GET [http://localhost:3001/api/v1/integrations/credentials/export](http://localhost:3001/api/v1/integrations/credentials/export)
+- GET [http://localhost:3001/api/v1/integrations](http://localhost:3001/api/v1/integrations)
+- PATCH [http://localhost:3001/api/v1/integrations/:key](http://localhost:3001/api/v1/integrations/:key)
+- POST [http://localhost:3001/api/v1/integrations/:key/credentials/validate](http://localhost:3001/api/v1/integrations/:key/credentials/validate)
+- PUT [http://localhost:3001/api/v1/integrations/:key/credentials](http://localhost:3001/api/v1/integrations/:key/credentials)
+- DELETE [http://localhost:3001/api/v1/integrations/:key/credentials](http://localhost:3001/api/v1/integrations/:key/credentials)
+
+### 1.20.2 List Administrator Authenticator Status
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint shows which administrators have set up an authenticator.
+
+**Endpoint:** [http://localhost:3001/api/v1/integrations/authenticators](http://localhost:3001/api/v1/integrations/authenticators)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/integrations/authenticators`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** None.
+- Administrator session required; no extra administrator verification required merely to view status.
 
-**Success:** HTTP 200. data: [{ userId, name, email, enrolled }].
+Response codes of this API endpoint:
 
-**Behavior:** Administrator session required; no step-up required merely to view status.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** The administrator identifiers, names, emails, and setup status are returned.
 
-### 2.19.2. Reset an Administrator Authenticator
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 248.** List Administrator Authenticator Status — Valid Request and Response
+
+This figure shows the request and returned response for “List Administrator Authenticator Status.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 249.** List Administrator Authenticator Status — Invalid Request and Response
+
+This figure shows a rejected request for “List Administrator Authenticator Status” and the error message returned by the system.
+
+### 1.20.3 Reset an Administrator Authenticator
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint removes an administrator's authenticator setup.
+
+**Endpoint:** [http://localhost:3001/api/v1/integrations/authenticators/:userId](http://localhost:3001/api/v1/integrations/authenticators/:userId)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/integrations/authenticators/:userId`
+**Configurations:** An administrator must be signed in. Complete the extra security unlock before this action.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: userId.
 
-**Access:** Administrator session with current sensitive-action unlock.
+**Important Notes:**
 
-**Parameters:** Path: userId.
+- Requires a current administrator extra administrator verification unlock. Deletes the target's authenticator and temporary unlock and requires fresh setup. Self-reset is allowed.
 
-**Success:** HTTP 200. data: { userId, enrolled: false }.
+Response codes of this API endpoint:
 
-**Behavior:** Requires a current administrator step-up unlock. Deletes the target's authenticator and temporary unlock and requires fresh setup. Self-reset is allowed.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 404 | Not Found | The requested record cannot be found. |
 
-**Additional failure conditions:** 403 with data.code STEP_UP_REQUIRED while locked; 404 target absent/not administrator.
+**Response (JSON):** The account identifier and not-enrolled status are returned. Fresh setup is needed before the next protected unlock.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.19.3. Export Effective Integration Credentials
+**Figure 250.** Reset an Administrator Authenticator — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Reset an Administrator Authenticator.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 251.** Reset an Administrator Authenticator — Invalid Request and Response
+
+This figure shows a rejected request for “Reset an Administrator Authenticator” and the error message returned by the system.
+
+### 1.20.4 Export Effective Integration Credentials
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint prepares a private copy of the active service credentials.
+
+**Endpoint:** [http://localhost:3001/api/v1/integrations/credentials/export](http://localhost:3001/api/v1/integrations/credentials/export)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/integrations/credentials/export`
+**Configurations:** The user must be signed in. Record-permission checks may also apply.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
+**Important Notes:**
 
-**Parameters:** None.
+- Requires a current extra administrator verification unlock. Cache-Control: no-store. Content contains actual effective secrets, not masks. Store privately and never paste the export into the manuscript, screenshots, or source control. Unreadable overrides can fall back to configured environment values.
 
-**Success:** HTTP 200. data: { filename, content }.
+Response codes of this API endpoint:
 
-**Behavior:** Requires a current step-up unlock. Cache-Control: no-store. Content contains actual effective secrets, not masks. Store privately and never paste the export into the manuscript, screenshots, or source control. Unreadable overrides can fall back to configured environment values.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Additional failure conditions:** 403 with data.code STEP_UP_REQUIRED while locked.
+**Response (JSON):** A suggested file name and credential text are returned. The text contains real secrets and must never appear in this paper or screenshots.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
-### 2.19.4. Read Integration Availability and Configuration
+**Figure 252.** Export Effective Integration Credentials — Valid Request and Response
+
+This figure shows the request and returned response for “Export Effective Integration Credentials.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 253.** Export Effective Integration Credentials — Invalid Request and Response
+
+This figure shows a rejected request for “Export Effective Integration Credentials” and the error message returned by the system.
+
+### 1.20.5 Read Integration Availability and Configuration
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint shows which connected services are available and configured.
+
+**Endpoint:** [http://localhost:3001/api/v1/integrations](http://localhost:3001/api/v1/integrations)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/integrations`
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Public; an administrator session changes the integration-list response shape.
+**Important Notes:**
 
-**Parameters:** None.
+- Viewing settings does not require the extra security unlock. Secret fields show masks rather than actual values. Turning an optional service on does not prove its credentials are ready. Better Auth is always enabled.
 
-**Success:** HTTP 200. data: { flags, turnstileSiteKey, overridesLoaded } for public/non-administrator callers; data: integration rows for an administrator.
+Response codes of this API endpoint:
 
-**Behavior:** Administrator rows include key, label, description, enabled, configured, consequence, updatedByName/updatedAt, credentials, version, pendingRestart, overridesLoaded. Secret credential entries have value null and a mask; plain entries may expose values. Viewing does not require a step-up unlock. Enabling a service does not itself prove it is configured.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** General callers receive service availability. Administrators receive detailed service settings. Secret values are hidden. Better Auth is always on and includes feature-status information.
 
-### 2.19.5. Enable or Disable an Integration
+[SCREENSHOT: Valid Request; include the request and response.]
+
+**Figure 254.** Read Integration Availability and Configuration — Valid Request and Response
+
+This figure demonstrates the request and returned response for “Read Integration Availability and Configuration.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 255.** Read Integration Availability and Configuration — Invalid Request and Response
+
+This figure shows a rejected request for “Read Integration Availability and Configuration” and the error message returned by the system.
+
+### 1.20.6 Enable or Disable an Integration
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint turns a supported optional service on or off.
+
+**Endpoint:** [http://localhost:3001/api/v1/integrations/:key](http://localhost:3001/api/v1/integrations/:key)
 
 **Method:** PATCH
 
-**Endpoint:** `/api/v1/integrations/:key`
+**Configurations:** An administrator must be signed in. Complete the extra security unlock before this action.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: key is turnstile, r2, googleAuth, cloudflareChat, email, googleForms, or googleCalendar.
+- Request body: enabled (required true or false).
 
-**Access:** Administrator session with current sensitive-action unlock.
+**Important Notes:**
 
-**Parameters:** Path: key is turnstile, r2, googleAuth, cloudflareChat, email, googleForms, or googleCalendar. Body: enabled (required boolean).
+- Complete the administrator security unlock before changing a switch. Better Auth cannot be changed and returns INTEGRATION_LOCKED.
 
-**Success:** HTTP 200. data: { key, enabled }.
+Response codes of this API endpoint:
 
-**Behavior:** Requires current step-up. Does not verify that credentials exist merely to enable a switch.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 404 unknown integration; 403 STEP_UP_REQUIRED.
+**Response (JSON):** The integration key and saved on-or-off status are returned. Better Auth cannot be turned off.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "enabled": true
-}
-```
+**Figure 256.** Enable or Disable an Integration — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure shows the request and returned response for “Enable or Disable an Integration.”
 
-### 2.19.6. Validate Draft Integration Credentials
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 257.** Enable or Disable an Integration — Invalid Request and Response
+
+This figure shows a rejected request for “Enable or Disable an Integration” and the error message returned by the system.
+
+### 1.20.7 Check Integration Credentials Before Saving
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint checks proposed service credentials without saving them.
+
+**Endpoint:** [http://localhost:3001/api/v1/integrations/:key/credentials/validate](http://localhost:3001/api/v1/integrations/:key/credentials/validate)
 
 **Method:** POST
 
-**Endpoint:** `/api/v1/integrations/:key/credentials/validate`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- key — Required supported service key in the endpoint address. Better Auth is locked.
+- version — Required current revision number, zero or greater.
+- values — Required group of credential names and proposed values. Each value may contain at most 4,096 characters or be null. The same field and pairing rules apply as when saving.
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Path: key is a supported integration key. Body: version (required integer >=0), values (required object mapping allowed credential field names to strings up to 4,096 characters or null).
+- This check does not save values and does not require the extra security unlock. It checks required fields, matching pairs, formats, and supported provider connections using the draft and existing values. It shares the credential-attempt limit. A successful check is not a saved change.
 
-**Success:** HTTP 200. data: { key, version, fields: [{ envKey, set, source }] }, where source is draft, stored, or env.
+Response codes of this API endpoint:
 
-**Behavior:** Administrator session required; no step-up unlock required. Merges drafts over stored overrides and configured fallbacks, checks required values, pairs and formats, and runs supported provider probes without saving credentials or incrementing their version. An all-null nonempty reset skips required-value and provider probes but still checks pairing. Shares the ten-request-per-minute per-administrator credential budget with saves and resets. No secret values are returned. The Better Auth integration is locked and cannot be validated this way.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| 422 | Details Could Not Be Verified | Check the supplied credentials or file details. |
 
-**Additional failure conditions:** 400 invalid body or unknown credential field; 401 no session; 403 not administrator; 404 unknown integration; 409 stale version or locked integration; 422 with data.failures [{ key, reason }] for group/provider failure; 429 credential limit.
+**Response (JSON):** The service key, current revision, and each checked field's saved status and source are returned. Secret values are not returned.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "version": 0,
-  "values": {
-    "MAIL_FROM": "ERPSYS <no-reply@example.org>",
-    "BREVO_API_KEY": "<draft provider credential>"
-  }
-}
-```
+**Figure 258.** Check Integration Credentials Before Saving — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Check Integration Credentials Before Saving.”
 
-### 2.19.7. Save Integration Credential Overrides
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 259.** Check Integration Credentials Before Saving — Invalid Request and Response
+
+This figure shows a rejected request for “Check Integration Credentials Before Saving” and the error message returned by the system.
+
+### 1.20.8 Save Integration Credential Overrides
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint saves replacement credentials for a connected service.
+
+**Endpoint:** [http://localhost:3001/api/v1/integrations/:key/credentials](http://localhost:3001/api/v1/integrations/:key/credentials)
 
 **Method:** PUT
 
-**Endpoint:** `/api/v1/integrations/:key/credentials`
+**Configurations:** An administrator must be signed in. Complete the extra security unlock before this action.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- key — Required service key in the endpoint address. Better Auth is locked and cannot be edited.
+- version — Required current revision number, zero or greater, in the request body. Read it from the service settings first.
+- values — Required group of permitted credential field names and replacement values. Each value may contain at most 4,096 characters. Leave a field out to keep it; use null to remove an override. Do not send empty strings.
 
-**Access:** Administrator session with current sensitive-action unlock.
+**Important Notes:**
 
-**Parameters:** Path: key is a supported integration key. Body: version (required integer >=0), values (required object mapping allowed credential field names to strings up to 4,096 characters or null).
+- Complete the administrator security unlock first. Paired fields must be submitted together when changed. Supported services check credentials before saving. Unchanged values do not increase the revision. Credential checks, saves, and resets share a ten-attempt-per-minute limit. Better Auth is locked. Check the restart notice after saving.
 
-**Success:** HTTP 200. data: updated integration row.
+Response codes of this API endpoint:
 
-**Behavior:** Requires current step-up. Omitted fields retain current overrides/fallbacks; null removes an override; empty strings are rejected. Required effective values, paired submissions, and supported provider probes are checked before saving. An all-null nonempty reset bypasses provider/required-value checks but still follows pairing rules. Unchanged saves do not increment version. Ten credential PUT/DELETE attempts per minute per administrator. Some saved values require restart; inspect pendingRestart.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| 422 | Details Could Not Be Verified | Check the supplied credentials or file details. |
 
-**Additional failure conditions:** 400 unknown credential name/invalid body; 404 unknown integration; 403 STEP_UP_REQUIRED; 409 stale version or concurrent save; 422 with data.failures [{ key, reason }] for group/provider failure; 429 credential limit.
+**Response (JSON):** The updated service settings are returned. A restart notice shows whether saved values need a server restart before use.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "version": 0,
-  "values": {
-    "MAIL_FROM": "ERPSYS <no-reply@example.org>",
-    "BREVO_API_KEY": "<new provider credential>"
-  }
-}
-```
+**Figure 260.** Save Integration Credential Overrides — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure shows the request and returned response for “Save Integration Credential Overrides.”
 
-### 2.19.8. Restore Configured Credential Defaults
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 261.** Save Integration Credential Overrides — Invalid Request and Response
+
+This figure shows a rejected request for “Save Integration Credential Overrides” and the error message returned by the system.
+
+### 1.20.9 Restore Configured Credential Defaults
+
+**Version:** 1.0
+
+**Date:** November 19, 2026
+
+**Description:** This endpoint removes saved credential overrides for a connected service.
+
+**Endpoint:** [http://localhost:3001/api/v1/integrations/:key/credentials](http://localhost:3001/api/v1/integrations/:key/credentials)
 
 **Method:** DELETE
 
-**Endpoint:** `/api/v1/integrations/:key/credentials`
+**Configurations:** An administrator must be signed in. Complete the extra security unlock before this action.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Path: key is a supported integration key. No version business field.
 
-**Access:** Administrator session with current sensitive-action unlock.
+**Important Notes:**
 
-**Parameters:** Path: key is a supported integration key. No version business field.
+- Requires the administrator security unlock. This removes saved overrides and may disrupt a connected service. Use test settings only. Better Auth cannot be changed.
 
-**Success:** HTTP 200. data: integration row.
+Response codes of this API endpoint:
 
-**Behavior:** Clears the group's saved overrides and falls back to configured environment values. It does not import a backup, restart the server, or change the service switch. Requires current step-up and shares the credential-write limit.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
+| 409 | Conflicting Change | Refresh the record or resolve its current state. |
 
-**Additional failure conditions:** 403 STEP_UP_REQUIRED; 404 unknown key; 429 limit.
+**Response (JSON):** The service settings are returned using the server's configured defaults. This does not restart the server or restore an exported backup.
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+[SCREENSHOT: Valid Request; include the request and response.]
 
+**Figure 262.** Restore Configured Credential Defaults — Valid Request and Response
 
-## 2.20. Request Audit
+This figure demonstrates the request and returned response for “Restore Configured Credential Defaults.”
 
-### 2.20.1. Search Recorded Write Requests
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 263.** Restore Configured Credential Defaults — Invalid Request and Response
+
+This figure shows a rejected request for “Restore Configured Credential Defaults” and the error message returned by the system.
+
+## 1.21 ACTIVITY LOG MODULE API
+
+### 1.21.1 Module Description
+
+This module lets administrators review recorded requests that changed application information.
+
+This module has the following endpoints:
+
+- GET [http://localhost:3001/api/v1/audit-logs](http://localhost:3001/api/v1/audit-logs)
+
+### 1.21.2 Search Recorded Write Requests
+
+**Version:** 1.0
+
+**Date:** November 20, 2026
+
+**Description:** This endpoint shows recorded requests that changed application information.
+
+**Endpoint:** [http://localhost:3001/api/v1/audit-logs](http://localhost:3001/api/v1/audit-logs)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/audit-logs`
+**Configurations:** An administrator must be signed in.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- Optional address filter: role (account category filter, at most 40 characters), method (POST/PUT/PATCH/DELETE), q (actor name, email, or path
+- at most 200 characters).
+- Optional address filter: page (positive whole number, default 1), pageSize or limit (default 50, maximum 200). Some small-list endpoints return the full list with page details rather than slicing
+- see endpoint notes.
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Optional query: role (account category filter, at most 40 characters), method (POST/PUT/PATCH/DELETE), q (actor name, email, or path; at most 200 characters). Optional query: page (positive integer, default 1), pageSize or limit (default 50, maximum 200). Some small-list endpoints return the full list with paging metadata rather than slicing; see endpoint notes.
+- Records signed-in versioned write requests, newest first. This request audit is separate from administrator action summaries.
 
-**Success:** HTTP 200. data: [{ id, actorId, actorName, actorEmail, role, method, path, status, ip, at }], with list metadata.
+Response codes of this API endpoint:
 
-**Behavior:** Records signed-in versioned write requests, newest first. This request audit is separate from administrator action summaries.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** Matching activity entries are returned with the account, action, address, result, and time.
 
+[SCREENSHOT: Valid Request; include the request and response.]
 
-## 2.21. Enrollment Assistant Stream
+**Figure 264.** Search Recorded Write Requests — Valid Request and Response
 
-### 2.21.1. Stream an Enrollment Assistant Reply
+This figure shows the request and returned response for “Search Recorded Write Requests.”
+
+[SCREENSHOT: Invalid request and response.]
+
+**Figure 265.** Search Recorded Write Requests — Invalid Request and Response
+
+This figure shows a rejected request for “Search Recorded Write Requests” and the error message returned by the system.
+
+## 1.22 ENROLLMENT ASSISTANT MODULE API
+
+### 1.22.1 Module Description
+
+This module provides an assistant that answers enrollment questions. Replies arrive in small parts while the answer is being written.
+
+This module has the following endpoints:
+
+- POST [http://localhost:3001/api/chat/stream](http://localhost:3001/api/chat/stream)
+
+### 1.22.2 Stream an Enrollment Assistant Reply
+
+**Version:** 1.0
+
+**Date:** November 20, 2026
+
+**Description:** This endpoint sends a question to the enrollment assistant.
+
+**Endpoint:** [http://localhost:3001/api/chat/stream](http://localhost:3001/api/chat/stream)
 
 **Method:** POST
 
-**Endpoint:** `/api/chat/stream`
+**Configurations:** A student, SBO officer, or administrator must be signed in. Adviser access does not include this working area.
 
-**Version:** Configured application/authentication version
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- messages — Required list of 1–20 messages in the request body.
+- role — Required for each message: user or assistant. The older value model is also accepted as assistant.
+- text — Required message text, 1–2,000 characters per message. The whole request may not exceed 100 KB.
 
-**Access:** Student-facing access: student, SBO officer, or administrator. Enrollment advisers do not inherit this access.
+**Important Notes:**
 
-**Parameters:** Body: messages (1–20 items), each { role, text }; role is user, assistant, or legacy model; text is 1–2,000 characters. JSON body limit 100 KB.
+- Uses the signed-in student working area. Legacy model messages normalize to assistant. Ten requests per minute per account/IP; daily allowances and connected service limits also apply. Errors after the stream starts are event objects, not a new HTTP status.
 
-**Success:** HTTP 200. 200 text/event-stream: data frames containing start, token, done, or error objects.
+Response codes of this API endpoint:
 
-**Behavior:** Uses the signed-in student working area. Legacy model messages normalize to assistant. Ten requests per minute per account/IP; daily allowances and provider limits also apply. Errors after the stream starts are event objects, not a new HTTP status.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | The request was completed. |
+| 400 | Invalid Request | Check the required information. |
+| 403 | Access Denied | Permission or security verification is required. |
 
-**Additional failure conditions:** 400 invalid messages; 401/403 access; 429 request limit; 503 when assistant is disabled. Provider/budget failures may instead arrive as streamed error frames.
+**Response (Event stream):** The answer arrives in parts, followed by a completion or error notice. A reply can start successfully and still report an error later.
 
-**Illustrative request body:**
+[SCREENSHOT: Valid Request; include the request and response.]
 
-```json
-{
-  "messages": [
-    {
-      "role": "user",
-      "text": "What should I do after my requirement is returned?"
-    }
-  ]
-}
-```
+**Figure 266.** Stream an Enrollment Assistant Reply — Valid Request and Response
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+This figure demonstrates the request and returned response for “Stream an Enrollment Assistant Reply.”
 
+[SCREENSHOT: Invalid request and response.]
 
-## 2.22. Application Health
+**Figure 267.** Stream an Enrollment Assistant Reply — Invalid Request and Response
 
-### 2.22.1. Check Basic Application Health
+This figure shows a rejected request for “Stream an Enrollment Assistant Reply” and the error message returned by the system.
 
-**Method:** GET
+## 1.23 SYSTEM HEALTH MODULE API
 
-**Endpoint:** `/api/health`
+### 1.23.1 Module Description
 
-**Version:** Configured application/authentication version
+This module provides a basic check that the application server is responding.
 
-**Capture date:** Not yet supplied.
+This module has the following endpoints:
 
-**Access:** Public.
+- GET [http://localhost:3001/api/health](http://localhost:3001/api/health)
 
-**Parameters:** None.
+### 1.23.2 Check Basic Application Health
 
-**Success:** HTTP 200. { ok: true }.
+**Version:** 1.0
 
-**Behavior:** Public, non-versioned JSON. It is a basic liveness response, not a database-readiness probe.
+**Date:** November 20, 2026
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Description:** This endpoint checks whether the application server is responding.
 
-
-## 2.23. Advisory Editor Presence
-
-### 2.23.1. List Active Editing Records
+**Endpoint:** [http://localhost:3001/api/health](http://localhost:3001/api/health)
 
 **Method:** GET
 
-**Endpoint:** `/api/v1/editing-presence`
+**Configurations:** No sign-in is required. Follow any token or provider checks described below.
 
-**Version:** Application API v1
+**Parameters:**
 
-**Capture date:** Not yet supplied.
+- No additional request-body or query information is required.
 
-**Access:** Administrator session.
+**Important Notes:**
 
-**Parameters:** Optional query: page (positive integer, default 1), pageSize or limit (default 50, maximum 100).
+- Public, non-versioned JSON. It is a basic liveness response, not a database-readiness probe.
 
-**Success:** HTTP 200. data: [{ resource, recordId, editors: [{ userId, editorId, name, lastSeenAt, expiresAt }] }], with list metadata.
+Response codes of this API endpoint:
 
-**Behavior:** Administrator-only overview of records with active editors, newest update first. Private, no-store; outside business timestamp ordering.
+| Code | Message | Description |
+| --- | --- | --- |
+| 200 | Request Successful (OK) | A simple running confirmation is returned. This does not check database readiness. |
 
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+**Response (JSON):** A simple running confirmation is returned. This does not check database readiness.
 
-### 2.23.2. Read Active Editors
+[SCREENSHOT: Request and response.]
 
-**Method:** GET
+**Figure 268.** Check Basic Application Health — Request and Response
 
-**Endpoint:** `/api/v1/editing-presence/:resource/:recordId`
+This figure shows the health-check request and the server response indicating that the application is running.
 
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
-
-**Parameters:** Path: resource is academic-year, department, requirement, adviser, user, stamp, chatbot-knowledge, profiling-form, social-link, schedule, student-profile, student-enrollment, submission, queue-entry, or integration; recordId is 1–200 characters.
-
-**Success:** HTTP 200. data: { resource, recordId, editors: [{ userId, editorId, name, lastSeenAt, expiresAt }] }.
-
-**Behavior:** Advisory presence is not a lock and does not prevent concurrent edits. It runs outside business timestamp ordering, never advances business read/write stamps, and is excluded from audit logging. Responses are private, no-store. Expired editors are filtered immediately; the minute sweep removes expired leases and empty records. Every record operation requires resource write access: administrator-only for academic-year, requirement, adviser, user, chatbot-knowledge and integration; officer access for social-link, profiling-form and the caller's own stamp; instructor access for department and the caller's assigned schedule. Profiles require ownership or officer access; enrollment is owner-only. Submissions require officer access or student ownership. Queue entries require instructor assignment and year-level scope. Use default for assistant knowledge or the active year's profiling form; me~departmentId for the caller's current-year schedule; me for the caller's stamp, profile or active-year enrollment; and me~STEP_CODE for the caller's submission. Existing submission identifiers are also accepted. Responses return canonical record identifiers. Integration recordId is an integration key. Other resources use existing record identifiers.
-
-**Additional failure conditions:** 400 invalid resource, recordId or editorId; 401 no session; 403 resource access denied; 404 missing record or active-year context.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.23.3. Join or Renew an Editing Lease
-
-**Method:** PUT
-
-**Endpoint:** `/api/v1/editing-presence/:resource/:recordId/:editorId`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
-
-**Parameters:** Path: resource is academic-year, department, requirement, adviser, user, stamp, chatbot-knowledge, profiling-form, social-link, schedule, student-profile, student-enrollment, submission, queue-entry, or integration; recordId is 1–200 characters. editorId identifies one tab: 1–100 letters, digits, underscores or hyphens. Body: empty object; unknown business fields are rejected.
-
-**Success:** HTTP 200. data: { resource, recordId, editors: [{ userId, editorId, name, lastSeenAt, expiresAt }] }.
-
-**Behavior:** Each tab renews every 20 seconds; its lease expires after 60 seconds. Identity, name and dates come from the server. Atomic revision comparisons preserve other users and independent tabs. Advisory presence is not a lock and does not prevent concurrent edits. It runs outside business timestamp ordering, never advances business read/write stamps, and is excluded from audit logging. Responses are private, no-store. Expired editors are filtered immediately; the minute sweep removes expired leases and empty records. Every record operation requires resource write access: administrator-only for academic-year, requirement, adviser, user, chatbot-knowledge and integration; officer access for social-link, profiling-form and the caller's own stamp; instructor access for department and the caller's assigned schedule. Profiles require ownership or officer access; enrollment is owner-only. Submissions require officer access or student ownership. Queue entries require instructor assignment and year-level scope. Use default for assistant knowledge or the active year's profiling form; me~departmentId for the caller's current-year schedule; me for the caller's stamp, profile or active-year enrollment; and me~STEP_CODE for the caller's submission. Existing submission identifiers are also accepted. Responses return canonical record identifiers. Integration recordId is an integration key. Other resources use existing record identifiers.
-
-**Additional failure conditions:** 400 invalid resource, recordId or editorId; 401 no session; 403 resource access denied; 404 missing record or active-year context. 400 for unexpected body fields; 409 when revision retries are exhausted.
-
-**Illustrative request body:**
-
-```json
-{}
-```
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.23.4. Leave an Editing Lease
-
-**Method:** DELETE
-
-**Endpoint:** `/api/v1/editing-presence/:resource/:recordId/:editorId`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
-
-**Parameters:** Path: resource is academic-year, department, requirement, adviser, user, stamp, chatbot-knowledge, profiling-form, social-link, schedule, student-profile, student-enrollment, submission, queue-entry, or integration; recordId is 1–200 characters. editorId identifies one tab: 1–100 letters, digits, underscores or hyphens. No business body fields.
-
-**Success:** HTTP 200. data: { resource, recordId, editors: [{ userId, editorId, name, lastSeenAt, expiresAt }] }.
-
-**Behavior:** Removes only the signed-in user's matching tab, preserving other editors. Leaving an absent lease succeeds; missed heartbeats also expire it. Advisory presence is not a lock and does not prevent concurrent edits. It runs outside business timestamp ordering, never advances business read/write stamps, and is excluded from audit logging. Responses are private, no-store. Expired editors are filtered immediately; the minute sweep removes expired leases and empty records. Every record operation requires resource write access: administrator-only for academic-year, requirement, adviser, user, chatbot-knowledge and integration; officer access for social-link, profiling-form and the caller's own stamp; instructor access for department and the caller's assigned schedule. Profiles require ownership or officer access; enrollment is owner-only. Submissions require officer access or student ownership. Queue entries require instructor assignment and year-level scope. Use default for assistant knowledge or the active year's profiling form; me~departmentId for the caller's current-year schedule; me for the caller's stamp, profile or active-year enrollment; and me~STEP_CODE for the caller's submission. Existing submission identifiers are also accepted. Responses return canonical record identifiers. Integration recordId is an integration key. Other resources use existing record identifiers.
-
-**Additional failure conditions:** 400 invalid resource, recordId or editorId; 401 no session; 403 resource access denied; 404 missing record or active-year context. 409 when revision retries are exhausted.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-
-# Credential Fields and Service Configuration
-
-Credential edits use integration key plus version and values. Omitted fields retain existing values, null removes an override, and empty strings are rejected. Required fields refer to the effective saved/configured group. Send both members when changing a paired group.
-
-- **Google sign-in — googleAuth:** GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET form a required pair.
-- **Bot protection — turnstile:** TURNSTILE_SECRET_KEY and VITE_TURNSTILE_SITE_KEY form a required pair; TURNSTILE_HOSTNAMES is optional.
-- **Private storage — r2:** R2_BUCKET, R2_ENDPOINT, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY; access ID and secret form a pair.
-- **Assistant — cloudflareChat:** CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN.
-- **Email — email:** BREVO_API_KEY and MAIL_FROM. A successful account probe does not prove message delivery.
-- **Profiling — googleForms:** GOOGLE_FORMS_REFRESH_TOKEN, with the configured Google sign-in client also needed for validation.
-- **Calendar — googleCalendar:** CALENDAR_TOKEN_KEY, at least 32 trimmed characters, and the configured Google client. Calendar credential checks are local rather than a full connected-user synchronization test.
-
-Saved credential overrides are encrypted. Ordinary reads mask secret fields; export returns real effective values. A pendingRestart flag distinguishes saving from applying a change to the running service. Clearing overrides restores configured defaults, not an imported backup. MongoDB Atlas is required infrastructure rather than one of these optional integration switches. Report generation is performed by the website using API data, not an external report-delivery endpoint.
-
-# Request and Response Capture Checklist
-
-The examples in this manuscript are illustrative request bodies or response-shape descriptions. They do not certify deployed behavior or replace executed evidence.
-
-For each endpoint, capture the version being tested, capture date, permitted account category, sanitized request parameters, actual HTTP status and headers, and actual response. Include a permitted operation, invalid input where relevant, permission refusal, and meaningful state conflicts. Use only demo data. Never capture live session cookies, reset tokens, provider keys, authenticator setup material, backup codes, or credential-export contents.
-
-Authentication tests require the library's origin/session behavior. Upload tests require direct file transfer and completion. Calendar tests require a real authorized consent flow. A 200 response containing INVALID or STALE invitation status is not a successful queue join. A reset-request success does not prove an email was delivered. A stream can start with HTTP 200 and subsequently report an error event. Report truncation must be shown through matchedCount/truncated rather than assumed from the first page.
-
-> **TODO (author):** Supply dated sanitized captures and results from the tested application version. No request screenshots or capture dates are fabricated in this revision.
-
-# External Service Documentation
-
-- **Google sign-in:** [Google OAuth 2.0](https://developers.google.com/identity/protocols/oauth2).
-- **Bot protection:** [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/).
-- **Private files:** [Cloudflare R2 API](https://developers.cloudflare.com/r2/api/s3/).
-- **Assistant:** [Cloudflare Workers AI](https://developers.cloudflare.com/workers-ai/).
-- **Profiling:** [Google Forms API](https://developers.google.com/workspace/forms/api).
-- **Calendar:** [Google Calendar API](https://developers.google.com/workspace/calendar/api).
-- **Email:** [Brevo transactional email](https://developers.brevo.com/docs/send-a-transactional-email).
-- **Authentication and authenticator:** [Better Auth](https://www.better-auth.com/docs).
-- **Database:** [MongoDB Atlas](https://www.mongodb.com/docs/atlas/).
