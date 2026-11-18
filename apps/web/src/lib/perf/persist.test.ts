@@ -4,6 +4,7 @@ import {
   INTEGRATIONS_BROADCAST_KEY,
   PERSIST_CACHE_KEY,
   PERSIST_KEY_PREFIX,
+  SIGNED_OUT_BROADCAST_KEY,
   cacheBuster,
 } from "./cache-policy";
 import { APP_BUILD_ID } from "./launch-metrics";
@@ -121,6 +122,7 @@ describe("restorePersistedCache", () => {
 });
 
 describe("connectCacheLifecycle", () => {
+  const KEY = ["student", "getMySteps"];
   const FLAGS = ["integrations", "public"];
 
   function storageEvent(key: string, newValue: string | null): StorageEvent {
@@ -130,6 +132,29 @@ describe("connectCacheLifecycle", () => {
       storageArea: window.localStorage,
     });
   }
+
+  it("clears this tab's cache when another tab signs out", () => {
+    queryClient.setQueryData(KEY, { steps: [] });
+    const stop = connectCacheLifecycle();
+    try {
+      // Each tab owns its own query cache, so sign-out has to be broadcast.
+      window.dispatchEvent(storageEvent(SIGNED_OUT_BROADCAST_KEY, "1"));
+      expect(queryClient.getQueryData(KEY)).toBeUndefined();
+    } finally {
+      stop();
+    }
+  });
+
+  it("leaves the cache alone for an unrelated storage key", () => {
+    queryClient.setQueryData(KEY, { steps: [] });
+    const stop = connectCacheLifecycle();
+    try {
+      window.dispatchEvent(storageEvent("unrelated", "1"));
+      expect(queryClient.getQueryData(KEY)).toEqual({ steps: [] });
+    } finally {
+      stop();
+    }
+  });
 
   it("marks the integration flags stale when another tab flips a switch", () => {
     queryClient.setQueryData(FLAGS, { data: { flags: { googleAuth: true } } });

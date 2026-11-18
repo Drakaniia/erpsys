@@ -305,7 +305,7 @@ export default function StudentFilters({
             onChange={onSearchInput}
             placeholder="Search name or student #"
             aria-label="Search students"
-            className="w-full rounded-xl border border-border bg-surface py-1.5 pl-8 pr-8 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="w-full rounded-xl border border-border bg-surface py-1.5 pl-8 pr-8 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
           {searchInput && (
             <button

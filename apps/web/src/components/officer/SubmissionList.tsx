@@ -222,8 +222,8 @@ export default function SubmissionList({
       ) : data ? (
         <>
           {view === "table" ? (
-            <div className="overflow-hidden rounded-xl border border-border bg-surface-raised">
-              <table className="w-full border-collapse">
+            <div className="apple-scrollbar overflow-x-auto rounded-xl border border-border bg-surface-raised">
+              <table className="w-full min-w-[640px] border-collapse">
                 <thead>
                   <tr className="border-b border-border text-left text-xs font-medium text-muted">
                     <th className="px-4 py-2.5 font-medium">

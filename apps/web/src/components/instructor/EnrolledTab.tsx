@@ -131,7 +131,7 @@ export default function EnrolledTab({
             onChange={onSearchInput}
             placeholder="Search name or student #"
             aria-label="Search enrolled students"
-            className="w-full rounded-xl border border-border bg-surface py-1.5 pl-8 pr-3 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="w-full rounded-xl border border-border bg-surface py-1.5 pl-8 pr-3 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
         <span className="ml-auto shrink-0 text-sm text-muted tabular-nums">
@@ -166,8 +166,11 @@ export default function EnrolledTab({
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-surface-raised">
-          <table className="w-full text-sm" aria-label="Enrolled students">
+        <div className="apple-scrollbar overflow-x-auto rounded-2xl border border-border bg-surface-raised">
+          <table
+            className="w-full min-w-[560px] text-sm"
+            aria-label="Enrolled students"
+          >
             <thead>
               <tr className="border-b border-border">
                 <th scope="col" className="w-10 px-4 py-2">

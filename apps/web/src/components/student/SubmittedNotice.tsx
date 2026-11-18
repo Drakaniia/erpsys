@@ -139,7 +139,10 @@ export default function SubmittedNotice({
             tabIndex={-1}
             className="w-full max-w-sm rounded-2xl border border-border bg-surface-raised p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Escape") setConfirmOpen(false);
+            }}
           >
             <h3 className="text-base font-semibold tracking-tight text-ink">
               Cancel submission?
@@ -151,6 +154,7 @@ export default function SubmittedNotice({
             <div className="mt-4 flex gap-2">
               <button
                 type="button"
+                autoFocus
                 onClick={() => setConfirmOpen(false)}
                 className="flex h-11 flex-1 items-center justify-center rounded-xl border border-border bg-surface text-sm font-semibold text-ink"
               >

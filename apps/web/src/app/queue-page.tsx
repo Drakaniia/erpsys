@@ -240,13 +240,16 @@ export function QueuePage() {
 
       {m.shareModalOpen &&
       m.shareLanding.kind === "show" &&
-      !m.shareMatchesRecord ? (
+      m.shareMismatch ? (
         <div className="modal-scrim fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="share-mismatch-title"
             className="w-full max-w-sm rounded-2xl bg-surface-raised p-5 shadow-xl"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") m.dismissShareModal();
+            }}
           >
             <h2
               id="share-mismatch-title"
@@ -255,12 +258,15 @@ export function QueuePage() {
               That link points to a different course
             </h2>
             <p className="mt-1 text-sm text-muted">
-              Your enrollment record says {m.myDept?.departmentName}, so
+              {m.myDept
+                ? `Your enrollment record says ${m.myDept.departmentName}, so`
+                : "You don't have an enrollment record for this term yet, so"}{" "}
               there&apos;s no {m.shareLanding.data.departmentName} queue to join
-              from here. Change your course on your profile first.
+              from here. Set your course on your profile first.
             </p>
             <button
               type="button"
+              autoFocus
               onClick={() => {
                 m.dismissShareModal();
                 m.goStudent();
@@ -271,7 +277,9 @@ export function QueuePage() {
             </button>
           </div>
         </div>
-      ) : m.shareModalOpen && m.shareLanding.kind === "show" ? (
+      ) : m.shareModalOpen &&
+        m.shareLanding.kind === "show" &&
+        m.shareMatchesRecord ? (
         <QueueShareModal
           open={m.shareModalOpen}
           landing={m.shareLanding}
@@ -330,6 +338,7 @@ export function QueuePage() {
             </p>
             <button
               type="button"
+              autoFocus
               className="mt-4 w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-white"
               onClick={() => m.setRealtimeHintOpen(false)}
             >

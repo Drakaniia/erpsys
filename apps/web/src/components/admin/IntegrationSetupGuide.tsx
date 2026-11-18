@@ -24,6 +24,28 @@ export function setupGuideFor(
 
 function setupGuides(origin: string): Record<IntegrationKey, SetupGuide> {
   return {
+    betterAuth: {
+      enables: "Password and email-code sign-in, optional email verification, sessions, student self-registration, password reset and the admin unlock. Email verification is not required for first login. Google sign-in, Bot protection and Email delivery plug into it; it runs inside the server, so there is no outside account to connect.",
+      steps: [
+        {
+          title: "Set the signing secret",
+          body: <>In the deployment env file (<code>/etc/erpsys.env</code>), set <code>BETTER_AUTH_SECRET</code> to a random value of at least 32 characters, for example the output of <code>openssl rand -base64 48</code>. It signs every session and unlock code. Changing it signs everyone out.</>,
+        },
+        {
+          title: "Set the public URL",
+          body: <>Set <code>BETTER_AUTH_URL</code> to the address people open, with no trailing slash: <code className="break-all">{origin}</code>. Sign-in cookies, reset links and the Google callback are built from it.</>,
+        },
+        {
+          title: "Name the admins and the unlock PIN",
+          body: <>List admin addresses in <code>ADMIN_EMAILS</code>, comma separated; they become admins only after proving email ownership and signing in again. Public password registration creates a student account. Set <code>SU_PIN</code> to 6 digits; it is the first step of the admin unlock. Turn on Email delivery for sign-in codes, optional verification, reset links and unlock codes.</>,
+        },
+        {
+          title: "Restart the server",
+          body: "These values are read once at boot and can't be changed from this page. Restart the service after editing the env file.",
+        },
+      ],
+      verify: "Sign out and sign back in with an email and password, then request a password reset for a test account. The status list above shows which parts are limited and why.",
+    },
     googleAuth: {
       enables: "Google sign-in and account linking. This OAuth client is also used by Google Forms; its refresh token is configured separately.",
       steps: [

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { shortcutBlocked } from "$lib/ui/shortcut-guard";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
@@ -225,13 +226,7 @@ export function useAdminConsole() {
 
   useEffect(() => {
     function onKeydown(e: KeyboardEvent) {
-      const target = e.target as HTMLElement | null;
-      const typing =
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable);
-      if (typing) return;
+      if (shortcutBlocked(e)) return;
 
       if (e.key === "?") {
         e.preventDefault();
@@ -253,8 +248,7 @@ export function useAdminConsole() {
     }
     window.addEventListener("keydown", onKeydown);
     return () => window.removeEventListener("keydown", onKeydown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, hasActiveYear]);
+  });
 
   const tabTitle = TAB_BY_ID.get(activeTab)?.label ?? "Admin";
 

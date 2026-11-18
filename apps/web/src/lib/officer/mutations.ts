@@ -45,13 +45,15 @@ export function useOfficerMutations(toast: OfficerToast) {
     }
   }
 
-  async function handleSaveLink(name: string, url: string, id?: string) {
+  async function handleSaveLink(name: string, url: string, id?: string, ts?: number) {
     try {
-      await saveLinkMutation.mutateAsync({ id, name, url });
+      await saveLinkMutation.mutateAsync({ id, name, url, ts });
       queryClient.invalidateQueries({ queryKey: ["officer"] });
       toast(id ? "Page updated" : "Page added");
+      return true;
     } catch {
-      toast("Could not save the page", "error");
+      toast("Could not save the page. Your draft is unchanged.", "error");
+      return false;
     }
   }
 

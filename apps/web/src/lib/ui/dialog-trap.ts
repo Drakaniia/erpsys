@@ -11,16 +11,29 @@ export interface DialogTrapOptions {
   initialFocus?: "auto" | "panel";
 }
 
+const pendingRestore = new WeakMap<HTMLElement, HTMLElement | null>();
+
+/**
+ * A trap torn down and rebuilt for the same panel in one commit (a parent
+ * re-render handing the dialog a new callback) inherits the old trap's
+ * restore target and leaves focus where the user has it.
+ */
 export function dialogTrap(
   panel: HTMLElement,
   options: DialogTrapOptions = {},
 ) {
-  const restoreTo = document.activeElement as HTMLElement | null;
+  const rebuilt = pendingRestore.has(panel);
+  const restoreTo = rebuilt
+    ? pendingRestore.get(panel)!
+    : (document.activeElement as HTMLElement | null);
+  pendingRestore.delete(panel);
 
   const focusables = () =>
     Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
 
-  if (options.initialFocus === "panel") {
+  if (rebuilt) {
+    // Focus stays put.
+  } else if (options.initialFocus === "panel") {
     panel.focus();
   } else {
     const marked = panel.querySelector<HTMLElement>(
@@ -62,7 +75,12 @@ export function dialogTrap(
   return {
     destroy() {
       document.removeEventListener("keydown", onKeydown);
-      restoreTo?.focus();
+      pendingRestore.set(panel, restoreTo);
+      queueMicrotask(() => {
+        if (!pendingRestore.has(panel)) return;
+        pendingRestore.delete(panel);
+        restoreTo?.focus();
+      });
     },
   };
 }

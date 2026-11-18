@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import { useEditingPresence } from "$lib/editing-presence";
+import EditorPresence from "../ui/EditorPresence";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { dialogTrap } from "$lib/ui/dialog-trap";
 import { api } from "$lib/api";
@@ -17,6 +19,7 @@ export default function ActivateYearDialog({
   onclose: () => void;
 }) {
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const presence = useEditingPresence("academic-year", year?.id, year);
 
   const previewQuery = useQuery(
     api.admin.getActivationPreview.queryOptions({
@@ -42,7 +45,7 @@ export default function ActivateYearDialog({
   async function confirmActivate() {
     if (!year) return;
     try {
-      await activateMutation.mutateAsync({ yearId: year.id });
+      await activateMutation.mutateAsync({ yearId: year.id, ts: presence.ts });
       ontoast(`${year.label} · ${year.semesterLabel} is now active`);
       onactivated();
       onclose();
@@ -79,6 +82,7 @@ export default function ActivateYearDialog({
         role="presentation"
         onClick={(e) => e.stopPropagation()}
       >
+        <EditorPresence presence={presence} />
         <h2
           id="activate-year-title"
           className="text-base font-semibold text-ink"

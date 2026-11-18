@@ -65,7 +65,7 @@ export default function ChatInputTextArea({
       onChange={handleInput}
       onKeyDown={handleKeydown}
       rows={rows}
-      className={`max-h-[400px] min-h-0 w-full resize-none overflow-x-hidden rounded-lg bg-surface-raised px-3 py-2 text-[15px] text-ink outline-none placeholder:text-muted/60 ${
+      className={`max-h-[400px] min-h-0 w-full resize-none overflow-x-hidden rounded-lg bg-surface-raised px-3 py-2 text-[15px] text-ink outline-none placeholder:text-muted ${
         variant === "unstyled"
           ? "border-none focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none"
           : "border border-border focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/20"

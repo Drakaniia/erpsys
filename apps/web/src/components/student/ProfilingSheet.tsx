@@ -1,4 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
+import { useEditingPresence } from "$lib/editing-presence";
+import EditorPresence from "../ui/EditorPresence";
 import ReplyNotice from "./ReplyNotice";
 import StampDisplay from "./StampDisplay";
 import SubmittedNotice from "./SubmittedNotice";
@@ -17,10 +19,11 @@ export default function ProfilingSheet({
     api.student.submitEvidence.mutationOptions(),
   );
   const { flags } = useIntegrations();
+  const presence = useEditingPresence("submission", step.status !== "VERIFIED" ? "me~PROFILING" : null, step);
 
   async function submit() {
     try {
-      await submitMutation.mutateAsync({ stepCode: "PROFILING" });
+      await submitMutation.mutateAsync({ stepCode: "PROFILING", ts: presence.ts });
       queryClient.invalidateQueries({ queryKey: ["student"] });
       notify("Submitted — pending officer review.");
     } catch (e) {
@@ -33,6 +36,7 @@ export default function ProfilingSheet({
 
   return (
     <div className="flex flex-col gap-4">
+      {step.status !== "VERIFIED" && <EditorPresence presence={presence} />}
       {step.reply ? <ReplyNotice reply={step.reply} /> : null}
 
       {step.status === "VERIFIED" ? (

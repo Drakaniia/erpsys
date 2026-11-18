@@ -18,7 +18,7 @@ The web imports **nothing** from `@erpsys/server`; there is no workspace depende
 - `constants.ts` — step codes, year levels, labels, the student-number rule (mirror of `apps/server/src/config/constants.ts`).
 - `roles.ts` — the surface matrix and landing rules (mirror of `apps/server/src/config/roles.ts`).
 - `report.ts` — `REPORT_ROW_CAP` and the truncation sentence (mirror of `apps/server/src/config/report.ts`).
-- `types.ts` — the response payloads the UI renders (student record, roster, step register, user list, SSE events, integrations, storage).
+- `types.ts` — the response payloads the UI renders (student record, roster, step register, user list, schedule, integrations, storage).
 
 Edit the server copy first, then mirror it here. `src/lib/auth-client.ts` declares the student-sign-up plugin shape locally, because better-auth's plugin itself lives on the server.
 

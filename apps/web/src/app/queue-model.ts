@@ -8,11 +8,6 @@ import { canUseStudentSurface } from "$lib/domain/roles";
 import { api } from "$lib/api";
 import { LAUNCH_STALE_MS, visibleQueuePosition } from "$lib/perf/cache-policy";
 import { intervalWhileVisible } from "$lib/polling";
-import { connectLiveUpdates } from "$lib/live-updates";
-import {
-  refreshStudentQueries,
-  STUDENT_BACKSTOP_POLL_MS,
-} from "$lib/student/live-refresh";
 import { notify } from "$lib/notifications";
 import { shouldGateOnboarding } from "$lib/student/onboarding-gate";
 import {
@@ -49,18 +44,13 @@ export function useQueueModel() {
 
   const sessionReady = !sessionQuery.isPending && Boolean(sessionQuery.data);
 
-  useEffect(
-    () => connectLiveUpdates((event) => refreshStudentQueries(event.topic)),
-    [],
-  );
-
   const stepsQuery = useQuery(
     api.student.getMySteps.queryOptions({
       staleTime: LAUNCH_STALE_MS,
       // No session, no request: without this the sign-out race fires
       // /api/v1/me/* against the cleared cookie and each lands a 401.
       enabled: sessionReady,
-      refetchInterval: intervalWhileVisible(STUDENT_BACKSTOP_POLL_MS),
+      refetchInterval: intervalWhileVisible(15_000),
       refetchOnWindowFocus: true,
     }),
   );
@@ -68,14 +58,14 @@ export function useQueueModel() {
     api.student.getMyQueueStatus.queryOptions({
       staleTime: LAUNCH_STALE_MS,
       enabled: sessionReady,
-      refetchInterval: intervalWhileVisible(STUDENT_BACKSTOP_POLL_MS),
+      refetchInterval: intervalWhileVisible(15_000),
       refetchOnWindowFocus: true,
     }),
   );
   const myDeptQuery = useQuery(
     api.student.getMyDepartmentQueue.queryOptions({
       enabled: sessionReady,
-      refetchInterval: intervalWhileVisible(STUDENT_BACKSTOP_POLL_MS),
+      refetchInterval: intervalWhileVisible(15_000),
       refetchOnWindowFocus: true,
     }),
   );
@@ -215,6 +205,8 @@ export function useQueueModel() {
     shareLanding.kind === "show" && myDept !== null
       ? shareLanding.data.departmentId === myDept.departmentId
       : false;
+  const shareMismatch =
+    shareLanding.kind === "show" && myDeptQuery.isSuccess && !shareMatchesRecord;
 
   function dismissShareModal() {
     setShareModalOpen(false);
@@ -249,6 +241,7 @@ export function useQueueModel() {
     setLeaveConfirmOpen(false);
     try {
       await leaveMutation.mutateAsync({} as any);
+      prev.current.removalNotified = true;
       queryClient.invalidateQueries({ queryKey: ["student"] });
       notify("You left the queue.");
     } catch (e) {
@@ -412,6 +405,7 @@ export function useQueueModel() {
     shareModalOpen,
     shareNotice,
     shareMatchesRecord,
+    shareMismatch,
     facultyConfirmOpen,
     leaveConfirmOpen,
     gateShowing,

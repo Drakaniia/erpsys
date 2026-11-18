@@ -92,7 +92,7 @@ export function useSaveSchedule() {
   return useMutation<
     ScheduleView,
     Error,
-    { departmentId: string; windows: ScheduleWindow[] }
+    { departmentId: string; windows: ScheduleWindow[]; ts?: number }
   >({
     mutationFn: (input) =>
       api.instructor.saveMySchedule.call(input) as Promise<ScheduleView>,
