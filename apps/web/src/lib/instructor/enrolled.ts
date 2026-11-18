@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, queryClient } from "$lib/api";
-import { useEditingPresence } from "$lib/editing-presence";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { intervalWhileVisible } from "$lib/polling";
 
 export type EnrolledRange = "today" | "ay" | "all";
@@ -75,7 +75,7 @@ export function useEnrolledState(
   }, [deptId, view, range, q]);
 
   const rows: any[] = enrolledQuery.data?.data ?? [];
-  const revertPresence = useEditingPresence("queue-entry", revertEntry?.enrollmentId, rows.find((row) => row.enrollmentId === revertEntry?.enrollmentId));
+  const revertPresence = useEditTimestamp("queue-entry", revertEntry?.enrollmentId, rows.find((row) => row.enrollmentId === revertEntry?.enrollmentId));
   const total: number =
     (enrolledQuery.data as { total?: number } | undefined)?.total ?? 0;
   const hasMore = rows.length < total && limit < 500;
@@ -218,7 +218,6 @@ export function useEnrolledState(
     revertMutation,
     bulkRevertMutation,
     revertEntry,
-    revertPresence,
     selectedIds,
     selectedCount: selectedIds.size,
     bulkConfirmOpen,

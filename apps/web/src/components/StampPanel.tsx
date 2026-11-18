@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useEditingPresence } from "$lib/editing-presence";
-import EditorPresence from "./ui/EditorPresence";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "$lib/api";
 import {
@@ -25,7 +24,7 @@ export default function StampPanel({
     api.officer.getStamp.queryOptions({ enabled: open && isOfficerSurface }),
   );
   const updateStamp = useMutation(api.officer.updateStamp.mutationOptions());
-  const presence = useEditingPresence("stamp", open && isOfficerSurface ? "me" : null, stampQuery.data);
+  const presence = useEditTimestamp("stamp", open && isOfficerSurface ? "me" : null, stampQuery.data);
 
   const initialized = useRef(false);
   const [stampName, setStampName] = useState("");
@@ -113,7 +112,7 @@ export default function StampPanel({
   return (
     <>
       <div className="space-y-3 px-3 py-2">
-        <EditorPresence presence={presence} />
+
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-ink">My stamp</p>
           <button

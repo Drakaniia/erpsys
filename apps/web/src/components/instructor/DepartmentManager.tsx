@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useEditingPresence } from "$lib/editing-presence";
-import EditorPresence from "../ui/EditorPresence";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   departmentLevelRangeLabel,
@@ -102,9 +101,9 @@ export default function DepartmentManager({
     null,
   );
   const [editingId, setEditingId] = useState<string | null>(null);
-  const presence = useEditingPresence("department", editingId, listQuery.data?.data?.find((d: { id: string }) => d.id === editingId));
-  const levelsPresence = useEditingPresence("department", editingLevelsFor?.id, editingLevelsFor);
-  const mappingPresence = useEditingPresence("department", assigningFor?.id, assigningFor);
+  const presence = useEditTimestamp("department", editingId, listQuery.data?.data?.find((d: { id: string }) => d.id === editingId));
+  const levelsPresence = useEditTimestamp("department", editingLevelsFor?.id, editingLevelsFor);
+  const mappingPresence = useEditTimestamp("department", assigningFor?.id, assigningFor);
   const [editName, setEditName] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
@@ -251,9 +250,6 @@ export default function DepartmentManager({
 
   return (
     <div className="flex flex-col gap-4">
-      {editingId && <EditorPresence presence={presence} />}
-      {editingLevelsFor && <EditorPresence presence={levelsPresence} />}
-      {assigningFor && <EditorPresence presence={mappingPresence} />}
       <p className="text-sm leading-relaxed text-muted">
         Your queue lives in the department tab on the left — assigning a new one
         replaces your current (one department at a time). Use Manage to switch

@@ -14,9 +14,7 @@ const apiState = vi.hoisted(() => ({
   invalidate: vi.fn(),
 }));
 
-vi.mock("$lib/editing-presence", () => ({
-  useEditingPresence: () => ({ editors: [], error: false, ts: 100 }),
-}));
+
 
 const slotState = vi.hoisted(() => ({
   onqueue: null as null | ((run: (() => Promise<void>) | null) => void),

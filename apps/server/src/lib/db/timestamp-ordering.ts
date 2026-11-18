@@ -16,7 +16,6 @@ type Row = Record<string, unknown>;
 type Op = (...args: unknown[]) => unknown;
 
 const EXEMPT = new Set([
-  "editing_presence",
   "session",
   "account",
   "verification",

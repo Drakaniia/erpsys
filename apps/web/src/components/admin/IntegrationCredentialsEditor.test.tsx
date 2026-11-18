@@ -3,9 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import IntegrationCredentialsEditor from "./IntegrationCredentialsEditor";
-vi.mock("$lib/editing-presence", () => ({
-  useEditingPresence: () => ({ editors: [], error: false, ts: undefined, saved: () => {} }),
-}));
+
 import type { AdminIntegrationRow } from "$lib/integrations/use-integrations";
 import { notify } from "$lib/notifications";
 

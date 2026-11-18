@@ -1,5 +1,4 @@
 import ConfirmDialog from "../components/ConfirmDialog";
-import EditorPresence from "../components/ui/EditorPresence";
 import ConfirmEnrollmentDialog from "../components/instructor/ConfirmEnrollmentDialog";
 import InstructorGuideDialog from "../components/instructor/InstructorGuideDialog";
 import RevertConfirmDialog from "../components/instructor/RevertConfirmDialog";
@@ -29,7 +28,6 @@ export default function InstructorDialogs({
 }) {
   return (
     <>
-      {s.enrolled.revertEntry && <EditorPresence presence={s.enrolled.revertPresence} />}
       <ConfirmEnrollmentDialog
         open={s.queue.showValidateDialog}
         entry={s.queue.servingEntry}

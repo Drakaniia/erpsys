@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useEditingPresence } from "$lib/editing-presence";
-import EditorPresence from "../ui/EditorPresence";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ConfirmDialog from "../ConfirmDialog";
 import { renderMarkdown } from "$lib/chat/markdown";
@@ -44,7 +43,7 @@ export default function ChatbotEditor({
     }
   }, [loaded, docQuery.data, docQuery.isSuccess]);
 
-  const presence = useEditingPresence("chatbot-knowledge", docQuery.isSuccess ? "default" : null, docQuery.data);
+  const presence = useEditTimestamp("chatbot-knowledge", docQuery.isSuccess ? "default" : null, docQuery.data);
   const dirty = loaded && draft !== savedContent;
   const wordCount = useMemo(() => {
     const text = document.createElement("div");
@@ -108,7 +107,7 @@ export default function ChatbotEditor({
 
   return (
     <div className="flex flex-col gap-4">
-      <EditorPresence presence={presence} />
+
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-0.5">
           <p className="text-sm text-muted">

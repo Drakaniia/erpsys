@@ -10,12 +10,6 @@ export type ClientRoute = {
 };
 
 export const ROUTES = {
-  editingPresence: {
-    join: { method: "PUT", path: "/api/v1/editing-presence/:resource/:recordId/:editorId" },
-    leave: { method: "DELETE", path: "/api/v1/editing-presence/:resource/:recordId/:editorId" },
-    read: { method: "GET", path: "/api/v1/editing-presence/:resource/:recordId" },
-    list: { method: "GET", path: "/api/v1/editing-presence", list: true },
-  },
   me: {
     // The aggregate launch read — one round trip for the landing surface.
     getLaunch: { method: "GET", path: "/api/v1/me/launch" },

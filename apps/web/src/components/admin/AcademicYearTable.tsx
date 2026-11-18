@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { useEditingPresence } from "$lib/editing-presence";
-import EditorPresence from "../ui/EditorPresence";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ConfirmDialog from "../ConfirmDialog";
 import ActivateYearDialog from "./ActivateYearDialog";
@@ -78,7 +77,7 @@ export default function AcademicYearTable({
 
   // ---- Edit (active year only) ----
   const [editingId, setEditingId] = useState<string | null>(null);
-  const presence = useEditingPresence("academic-year", editingId, years.find((y) => y.id === editingId));
+  const presence = useEditTimestamp("academic-year", editingId, years.find((y) => y.id === editingId));
   const [editLabel, setEditLabel] = useState("");
   const [editSemester, setEditSemester] = useState("");
   const [editError, setEditError] = useState("");
@@ -140,7 +139,7 @@ export default function AcademicYearTable({
 
   return (
     <div className="flex flex-col gap-4">
-      {editingId && <EditorPresence presence={presence} />}
+
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted">
           One active year at a time. Activating a new year resets students'

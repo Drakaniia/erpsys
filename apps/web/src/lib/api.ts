@@ -174,8 +174,7 @@ async function send(route: ClientRoute, input: unknown): Promise<unknown> {
   const hasId = value.id !== undefined && value.id !== null;
   const def = route.update && hasId ? route.update : route;
   const { path, rest, params } = buildPath(def.path, value);
-  const presence = path.startsWith("/api/v1/editing-presence");
-  if (!presence && def.method !== "GET" && rest.ts === undefined) {
+  if (def.method !== "GET" && rest.ts === undefined) {
     const ts = params.map((p) => tsById.get(p)).find((t) => t !== undefined);
     if (ts !== undefined) rest.ts = ts;
   }
@@ -212,7 +211,7 @@ async function send(route: ClientRoute, input: unknown): Promise<unknown> {
   const json: unknown = text ? JSON.parse(text) : undefined;
   if (json && typeof json === "object" && "data" in json) {
     const { ts } = json as { ts?: unknown };
-    if (!presence && typeof ts === "number") rememberTs((json as { data: unknown }).data, ts);
+    if (typeof ts === "number") rememberTs((json as { data: unknown }).data, ts);
     if (route.list) return json;
     return (json as { data: unknown }).data;
   }

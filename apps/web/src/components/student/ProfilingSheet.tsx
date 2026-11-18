@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useEditingPresence } from "$lib/editing-presence";
-import EditorPresence from "../ui/EditorPresence";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import ReplyNotice from "./ReplyNotice";
 import StampDisplay from "./StampDisplay";
 import SubmittedNotice from "./SubmittedNotice";
@@ -19,7 +18,7 @@ export default function ProfilingSheet({
     api.student.submitEvidence.mutationOptions(),
   );
   const { flags } = useIntegrations();
-  const presence = useEditingPresence("submission", step.status !== "VERIFIED" ? "me~PROFILING" : null, step);
+  const presence = useEditTimestamp("submission", step.status !== "VERIFIED" ? "me~PROFILING" : null, step);
 
   async function submit() {
     try {
@@ -36,7 +35,7 @@ export default function ProfilingSheet({
 
   return (
     <div className="flex flex-col gap-4">
-      {step.status !== "VERIFIED" && <EditorPresence presence={presence} />}
+
       {step.reply ? <ReplyNotice reply={step.reply} /> : null}
 
       {step.status === "VERIFIED" ? (

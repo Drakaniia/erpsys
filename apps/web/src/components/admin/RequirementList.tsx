@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { useEditingPresence } from "$lib/editing-presence";
-import EditorPresence from "../ui/EditorPresence";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ConfirmDialog from "../ConfirmDialog";
 import AppleSwitch from "../ui/AppleSwitch";
@@ -71,7 +70,7 @@ export default function RequirementList({
   }
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const presence = useEditingPresence("requirement", editingId, items.find((item) => item.id === editingId));
+  const presence = useEditTimestamp("requirement", editingId, items.find((item) => item.id === editingId));
   const [editLabel, setEditLabel] = useState("");
 
   function startEdit(item: RequirementItem) {
@@ -154,7 +153,7 @@ export default function RequirementList({
 
   return (
     <div className="flex flex-col gap-4">
-      {editingId && <EditorPresence presence={presence} />}
+
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted">
           Shown to students at step 1 (Assessment). Edits go live immediately;
