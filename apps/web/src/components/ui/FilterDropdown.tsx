@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { prefersReducedMotion } from "$lib/motion";
+import { useEffect, useId, useRef, useState } from "react";
+import { useDropdownPanel } from "$lib/ui/use-dropdown-panel";
 import "./FilterDropdown.css";
 
 type Option = { value: string; label: string };
@@ -10,13 +10,19 @@ export default function FilterDropdown({
   ariaLabel,
   onchange,
   id,
+  disabled = false,
+  compact = false,
 }: {
   value: string;
   options: readonly Option[];
   ariaLabel: string;
   onchange: (v: string) => void;
   id?: string;
+  disabled?: boolean;
+  compact?: boolean;
 }) {
+  const listId = useId();
+  const typeahead = useRef({ text: "", time: 0 });
   const currentLabel = options.find((o) => o.value === value)?.label ?? value;
 
   const [open, setOpen] = useState(false);
@@ -24,6 +30,7 @@ export default function FilterDropdown({
   const root = useRef<HTMLDivElement | null>(null);
   const triggerEl = useRef<HTMLButtonElement | null>(null);
   const listEl = useRef<HTMLDivElement | null>(null);
+  useDropdownPanel(open, triggerEl, listEl);
 
   useEffect(() => {
     if (!open) return;
@@ -38,6 +45,7 @@ export default function FilterDropdown({
   }
 
   function openMenu(focusIdx?: number) {
+    if (disabled || triggerEl.current?.matches(":disabled") || options.length === 0) return;
     setOpen(true);
     const idx = focusIdx ?? options.findIndex((o) => o.value === value);
     setFocusedIndex(idx >= 0 ? idx : 0);
@@ -84,6 +92,7 @@ export default function FilterDropdown({
       }
     } else if (e.key === "Escape" && open) {
       e.preventDefault();
+      e.stopPropagation();
       close();
     }
   }
@@ -115,11 +124,25 @@ export default function FilterDropdown({
       }
       case "Escape":
         e.preventDefault();
+        e.stopPropagation();
         close();
         break;
       case "Tab":
+        triggerEl.current?.focus();
         close(false);
         break;
+      default: {
+        if (e.key.length !== 1 || e.ctrlKey || e.altKey || e.metaKey) break;
+        const now = Date.now();
+        typeahead.current.text = now - typeahead.current.time > 600 ? e.key : typeahead.current.text + e.key;
+        typeahead.current.time = now;
+        const query = typeahead.current.text.toLocaleLowerCase();
+        const index = options.findIndex((option) => option.label.toLocaleLowerCase().startsWith(query));
+        if (index >= 0) {
+          e.preventDefault();
+          setFocusedIndex(index);
+        }
+      }
     }
   }
 
@@ -129,29 +152,30 @@ export default function FilterDropdown({
       if (root.current && !root.current.contains(ev.target as Node))
         close(false);
     }
-    function onKeyDown(ev: KeyboardEvent) {
-      if (ev.key === "Escape") close();
-    }
+
     document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   return (
-    <div className="relative" ref={root} id={id}>
+    <div className="relative min-w-0" ref={root}>
       <button
         ref={triggerEl}
         type="button"
+        role="combobox"
+        id={id}
+        value={value}
+        disabled={disabled}
+        aria-controls={open ? listId : undefined}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
         onClick={toggle}
         onKeyDown={onTriggerKeydown}
-        className={`group inline-flex min-w-[148px] items-center justify-between gap-2 rounded-lg border border-border bg-surface-raised px-3 py-2 text-left text-sm font-normal text-ink transition-colors duration-150 ease-out hover:bg-surface active:bg-surface ${open ? "bg-surface" : ""}`}
+        className={`dropdown-trigger ${compact ? "dropdown-trigger--compact" : ""}`}
       >
         <span className="truncate">{currentLabel}</span>
         <svg
@@ -164,8 +188,7 @@ export default function FilterDropdown({
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden="true"
-          className={`shrink-0 text-muted/70 transition-transform duration-150 ease-out ${open ? "rotate-180" : ""}`}
-          style={prefersReducedMotion() ? { transition: "none" } : undefined}
+          className="dropdown-chevron"
         >
           <path d="m6 9 6 6 6-6" />
         </svg>
@@ -174,12 +197,13 @@ export default function FilterDropdown({
       {open ? (
         <div
           ref={listEl}
+          id={listId}
+          popover="manual"
           role="listbox"
           aria-label={ariaLabel}
           tabIndex={-1}
           onKeyDown={onListKeydown}
-          className="dropdown-panel absolute left-0 top-full z-50 mt-1.5 min-w-full rounded-lg border border-border bg-surface-raised p-1 backdrop-blur-md will-change-transform"
-          style={{ transformOrigin: "top left", minWidth: "100%" }}
+          className="dropdown-panel apple-scrollbar"
         >
           {options.map((opt, i) => {
             const selected = opt.value === value;
@@ -194,13 +218,9 @@ export default function FilterDropdown({
                 tabIndex={focused ? 0 : -1}
                 onClick={() => select(opt.value)}
                 onPointerDown={(e) => e.preventDefault()}
-                className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-1.5 text-left text-sm leading-5 transition-colors duration-100 ease-out ${
-                  selected
-                    ? "bg-primary text-white"
-                    : focused
-                      ? "bg-surface text-ink"
-                      : "text-ink hover:bg-surface"
-                }`}
+                onPointerMove={() => setFocusedIndex(i)}
+                className="dropdown-option"
+                data-focused={focused}
               >
                 <span className={`truncate ${selected ? "font-medium" : ""}`}>
                   {opt.label}
@@ -216,13 +236,13 @@ export default function FilterDropdown({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     aria-hidden="true"
-                    className="shrink-0"
+                    className="shrink-0 text-primary"
                   >
                     <path d="M5 13l4 4L19 7" />
                   </svg>
                 ) : (
                   <span
-                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-transparent"
+                    className="h-3.5 w-3.5 shrink-0"
                     aria-hidden="true"
                   />
                 )}

@@ -1,3 +1,5 @@
+import FilterDropdown from "./FilterDropdown";
+
 /**
  * Shared by the admin users table and the officer submission list.
  * `QueuePagination` is a different control and is deliberately not folded in.
@@ -79,20 +81,18 @@ export default function Pagination({
       <p className="text-xs text-muted tabular-nums">{label(total)}</p>
       <div className={`flex items-center ${look.gap}`}>
         {!hideSizeSelect && (
-          <label
+          <div
             className={`flex items-center ${look.labelGap} text-xs text-muted`}
           >
             Per page
-            <select
-              value={pageSize}
-              onChange={(e) => onpagesizechange(Number(e.currentTarget.value))}
-              className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-ink"
-            >
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
-          </label>
+            <FilterDropdown
+              ariaLabel="Per page"
+              value={String(pageSize)}
+              onchange={(value) => onpagesizechange(Number(value))}
+              options={[25, 50, 100].map((size) => ({ value: String(size), label: String(size) }))}
+              compact
+            />
+          </div>
         )}
         {!hideNav &&
           (look.nav ? (
