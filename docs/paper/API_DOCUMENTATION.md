@@ -39,7 +39,7 @@ Authentication responses, basic health, binary files, redirects, and assistant s
 
 The optional data object is not present on every error. Server error names are not generally serialized as top-level codes. Production often replaces detailed business messages with generic status text; examples of conditions below do not promise exact production wording. Storage-quota responses and authentication errors have explicitly different shapes.
 
-Every versioned request has a transaction timestamp. A write may include the ts returned with the data being edited; the middleware consumes it before business-body validation. It must be a positive safe integer no later than the server's timestamp ceiling. Omit it to start a fresh server-anchored operation. A stale read or write can return HTTP 409 with data.code TS_ABORTED. Refresh the affected records before retrying; a batch must not be assumed rolled back. Eligible server-started requests restart up to three times only before writing. Ordering is designed for one application process, not a multi-server transaction service.
+Versioned business requests use transaction timestamps. A write may include the ts returned with the data being edited; the middleware consumes it before business-body validation. It must be a positive safe integer issued by the running server. Omit it to start a fresh server-anchored operation. A stale read or write can return HTTP 409 with data.code TS_ABORTED. Keep unsaved drafts and reload the affected records before retrying; a batch must not be assumed rolled back. Eligible server-started requests restart up to three times only before writing. Ordering is designed for one application process, not a multi-server transaction service. Advisory editing-presence operations run outside business timestamp ordering and do not advance business read/write stamps; presence is not a record lock.
 
 Shared resource failures include 400 for invalid request input/timestamp; 401 for no session; 403 for permission failure; 404 for missing resources; 409 for conflicting state; 412 for unmet prerequisites; 413 for body/file limits; 429 for request limits; and 500/502/503 for internal/provider/service failures as applicable. Successful authorization does not bypass business-state checks.
 
@@ -2904,25 +2904,7 @@ Each endpoint below is mounted by the current application. Shared envelope, erro
 
 **Success:** HTTP 200. data: notification rows, page: 1, pageSize: 50, total: returned-row count.
 
-**Behavior:** Newest first, capped at 50. This handler does not expose arbitrary notification pagination.
-
-**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
-
-### 2.16.6. Mark All Notifications Read
-
-**Method:** POST
-
-**Endpoint:** `/api/v1/me/notifications/read`
-
-**Version:** Application API v1
-
-**Capture date:** Not yet supplied.
-
-**Access:** Signed-in session; the operation may impose additional business visibility checks.
-
-**Parameters:** None.
-
-**Success:** HTTP 200. data: { count }.
+**Behavior:** Newest first, capped at 50. This handler does not expose arbitrary notification pagination. New read markers live in account-scoped browser storage, capped at 1,000 IDs; they do not synchronize across devices and clearing browser storage resets them. Existing server read markers remain honored. There is no mark-read write endpoint.
 
 **Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
 
@@ -3273,7 +3255,41 @@ Each endpoint below is mounted by the current application. Shared envelope, erro
 
 **Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
 
-### 2.19.6. Save Integration Credential Overrides
+### 2.19.6. Validate Draft Integration Credentials
+
+**Method:** POST
+
+**Endpoint:** `/api/v1/integrations/:key/credentials/validate`
+
+**Version:** Application API v1
+
+**Capture date:** Not yet supplied.
+
+**Access:** Administrator session.
+
+**Parameters:** Path: key is a supported integration key. Body: version (required integer >=0), values (required object mapping allowed credential field names to strings up to 4,096 characters or null).
+
+**Success:** HTTP 200. data: { key, version, fields: [{ envKey, set, source }] }, where source is draft, stored, or env.
+
+**Behavior:** Administrator session required; no step-up unlock required. Merges drafts over stored overrides and configured fallbacks, checks required values, pairs and formats, and runs supported provider probes without saving credentials or incrementing their version. An all-null nonempty reset skips required-value and provider probes but still checks pairing. Shares the ten-request-per-minute per-administrator credential budget with saves and resets. No secret values are returned. The Better Auth integration is locked and cannot be validated this way.
+
+**Additional failure conditions:** 400 invalid body or unknown credential field; 401 no session; 403 not administrator; 404 unknown integration; 409 stale version or locked integration; 422 with data.failures [{ key, reason }] for group/provider failure; 429 credential limit.
+
+**Illustrative request body:**
+
+```json
+{
+  "version": 0,
+  "values": {
+    "MAIL_FROM": "ERPSYS <no-reply@example.org>",
+    "BREVO_API_KEY": "<draft provider credential>"
+  }
+}
+```
+
+**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+
+### 2.19.7. Save Integration Credential Overrides
 
 **Method:** PUT
 
@@ -3307,7 +3323,7 @@ Each endpoint below is mounted by the current application. Shared envelope, erro
 
 **Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
 
-### 2.19.7. Restore Configured Credential Defaults
+### 2.19.8. Restore Configured Credential Defaults
 
 **Method:** DELETE
 
@@ -3410,6 +3426,101 @@ Each endpoint below is mounted by the current application. Shared envelope, erro
 **Success:** HTTP 200. { ok: true }.
 
 **Behavior:** Public, non-versioned JSON. It is a basic liveness response, not a database-readiness probe.
+
+**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+
+
+## 2.23. Advisory Editor Presence
+
+### 2.23.1. List Active Editing Records
+
+**Method:** GET
+
+**Endpoint:** `/api/v1/editing-presence`
+
+**Version:** Application API v1
+
+**Capture date:** Not yet supplied.
+
+**Access:** Administrator session.
+
+**Parameters:** Optional query: page (positive integer, default 1), pageSize or limit (default 50, maximum 100).
+
+**Success:** HTTP 200. data: [{ resource, recordId, editors: [{ userId, editorId, name, lastSeenAt, expiresAt }] }], with list metadata.
+
+**Behavior:** Administrator-only overview of records with active editors, newest update first. Private, no-store; outside business timestamp ordering.
+
+**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+
+### 2.23.2. Read Active Editors
+
+**Method:** GET
+
+**Endpoint:** `/api/v1/editing-presence/:resource/:recordId`
+
+**Version:** Application API v1
+
+**Capture date:** Not yet supplied.
+
+**Access:** Signed-in session; the operation may impose additional business visibility checks.
+
+**Parameters:** Path: resource is academic-year, department, requirement, adviser, user, stamp, chatbot-knowledge, profiling-form, social-link, schedule, student-profile, student-enrollment, submission, queue-entry, or integration; recordId is 1–200 characters.
+
+**Success:** HTTP 200. data: { resource, recordId, editors: [{ userId, editorId, name, lastSeenAt, expiresAt }] }.
+
+**Behavior:** Advisory presence is not a lock and does not prevent concurrent edits. It runs outside business timestamp ordering, never advances business read/write stamps, and is excluded from audit logging. Responses are private, no-store. Expired editors are filtered immediately; the minute sweep removes expired leases and empty records. Every record operation requires resource write access: administrator-only for academic-year, requirement, adviser, user, chatbot-knowledge and integration; officer access for social-link, profiling-form and the caller's own stamp; instructor access for department and the caller's assigned schedule. Profiles require ownership or officer access; enrollment is owner-only. Submissions require officer access or student ownership. Queue entries require instructor assignment and year-level scope. Use default for assistant knowledge or the active year's profiling form; me~departmentId for the caller's current-year schedule; me for the caller's stamp, profile or active-year enrollment; and me~STEP_CODE for the caller's submission. Existing submission identifiers are also accepted. Responses return canonical record identifiers. Integration recordId is an integration key. Other resources use existing record identifiers.
+
+**Additional failure conditions:** 400 invalid resource, recordId or editorId; 401 no session; 403 resource access denied; 404 missing record or active-year context.
+
+**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+
+### 2.23.3. Join or Renew an Editing Lease
+
+**Method:** PUT
+
+**Endpoint:** `/api/v1/editing-presence/:resource/:recordId/:editorId`
+
+**Version:** Application API v1
+
+**Capture date:** Not yet supplied.
+
+**Access:** Signed-in session; the operation may impose additional business visibility checks.
+
+**Parameters:** Path: resource is academic-year, department, requirement, adviser, user, stamp, chatbot-knowledge, profiling-form, social-link, schedule, student-profile, student-enrollment, submission, queue-entry, or integration; recordId is 1–200 characters. editorId identifies one tab: 1–100 letters, digits, underscores or hyphens. Body: empty object; unknown business fields are rejected.
+
+**Success:** HTTP 200. data: { resource, recordId, editors: [{ userId, editorId, name, lastSeenAt, expiresAt }] }.
+
+**Behavior:** Each tab renews every 20 seconds; its lease expires after 60 seconds. Identity, name and dates come from the server. Atomic revision comparisons preserve other users and independent tabs. Advisory presence is not a lock and does not prevent concurrent edits. It runs outside business timestamp ordering, never advances business read/write stamps, and is excluded from audit logging. Responses are private, no-store. Expired editors are filtered immediately; the minute sweep removes expired leases and empty records. Every record operation requires resource write access: administrator-only for academic-year, requirement, adviser, user, chatbot-knowledge and integration; officer access for social-link, profiling-form and the caller's own stamp; instructor access for department and the caller's assigned schedule. Profiles require ownership or officer access; enrollment is owner-only. Submissions require officer access or student ownership. Queue entries require instructor assignment and year-level scope. Use default for assistant knowledge or the active year's profiling form; me~departmentId for the caller's current-year schedule; me for the caller's stamp, profile or active-year enrollment; and me~STEP_CODE for the caller's submission. Existing submission identifiers are also accepted. Responses return canonical record identifiers. Integration recordId is an integration key. Other resources use existing record identifiers.
+
+**Additional failure conditions:** 400 invalid resource, recordId or editorId; 401 no session; 403 resource access denied; 404 missing record or active-year context. 400 for unexpected body fields; 409 when revision retries are exhausted.
+
+**Illustrative request body:**
+
+```json
+{}
+```
+
+**Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
+
+### 2.23.4. Leave an Editing Lease
+
+**Method:** DELETE
+
+**Endpoint:** `/api/v1/editing-presence/:resource/:recordId/:editorId`
+
+**Version:** Application API v1
+
+**Capture date:** Not yet supplied.
+
+**Access:** Signed-in session; the operation may impose additional business visibility checks.
+
+**Parameters:** Path: resource is academic-year, department, requirement, adviser, user, stamp, chatbot-knowledge, profiling-form, social-link, schedule, student-profile, student-enrollment, submission, queue-entry, or integration; recordId is 1–200 characters. editorId identifies one tab: 1–100 letters, digits, underscores or hyphens. No business body fields.
+
+**Success:** HTTP 200. data: { resource, recordId, editors: [{ userId, editorId, name, lastSeenAt, expiresAt }] }.
+
+**Behavior:** Removes only the signed-in user's matching tab, preserving other editors. Leaving an absent lease succeeds; missed heartbeats also expire it. Advisory presence is not a lock and does not prevent concurrent edits. It runs outside business timestamp ordering, never advances business read/write stamps, and is excluded from audit logging. Responses are private, no-store. Expired editors are filtered immediately; the minute sweep removes expired leases and empty records. Every record operation requires resource write access: administrator-only for academic-year, requirement, adviser, user, chatbot-knowledge and integration; officer access for social-link, profiling-form and the caller's own stamp; instructor access for department and the caller's assigned schedule. Profiles require ownership or officer access; enrollment is owner-only. Submissions require officer access or student ownership. Queue entries require instructor assignment and year-level scope. Use default for assistant knowledge or the active year's profiling form; me~departmentId for the caller's current-year schedule; me for the caller's stamp, profile or active-year enrollment; and me~STEP_CODE for the caller's submission. Existing submission identifiers are also accepted. Responses return canonical record identifiers. Integration recordId is an integration key. Other resources use existing record identifiers.
+
+**Additional failure conditions:** 400 invalid resource, recordId or editorId; 401 no session; 403 resource access denied; 404 missing record or active-year context. 409 when revision retries are exhausted.
 
 **Verification evidence:** Capture actual results using the shared checklist; no successful run is implied by this entry.
 
