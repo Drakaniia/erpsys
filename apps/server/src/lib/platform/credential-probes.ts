@@ -329,6 +329,8 @@ export async function probeCredentials(
   values: Record<string, string>,
 ): Promise<ProbeResult> {
   switch (key) {
+    case "betterAuth":
+      return { ok: true };
     case "googleAuth":
       return probeGoogle(values);
     case "turnstile":

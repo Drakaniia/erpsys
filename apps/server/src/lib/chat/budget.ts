@@ -81,6 +81,8 @@ export type ChatUsageTotalDoc = {
   exhausted: boolean;
   exhaustedAt?: Date;
   expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export type ChatUsageUserDoc = {
@@ -91,6 +93,8 @@ export type ChatUsageUserDoc = {
   neurons: number;
   turns: number;
   expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export type DayUsage = {
@@ -184,6 +188,7 @@ export async function commitUsage(
     outputTokens: input.outputTokens,
   });
   const expiresAt = expiresAtForDay(day);
+  const now = new Date();
   const collection = db.collection(COLLECTIONS.chatUsage);
 
   await Promise.all([
@@ -191,7 +196,8 @@ export async function commitUsage(
       { _id: totalDocId(day) } as never,
       {
         $inc: { tokens, neurons, turns: 1 },
-        $setOnInsert: { day, exhausted: false, expiresAt },
+        $set: { updatedAt: now },
+        $setOnInsert: { day, exhausted: false, expiresAt, createdAt: now },
       } as never,
       { upsert: true },
     ),
@@ -199,7 +205,8 @@ export async function commitUsage(
       { _id: userDocId(day, userId) } as never,
       {
         $inc: { tokens, neurons, turns: 1 },
-        $setOnInsert: { day, userId, expiresAt },
+        $set: { updatedAt: now },
+        $setOnInsert: { day, userId, expiresAt, createdAt: now },
       } as never,
       { upsert: true },
     ),
@@ -214,12 +221,13 @@ export async function markDayExhausted(
   await db.collection(COLLECTIONS.chatUsage).updateOne(
     { _id: totalDocId(day) } as never,
     {
-      $set: { exhausted: true, exhaustedAt: now },
+      $set: { exhausted: true, exhaustedAt: now, updatedAt: now },
       $setOnInsert: {
         day,
         tokens: 0,
         neurons: 0,
         turns: 0,
+        createdAt: now,
         expiresAt: expiresAtForDay(day),
       },
     } as never,

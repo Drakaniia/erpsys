@@ -40,7 +40,7 @@ beforeEach(async () => {
     [COLLECTIONS.requirementItem]: [
       { _id: "req-1", label: "Report Card", order: 0, isActive: true },
     ],
-    [COLLECTIONS.adminActionLog]: [],
+
     [COLLECTIONS.auditLog]: [],
   });
   holder.db = fake.db;
@@ -70,9 +70,9 @@ describe("audit trail", () => {
     });
     expect(response.status).toBe(200);
     await vi.waitFor(() =>
-      expect(holder.store[COLLECTIONS.auditLog]).toHaveLength(1),
+      expect(holder.store[COLLECTIONS.auditLog].filter((row) => row.kind === "http")).toHaveLength(1),
     );
-    expect(holder.store[COLLECTIONS.auditLog][0]).toMatchObject({
+    expect(holder.store[COLLECTIONS.auditLog].find((row) => row.kind === "http")).toMatchObject({
       actorId: "admin1",
       actorName: "Ada Admin",
       role: "ADMIN",
@@ -104,7 +104,8 @@ describe("GET /api/v1/audit-logs", () => {
         path: "/api/v1/me/queue",
         status: 201,
         ip: "",
-        at: new Date("2026-01-01T00:00:00Z"),
+        createdAt: new Date("2026-01-01T00:00:00Z"),
+        updatedAt: new Date("2026-01-01T00:00:00Z"),
       },
       {
         _id: "a2",
@@ -116,7 +117,8 @@ describe("GET /api/v1/audit-logs", () => {
         path: "/api/v1/requirements/req-9",
         status: 200,
         ip: "",
-        at: new Date("2026-01-02T00:00:00Z"),
+        createdAt: new Date("2026-01-02T00:00:00Z"),
+        updatedAt: new Date("2026-01-02T00:00:00Z"),
       },
     );
   });
@@ -125,6 +127,10 @@ describe("GET /api/v1/audit-logs", () => {
     const all = await (await fetch(`${url}/api/v1/audit-logs`)).json();
     expect(all.data.map((r: Row) => r.id)).toEqual(["a2", "a1"]);
     expect(all.total).toBe(2);
+    expect(all.data.map((r: Row) => r.at)).toEqual([
+      "2026-01-02T00:00:00.000Z",
+      "2026-01-01T00:00:00.000Z",
+    ]);
 
     const students = await (
       await fetch(`${url}/api/v1/audit-logs?role=STUDENT`)

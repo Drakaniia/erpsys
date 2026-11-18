@@ -1,45 +1,10 @@
-export const STORAGE_ROUTE_SLUGS = [
+const STORAGE_ROUTE_SLUGS = [
   "evidenceImage",
   "mugshotCapture",
   "stampImage",
 ] as const;
 export type StorageRoute = (typeof STORAGE_ROUTE_SLUGS)[number];
 
-export type StorageSessionRequest = {
-  route: StorageRoute;
-  stepCode?: string;
-  studentProfileId?: string;
-  mime: string;
-  size: number;
-};
-
-export type StorageSessionResponse = {
-  uploadId: string;
-  uploadUrl: string;
-  sessionExpiresAt: string;
-};
-
-export type StorageCompleteRequest = {
-  uploadId: string;
-};
-
-export type StorageSessionStatusResponse = {
-  status: "pending" | "complete" | "abandoned";
-  bytesReceived?: number;
-};
-
-export type StorageUploadRow = {
-  _id: string;
-  backend?: string | null;
-  r2Status?: string | null;
-  r2Bucket?: string | null;
-  r2Key?: string | null;
-  r2Route?: StorageRoute | null;
-  fileKey?: string | null;
-  fileUrl?: string | null;
-  kind?: string | null;
-  studentProfileId?: string | null;
-};
 
 export const R2_KEY_PREFIX = "r2:";
 

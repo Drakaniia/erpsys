@@ -11,9 +11,13 @@ export type AdminStepUpRow = {
   totpAttempts: number;
   unlockedUntil: Date | null;
   expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
-export type AdminStepUpPatch = Partial<Omit<AdminStepUpRow, "_id" | "expiresAt">>;
+export type AdminStepUpPatch = Partial<
+  Omit<AdminStepUpRow, "_id" | "expiresAt" | "createdAt" | "updatedAt">
+>;
 
 function rows() {
   return getDbSync().collection<AdminStepUpRow>(COLLECTIONS.adminStepUp);
@@ -42,6 +46,8 @@ export class AdminStepUpModel {
         totpAttempts: 0,
         unlockedUntil: null,
         expiresAt,
+        createdAt: now,
+        updatedAt: now,
       },
       { upsert: true },
     );
@@ -54,7 +60,7 @@ export class AdminStepUpModel {
   ): Promise<void> {
     await rows().updateOne(
       { _id: userId },
-      { $set: { ...fields, expiresAt } },
+      { $set: { ...fields, expiresAt, updatedAt: new Date() } },
     );
   }
 
@@ -64,7 +70,7 @@ export class AdminStepUpModel {
   ): Promise<AdminStepUpRow | null> {
     return rows().findOneAndUpdate(
       { _id: userId, codeHash: { $ne: null }, codeAt: null, attempts: { $lt: max } },
-      { $inc: { attempts: 1 } },
+      { $inc: { attempts: 1 }, $set: { updatedAt: new Date() } },
       { returnDocument: "after" },
     );
   }
@@ -75,7 +81,7 @@ export class AdminStepUpModel {
   ): Promise<AdminStepUpRow | null> {
     return rows().findOneAndUpdate(
       { _id: userId, codeAt: { $ne: null }, totpAttempts: { $lt: max } },
-      { $inc: { totpAttempts: 1 } },
+      { $inc: { totpAttempts: 1 }, $set: { updatedAt: new Date() } },
       { returnDocument: "after" },
     );
   }

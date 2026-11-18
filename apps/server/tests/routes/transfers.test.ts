@@ -154,6 +154,8 @@ describe("department transfers", () => {
     });
     const row = context.store[COLLECTIONS.departmentTransferRequest][0]!;
     expect(row.status).toBe("PENDING");
+    expect(row.createdAt).toBeInstanceOf(Date);
+    expect(row.updatedAt).toEqual(row.createdAt);
     expect(
       context.store[COLLECTIONS.notification].find(
         (n) => n.type === "DEPARTMENT_TRANSFER_REQUESTED",

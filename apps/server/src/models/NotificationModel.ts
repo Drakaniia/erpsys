@@ -1,6 +1,6 @@
 import { COLLECTIONS, getDbSync } from "../lib/db/db.js";
 
-export type NotificationRow = {
+type NotificationRow = {
   _id: string;
   userId: string;
   type: string;
@@ -9,6 +9,7 @@ export type NotificationRow = {
   action?: { kind?: unknown; label?: unknown } | null;
   readAt?: Date | null;
   createdAt: Date;
+  updatedAt: Date;
 };
 
 export class NotificationModel {
@@ -24,17 +25,6 @@ export class NotificationModel {
       .toArray();
   }
 
-  static async markAllRead(userId: string, now: Date): Promise<number> {
-    const result = await getDbSync()
-      .collection<NotificationRow>(COLLECTIONS.notification)
-      .updateMany(
-        { userId, readAt: null } as never,
-        {
-          $set: { readAt: now },
-        } as never,
-      );
-    return result.modifiedCount;
-  }
 
   static async findLatestByType(
     userId: string,
@@ -54,16 +44,17 @@ export class NotificationModel {
       .updateOne({ _id: id } as never, { $set: patch } as never);
   }
 
-  static async insert(row: NotificationRow): Promise<void> {
+  static async insert(row: Omit<NotificationRow, "updatedAt">): Promise<void> {
     await getDbSync()
       .collection(COLLECTIONS.notification)
-      .insertOne(row as never);
+      .insertOne({ ...row, updatedAt: row.createdAt } as never);
   }
 
-  static async insertMany(rows: NotificationRow[]): Promise<void> {
+  static async insertMany(rows: Omit<NotificationRow, "updatedAt">[]): Promise<void> {
     if (rows.length === 0) return;
     await getDbSync()
       .collection<NotificationRow>(COLLECTIONS.notification)
-      .insertMany(rows as never);
+      .insertMany(rows.map((row) => ({ ...row, updatedAt: row.createdAt })) as never);
   }
 }
+

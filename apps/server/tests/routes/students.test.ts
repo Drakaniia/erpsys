@@ -87,7 +87,7 @@ function seed(): Record<string, Row[]> {
         isActive: true,
       },
     ],
-    [COLLECTIONS.profilingForm]: [],
+
     [COLLECTIONS.stepVerification]: [],
     [COLLECTIONS.upload]: [],
     [COLLECTIONS.enrollmentQueue]: [],
@@ -320,15 +320,13 @@ describe("assessment", () => {
 });
 
 describe("notifications", () => {
-  it("lists the bell and marks it read", async () => {
+  it("lists notifications and leaves read markers to the browser", async () => {
     const list = await (await call("/me/notifications")).json();
     expect(list.data[0].title).toBe("Evidence expired");
     expect(list.pageSize).toBe(50);
 
     const read = await call("/me/notifications/read", { method: "POST" });
-    expect((await read.json()).data).toEqual({ count: 1 });
-    expect(context.store[COLLECTIONS.notification][0].readAt).toBeInstanceOf(
-      Date,
-    );
+    expect(read.status).toBe(404);
+    expect(context.store[COLLECTIONS.notification][0].readAt).toBeNull();
   });
 });

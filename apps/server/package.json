@@ -5,6 +5,8 @@
   "scripts": {
     "admin:reset-2fa": "tsx src/scripts/reset-admin-2fa.ts",
     "build": "tsc",
+    "backfill:timestamps": "tsx src/scripts/backfill-timestamps.ts",
+    "db:simplify": "tsx src/scripts/simplify-collections.ts",
     "cf:whoami": "wrangler whoami",
     "check": "tsc --noEmit && tsc -p tsconfig.test.json",
     "dev": "tsx watch src/index.ts",
@@ -17,9 +19,9 @@
     "@aws-sdk/client-s3": "^3.879.0",
     "@aws-sdk/s3-request-presigner": "^3.879.0",
     "better-auth": "1.6.27",
-    "dotenv": "latest",
-    "express": "latest",
-    "mongodb": "latest",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "mongodb": "^7.8.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

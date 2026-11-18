@@ -21,6 +21,8 @@ const google = vi.hoisted(() => ({
   deleteEvent: vi.fn(),
   deleteCalendar: vi.fn(),
   revokeToken: vi.fn(),
+  sealToken: (plain: string) => `enc:${plain}`,
+  openToken: (sealed: string) => sealed.replace(/^enc:/, ""),
 }));
 
 vi.mock("../../src/config/auth.js", () => ({
@@ -42,10 +44,7 @@ vi.mock("../../src/lib/platform/rate-limit.js", async (importOriginal) => ({
   slidingWindowRateLimit: () => (_req: unknown, _res: unknown, next: () => void) =>
     next(),
 }));
-vi.mock("../../src/lib/platform/token-crypto.js", () => ({
-  sealToken: (plain: string) => `enc:${plain}`,
-  openToken: (sealed: string) => sealed.replace(/^enc:/, ""),
-}));
+
 vi.mock("../../src/lib/platform/integration-settings.js", async (importOriginal) => ({
   ...(await importOriginal<
     typeof import("../../src/lib/platform/integration-settings.js")

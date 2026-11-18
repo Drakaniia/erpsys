@@ -5,6 +5,8 @@ export type StepRow = {
   code: string;
   name: string;
   order: number;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
 };
 
 export class StepModel {

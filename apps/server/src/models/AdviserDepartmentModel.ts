@@ -1,10 +1,12 @@
 import { COLLECTIONS, getDbSync, refIn } from "../lib/db/db.js";
 import type { YearLevel } from "../config/constants.js";
 
-export type AdviserDepartmentRow = {
+type AdviserDepartmentRow = {
   adviserId: string;
   departmentId: string;
   yearLevels?: YearLevel[];
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
 };
 
 export class AdviserDepartmentModel {

@@ -1,7 +1,7 @@
 import type { Db } from "mongodb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { COLLECTIONS } from "../db/db.js";
-import { encryptField } from "./credential-cipher.js";
+import { encryptField } from "./credentials.js";
 import {
   INTEGRATION_KEYS,
   allIntegrationStates,
@@ -82,7 +82,7 @@ function storeDb(): Store {
     db: null as unknown as Db,
     data: {
       [COLLECTIONS.integrationSetting]: [],
-      [COLLECTIONS.integrationCredential]: [],
+
       [COLLECTIONS.adminActionLog]: [],
       [COLLECTIONS.user]: [],
     },
@@ -306,7 +306,7 @@ describe("publicIntegrationPayload", () => {
       "env-site-key",
     );
 
-    store.data[COLLECTIONS.integrationCredential].push({
+    store.data[COLLECTIONS.integrationSetting].push({
       _id: "ic-1",
       key: "turnstile",
       values: {
@@ -347,8 +347,8 @@ describe("allIntegrationStates", () => {
       _id: "integration-1",
       key: "r2",
       enabled: false,
-      updatedById: "u-1",
-      updatedAt,
+      enabledById: "u-1",
+      enabledAt: updatedAt,
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
     });
 
@@ -386,7 +386,7 @@ describe("setIntegrationEnabled", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].key).toBe("googleAuth");
     expect(rows[0].enabled).toBe(false);
-    expect(rows[0].updatedById).toBe("u-1");
+    expect(rows[0].enabledById).toBe("u-1");
     expect(rows[0].createdAt).toBeInstanceOf(Date);
     expect(String(rows[0]._id)).toMatch(/^integration-/);
 

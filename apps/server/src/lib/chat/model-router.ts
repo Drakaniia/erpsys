@@ -9,11 +9,6 @@ export type ModelOutcome = "ok" | "unavailable" | "rejected";
 const modelFailures = new Map<string, number[]>();
 const demotedUntil = new Map<string, number>();
 
-export function resetModelHealth(): void {
-  modelFailures.clear();
-  demotedUntil.clear();
-}
-
 export function reportModelOutcome(
   model: string,
   outcome: ModelOutcome,
@@ -73,10 +68,6 @@ export function configurePacer(
   refillPerMs = rpm / 60_000;
   lastRefillMs = now;
   pauseUntilMs = 0;
-}
-
-export function resetPacer(now: number = Date.now()): void {
-  configurePacer(DEFAULT_CHAT_RPM, now);
 }
 
 export function pauseProviderUntil(timestampMs: number): void {

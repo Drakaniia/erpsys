@@ -1,9 +1,10 @@
 import { ApiError } from "./errors.js";
 
+
 export const SCHEDULE_TZ = "Asia/Manila";
-export const SLOT_MINUTES = 30;
-export const MAX_WINDOWS_PER_DEPARTMENT = 30;
-export const SCHEDULE_HORIZON_DAYS = 14;
+const SLOT_MINUTES = 30;
+const MAX_WINDOWS_PER_DEPARTMENT = 30;
+const SCHEDULE_HORIZON_DAYS = 14;
 
 const OFFSET_MS = 8 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -21,9 +22,9 @@ export type ScheduleWindow = {
 
 export type OwnedWindow = ScheduleWindow & { adviserId: string };
 
-export type Interval = { startMs: number; endMs: number };
+type Interval = { startMs: number; endMs: number };
 
-export type ScheduleSummary = {
+type ScheduleSummary = {
   current: { startsAt: string; endsAt: string } | null;
   next: { startsAt: string; endsAt: string } | null;
 };
@@ -37,7 +38,7 @@ export function isoWeekday(date: string): number {
   return day === 0 ? 7 : day;
 }
 
-export function addDays(date: string, days: number): string {
+function addDays(date: string, days: number): string {
   return new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS)
     .toISOString()
     .slice(0, 10);

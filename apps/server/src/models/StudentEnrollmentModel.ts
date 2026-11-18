@@ -1,12 +1,14 @@
 import { COLLECTIONS, getDbSync } from "../lib/db/db.js";
 import type { YearLevel } from "../config/constants.js";
 
-export type StudentEnrollmentRow = {
+type StudentEnrollmentRow = {
   _id: string;
   studentProfileId: string;
   academicYearId: string;
   departmentId: string;
   yearLevel: YearLevel;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
 };
 
 export class StudentEnrollmentModel {

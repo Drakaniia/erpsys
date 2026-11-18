@@ -23,7 +23,7 @@ export function parseQuery<T extends z.ZodType>(
   schema: T,
   req: Request,
 ): z.output<T> {
-  const parsed = schema.safeParse({ ...req.params, ...req.query });
+  const parsed = schema.safeParse({ ...req.query, ...req.params });
   if (!parsed.success) {
     throw new ApiError("BAD_REQUEST", { message: parsed.error.message });
   }

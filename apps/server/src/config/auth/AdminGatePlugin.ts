@@ -7,17 +7,25 @@ import {
 } from "better-auth/api";
 import { z } from "zod";
 import { isApiError } from "../errors.js";
-import { AdminGateService } from "../../services/auth/AdminGateService.js";
+import {
+  beforeAuthenticator,
+  beforePassword,
+  isAdminUser,
+  passwordAccepted,
+  requireCodeStep,
+  sendCode,
+  stepUpStatus,
+  submitPin,
+  unlockStepUp,
+  verifyCode,
+} from "./admin-gate.js";
 
 const TWO_FACTOR_PATHS = [
   "/two-factor/enable",
   "/two-factor/verify-totp",
   "/two-factor/verify-backup-code",
 ];
-const CHECK_PATHS = [
-  "/two-factor/verify-totp",
-  "/two-factor/verify-backup-code",
-];
+const CHECK_PATHS = ["/two-factor/verify-totp", "/two-factor/verify-backup-code"];
 
 type SessionCtx = {
   context: {
@@ -30,22 +38,22 @@ type SessionCtx = {
   };
 };
 
-function rethrow(error: unknown): never {
-  if (isApiError(error)) {
+async function rethrowing(work: () => Promise<void>): Promise<void> {
+  try {
+    await work();
+  } catch (error) {
+    if (!isApiError(error)) throw error;
     throw new APIError(error.code as never, {
       message: error.message,
       code: (error.data as { code?: string } | undefined)?.code,
     });
   }
-  throw error;
 }
 
 async function adminUser(ctx: unknown) {
   const session = await getSessionFromCtx(ctx as never);
-  if (!session) {
-    throw new APIError("UNAUTHORIZED", { message: "Unauthorized." });
-  }
-  if (!(await AdminGateService.isAdminUser(session.user.id))) {
+  if (!session) throw new APIError("UNAUTHORIZED", { message: "Unauthorized." });
+  if (!(await isAdminUser(session.user.id))) {
     throw new APIError("FORBIDDEN", { message: "Not available." });
   }
   return session.user;
@@ -76,24 +84,17 @@ export function createAdminGatePlugin() {
         async (ctx) => {
           const user = await adminUser(ctx);
           return ctx.json({
-            ...(await AdminGateService.status(user.id)),
+            ...(await stepUpStatus(user.id)),
             enrolled: await enrolled(ctx as never, user.id),
           });
         },
       ),
       adminGatePin: createAuthEndpoint(
         "/admin-gate/pin",
-        {
-          method: "POST",
-          body: z.object({ pin: z.string().regex(/^\d{6}$/) }),
-        },
+        { method: "POST", body: z.object({ pin: z.string().regex(/^\d{6}$/) }) },
         async (ctx) => {
           const user = await adminUser(ctx);
-          try {
-            await AdminGateService.submitPin(user.id, ctx.body.pin);
-          } catch (error) {
-            rethrow(error);
-          }
+          await rethrowing(() => submitPin(user.id, ctx.body.pin));
           return ctx.json({ ok: true });
         },
       ),
@@ -102,13 +103,9 @@ export function createAdminGatePlugin() {
         { method: "POST", body: z.object({ password: z.string().min(1).max(128) }) },
         async (ctx) => {
           const user = await adminUser(ctx);
-          try {
-            await AdminGateService.beforePassword(user.id);
-          } catch (error) {
-            rethrow(error);
-          }
+          await rethrowing(() => beforePassword(user.id));
           await ctx.context.password.checkPassword(user.id, ctx);
-          await AdminGateService.passwordAccepted(user.id);
+          await passwordAccepted(user.id);
           return ctx.json({ ok: true });
         },
       ),
@@ -117,11 +114,7 @@ export function createAdminGatePlugin() {
         { method: "POST" },
         async (ctx) => {
           const user = await adminUser(ctx);
-          try {
-            await AdminGateService.sendCode(user);
-          } catch (error) {
-            rethrow(error);
-          }
+          await rethrowing(() => sendCode(user));
           return ctx.json({ ok: true });
         },
       ),
@@ -130,11 +123,7 @@ export function createAdminGatePlugin() {
         { method: "POST", body: z.object({ code: z.string().regex(/^\d{6}$/) }) },
         async (ctx) => {
           const user = await adminUser(ctx);
-          try {
-            await AdminGateService.verifyCode(user.id, ctx.body.code);
-          } catch (error) {
-            rethrow(error);
-          }
+          await rethrowing(() => verifyCode(user.id, ctx.body.code));
           return ctx.json({ ok: true });
         },
       ),
@@ -142,46 +131,36 @@ export function createAdminGatePlugin() {
     hooks: {
       before: [
         {
-          matcher: (context: { path?: string }) =>
-            !!context.path?.startsWith("/two-factor/"),
+          matcher: (context: { path?: string }) => !!context.path?.startsWith("/two-factor/"),
           handler: createAuthMiddleware(async (ctx) => {
             if (!TWO_FACTOR_PATHS.includes(ctx.path)) {
               throw new APIError("FORBIDDEN", { message: "Not available." });
             }
             if ((ctx.body as { trustDevice?: unknown } | undefined)?.trustDevice) {
-              throw new APIError("BAD_REQUEST", {
-                message: "Trusted devices are not allowed.",
-              });
+              throw new APIError("BAD_REQUEST", { message: "Trusted devices are not allowed." });
             }
             const user = await adminUser(ctx);
-            try {
-              if (ctx.path === "/two-factor/enable") {
-                if (await enrolled(ctx as never, user.id)) {
-                  throw new APIError("FORBIDDEN", {
-                    message:
-                      "The authenticator is already set up. Ask for a reset if the device is lost.",
-                  });
-                }
-                await AdminGateService.requireCodeStep(user.id);
-              } else {
-                await AdminGateService.beforeAuthenticator(user.id);
-              }
-            } catch (error) {
-              rethrow(error);
+            if (ctx.path !== "/two-factor/enable") {
+              return rethrowing(() => beforeAuthenticator(user.id));
             }
+            if (await enrolled(ctx as never, user.id)) {
+              throw new APIError("FORBIDDEN", {
+                message:
+                  "The authenticator is already set up. Ask for a reset if the device is lost.",
+              });
+            }
+            await rethrowing(() => requireCodeStep(user.id));
           }),
         },
       ],
       after: [
         {
-          matcher: (context: { path?: string }) =>
-            CHECK_PATHS.includes(context.path ?? ""),
+          matcher: (context: { path?: string }) => CHECK_PATHS.includes(context.path ?? ""),
           handler: createAuthMiddleware(async (ctx) => {
             if (isAPIError(ctx.context.returned)) return;
             const userId =
-              ctx.context.newSession?.user.id ??
-              (await getSessionFromCtx(ctx as never))?.user.id;
-            if (userId) await AdminGateService.unlock(userId);
+              ctx.context.newSession?.user.id ?? (await getSessionFromCtx(ctx as never))?.user.id;
+            if (userId) await unlockStepUp(userId);
           }),
         },
       ],

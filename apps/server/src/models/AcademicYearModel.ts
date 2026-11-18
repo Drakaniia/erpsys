@@ -1,19 +1,41 @@
 import { COLLECTIONS, getDbSync, idIn } from "../lib/db/db.js";
 
+export type ProfilingForm = {
+  formId?: string | null;
+  title?: string | null;
+  responderUri?: string | null;
+  updatedById?: string;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
+};
+
 export type AcademicYearRow = {
   _id: string;
   label: string;
   semesterLabel: string;
   isActive: boolean;
+  profilingForm?: ProfilingForm | null;
   createdAt: Date;
+  updatedAt: Date;
 };
 
-export type AcademicYearOption = Pick<
+type AcademicYearOption = Pick<
   AcademicYearRow,
   "_id" | "label" | "semesterLabel" | "isActive"
 >;
 
 export class AcademicYearModel {
+  static async profilingForm(academicYearId: string): Promise<ProfilingForm | null> {
+    return (await this.findById(academicYearId))?.profilingForm ?? null;
+  }
+
+  static async setProfilingForm(academicYearId: string, form: ProfilingForm | null): Promise<void> {
+    await getDbSync().collection<AcademicYearRow>(COLLECTIONS.academicYear).updateOne(
+      idIn([academicYearId]) as never,
+      { $set: { profilingForm: form } },
+    );
+  }
+
   static async findActive(): Promise<AcademicYearRow | null> {
     return getDbSync()
       .collection<AcademicYearRow>(COLLECTIONS.academicYear)

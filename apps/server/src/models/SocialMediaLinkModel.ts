@@ -6,6 +6,8 @@ export type SocialLinkRow = {
   url: string;
   order: number;
   isActive: boolean;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
 };
 
 export class SocialMediaLinkModel {
