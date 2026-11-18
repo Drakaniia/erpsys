@@ -187,6 +187,7 @@ describe("my enrollments", () => {
     });
     const rows = context.store[COLLECTIONS.studentEnrollment];
     expect(rows).toHaveLength(2);
+    expect(rows[1]._id).toMatch(/^enrollment-/);
     expect(rows[1]).toMatchObject({
       studentProfileId: "profile-1",
       academicYearId: "ay-2",
@@ -194,18 +195,33 @@ describe("my enrollments", () => {
     });
   });
 
-  it("rewrites the same year in place instead of adding a row", async () => {
-    await save({
+  it("rewrites the same year in place without replacing its immutable id", async () => {
+    const response = await save({
       academicYearId: "ay-1",
       departmentId: "dept-2",
       yearLevel: "SECOND",
     });
+    expect(response.status).toBe(200);
     const rows = context.store[COLLECTIONS.studentEnrollment];
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
+      _id: "enr-1",
       departmentId: "dept-2",
       yearLevel: "SECOND",
     });
+  });
+
+  it("keeps the enrollment id when the same placement is saved again", async () => {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const response = await save({
+        academicYearId: "ay-1",
+        departmentId: "dept-1",
+        yearLevel: "FIRST",
+      });
+      expect(response.status).toBe(200);
+    }
+    expect(context.store[COLLECTIONS.studentEnrollment]).toHaveLength(1);
+    expect(context.store[COLLECTIONS.studentEnrollment][0]._id).toBe("enr-1");
   });
 
   it("refuses a course change while the student is in the queue", async () => {

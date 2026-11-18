@@ -117,7 +117,7 @@ export class StudentEnrollmentModel {
           studentProfileId: input.studentProfileId,
           academicYearId: input.academicYearId,
         } as never,
-        { $set: { _id: id, ...input } } as never,
+        { $set: input, $setOnInsert: { _id: id } } as never,
         { upsert: true } as never,
       );
   }
