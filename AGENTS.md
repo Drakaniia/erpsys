@@ -13,23 +13,22 @@ ERPSYS — a pnpm monorepo with two apps that deploy as one origin:
 
 ## Layering (`apps/server/src`)
 
-`routes/` → `controllers/` → `services/` → `models/`, with `config/`, `middleware/`, `views/` and `lib/` beside them.
+`routes/` → (`services/`) → `models/`, with `config/`, `middleware/` and `lib/` beside them. Keep it as flat as the work allows.
 
-- `routes/` wires HTTP only: one `express.Router` per resource, `routes/<resource>/index.ts`, mounted in `routes/<resource>` order from `routes/index.ts`. Each router declares its own `/me/...` paths; no router composes another's handlers.
-- `controllers/` parse, call exactly one service, and shape the response. Same resource folder names as `routes/` and `services/`.
-- `services/` carry the business rules, one use case per class, grouped in the folder of the resource that owns the data. They never see `Request`/`Response`.
-- `models/` are one class per collection (static methods only), wrapping `lib/db`.
-- `views/` shape the few payloads too complex for `okOne`/`okList`.
+- `routes/` holds the handlers: one `express.Router` per resource, `routes/<resource>/index.ts`, mounted in order from `routes/index.ts`. A handler parses input (zod via `middleware/http.ts`), does the work or calls a service function, and responds with `okOne`/`okList`. Logic used only by one router lives in that file as plain functions.
+- `services/<resource>.ts` exists only when a resource's logic is too big for its route file or is shared with other resources. It exports plain functions, not classes, and never sees `Request`/`Response`.
+- `models/` are the small db helpers, one per collection, wrapping `lib/db`. Delete a method once nothing calls it.
 - `config/` holds pure values, the role matrix, `ApiError`, and the Better Auth config; it imports nothing from the layers above it.
-- `lib/` is infrastructure only: `db/` (connection, ids, indexes, sweeps, repair), `platform/` (env, metrics, rate limit, SSE, openapi, shutdown), `storage/` (R2), `chat/` (Cloudflare AI).
+- `lib/` is infrastructure only: `db/` (connection, ids, indexes, the minute sweep, timestamp ordering), `platform/` (env, rate limit, integration switches and stored credentials, mailer, Turnstile), `storage/` (R2), `chat/` (Workers AI), `google/` (Forms, Calendar).
 
 Rules:
 
+- No controllers, no one-class-per-use-case services, no view classes. Do not add a layer, interface or wrapper that has a single caller.
 - Import the concrete module (`../lib/db/db.js`), never a barrel `index.ts`; the only `index.ts` files are route tables.
 - Relative imports need the `.js` extension (NodeNext).
-- No controller imports Mongo or an integration client. No route contains logic. No model contains HTTP concerns.
+- No model contains HTTP concerns.
 - **No cross-app imports.** `apps/server` must never import from `../web`, and `apps/web` must not import server code — it keeps its own copies (see below).
-- Tests live in `apps/server/tests/<layer>/<resource>/` (route tests in `tests/routes/`), plus colocated `*.test.ts` next to `lib/` modules. Run through `tsconfig.test.json`.
+- Route tests in `tests/routes/` are the API contract; they drive `v1Router` over HTTP against `tests/helpers/fakeDb.ts`. Other tests live in `tests/<area>/` or colocated next to `lib/` modules. Run through `tsconfig.test.json`.
 
 ## Comments (`apps/server/src`)
 
@@ -56,7 +55,7 @@ Concurrency code — every function that issues a transaction timestamp, checks 
  */
 ```
 
-- Those blocks, plus one header block per router file naming its mount point (`/api/v1`, `/api/auth`, `/api`, or root), are the only comments allowed in the server. Outside them, `controllers/`, `services/`, `models/`, `config/`, `lib/`, `middleware/`, `views/` and `scripts/` stay comment-free — no other docblocks, no line notes, no TODOs.
+- Those blocks, plus one header block per router file naming its mount point (`/api/v1`, `/api/auth`, `/api`, or root), are the only comments allowed in the server. Outside them, `services/`, `models/`, `config/`, `lib/`, `middleware/` and `scripts/` stay comment-free — no other docblocks, no line notes, no TODOs.
 - Timestamp ordering is enforced once, in `lib/db/timestamp-ordering.ts` (wrapped around `getDbSync()`); models and services do not thread `ts` by hand.
 - `Access:` uses `public`, `session`, or `session + <student|instructor|officer|admin> surface`.
 - Add, move, rename or re-slice an endpoint → write or update its block in the same change. A route without a block is an unfinished change.
@@ -77,7 +76,7 @@ The client URL table is `apps/web/src/lib/api-routes.ts` — hand-written, the s
 
 ## Conventions
 
-- Tests are named after their subject (`QueueServingService.ts` → `queue-serving.test.ts` in `tests/`), colocated only for `lib/` modules.
+- Tests are named after their subject (`routes/queues` → `tests/routes/queues.test.ts`), colocated only for `lib/` modules.
 - Keep secrets and live account data out of tracked files. `docs/` is documentation only.
 - Docs live in `docs/specs/` (design specs), `docs/ops/` (runbooks) and `docs/plans/` (dated implementation plans); `docs/README.md` indexes them.
 

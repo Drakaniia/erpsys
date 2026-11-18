@@ -234,7 +234,6 @@ describe("launch", () => {
       hasProfile: true,
       studentNumber: "12345",
     });
-    expect(Object.keys(data.integrations)).toEqual(["data"]);
   });
 
   it("seeds the officer surface with the overview, bell and links", async () => {

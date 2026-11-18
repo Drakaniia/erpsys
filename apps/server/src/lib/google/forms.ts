@@ -3,12 +3,12 @@ import { env } from "../platform/env.js";
 
 const FORMS = "https://forms.googleapis.com/v1/forms";
 
-export type FormItem = {
+type FormItem = {
   title?: string;
   questionItem?: { question?: { questionId?: string } };
 };
 
-export type FormResponse = {
+type FormResponse = {
   respondentEmail?: string;
   lastSubmittedTime?: string;
   answers?: Record<

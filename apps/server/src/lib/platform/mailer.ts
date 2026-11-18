@@ -1,10 +1,6 @@
+import { COLLECTIONS, getDbSync, idIn } from "../db/db.js";
 import { env } from "./env.js";
-import {
-  integrationConfigured,
-  integrationEnabled,
-} from "./integration-settings.js";
-
-const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
+import { integrationConfigured, integrationEnabled } from "./integration-settings.js";
 
 export type MailMessage = {
   to: string;
@@ -16,9 +12,8 @@ export type MailMessage = {
 function sender(raw: string): { email: string; name?: string } {
   const match = /^(.*)<([^>]+)>\s*$/.exec(raw.trim());
   if (!match) return { email: raw.trim() };
-  const email = match[2].trim();
   const name = match[1].trim();
-  return name ? { email, name } : { email };
+  return name ? { email: match[2].trim(), name } : { email: match[2].trim() };
 }
 
 export function escapeHtml(value: string): string {
@@ -33,9 +28,8 @@ export async function sendMail(message: MailMessage): Promise<boolean> {
   const to = message.to.trim();
   if (!to || !integrationConfigured("email")) return false;
   if (!(await integrationEnabled("email"))) return false;
-
   try {
-    const response = await fetch(BREVO_ENDPOINT, {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
         "api-key": env.BREVO_API_KEY,
@@ -48,8 +42,7 @@ export async function sendMail(message: MailMessage): Promise<boolean> {
         subject: message.subject,
         textContent: message.text,
         htmlContent:
-          message.html ??
-          `<p>${escapeHtml(message.text).replace(/\n/g, "<br>")}</p>`,
+          message.html ?? `<p>${escapeHtml(message.text).replace(/\n/g, "<br>")}</p>`,
       }),
     });
     if (!response.ok) {
@@ -64,4 +57,18 @@ export async function sendMail(message: MailMessage): Promise<boolean> {
     console.error(`[mailer] could not send "${message.subject}"`, error);
     return false;
   }
+}
+
+export const siteOrigin = () => env.PUBLIC_SITE_URL || env.BETTER_AUTH_URL;
+
+export function mailUser(userId: string, subject: string, text: string): void {
+  void getDbSync()
+    .collection<{ email?: string }>(COLLECTIONS.user)
+    .findOne(idIn([userId]) as never)
+    .then((user) =>
+      user?.email?.trim()
+        ? sendMail({ to: user.email.trim(), subject, text })
+        : false,
+    )
+    .catch((error) => console.error(`[mailer] could not mail "${subject}"`, error));
 }

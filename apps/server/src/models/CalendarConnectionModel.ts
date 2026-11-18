@@ -1,8 +1,8 @@
 import { COLLECTIONS, getDbSync, refIn } from "../lib/db/db.js";
 import { genId } from "../lib/db/ids.js";
 
-export type ConnectionStatus = "PENDING" | "CONNECTED" | "NEEDS_RECONNECT";
-export type ConnectionSyncState = "CLEAN" | "DIRTY" | "FAILED";
+type ConnectionStatus = "PENDING" | "CONNECTED" | "NEEDS_RECONNECT";
+type ConnectionSyncState = "CLEAN" | "DIRTY" | "FAILED";
 
 export type CalendarConnectionRow = {
   _id: string;

@@ -374,6 +374,11 @@ describe("authRateLimit", () => {
     expect(run(authRateLimit, signUp).res.statusCode).toBe(429);
   });
 
+  it.each(["/sign-in/email-otp", "/email-otp/send-verification-otp", "/email-otp/verify-email"])("shares the credential budget with %s", (path) => {
+    for (let i = 0; i < AUTH_RATE_LIMIT_MAX; i += 1) run(authRateLimit, signIn());
+    expect(run(authRateLimit, fakeReq({ url: `/api/auth${path}`, ip: "1.1.1.1" })).res.statusCode).toBe(429);
+  });
+
   it("does not let one IP exhaust another's budget", () => {
     const other = fakeReq({ url: "/api/auth/sign-in/email", ip: "2.2.2.2" });
     for (let i = 0; i < AUTH_RATE_LIMIT_MAX; i += 1) {

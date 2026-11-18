@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import type { Request, Response } from "express";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   beginTransaction,
   guardDb,
@@ -36,6 +36,25 @@ const abortCode = (error: unknown) =>
   (error as { data?: { code?: string } }).data?.code;
 
 describe("timestamp ordering", () => {
+  it("reports TS_ABORTED when a racing writer makes the atomic write filter match nothing", async () => {
+    const { db, store } = fakeDb({ things: [{ _id: "x", value: 0 }] });
+    const raw = db.collection("things");
+    const update = raw.updateOne;
+    const ts = nextTs();
+    vi.spyOn(db, "collection").mockImplementation(() => ({
+      ...raw,
+      updateOne: async (...args: Parameters<typeof update>) => {
+        store.things[0].writeTs = ts + 1;
+        return update(...args);
+      },
+    }));
+    const guarded = guardDb(db as unknown as Db);
+    await expect(inTx(ts, "PATCH", () => guarded.collection("things").updateOne(
+      { _id: "x" } as never, { $set: { value: 1 } },
+    ))).rejects.toMatchObject({ status: 409, data: { code: TS_ABORTED } });
+    expect(store.things[0].value).toBe(0);
+    vi.restoreAllMocks();
+  });
   it("aborts the older writer once a younger transaction has read X (textbook schedule)", async () => {
     const { things, stored } = setup();
     const t1 = nextTs();

@@ -24,6 +24,19 @@ Every `/api/v1` request is one transaction under basic timestamp ordering (`src/
 - GETs by instructor, officer and admin surfaces stamp `readTs`; student-surface GETs do not.
 - Never guarded: Better Auth state (`session`, `account`, `verification`), `audit_log`, `admin_action_log`, `chat_usage`, `storage_usage`, `admin_step_up`, and everything outside `/api/v1`.
 
+## Editor presence (`/api/v1/editing-presence`)
+
+Presence is advisory, not a record lock. `editing_presence` stores one document per `(resource, recordId)` with an `editors` array of `{ userId, editorId, name, lastSeenAt, expiresAt }`. Each tab renews every 20 seconds; leases expire after 60 seconds. Reads filter expired entries immediately; the minute sweep removes expired members and empty documents. Atomic revision comparisons preserve concurrent editors and independent tabs.
+
+- `PUT /:resource/:recordId/:editorId`: join/renew with an empty body. Requires session and resource write access; identity and dates are server supplied.
+- `DELETE /:resource/:recordId/:editorId`: remove only the signed-in user's matching tab.
+- `GET /:resource/:recordId`: read active editors with the same resource authorization.
+- `GET /`: admin-only paginated overview (`page`, `pageSize`, capped at 100).
+- Record responses contain `{ data: { resource, recordId, editors } }`; overview returns `{ data, page, pageSize, total }`.
+- Resource allowlist: `academic-year`, `department`, `requirement`, `adviser`, `user`, `stamp`, `chatbot-knowledge`, `profiling-form`, `social-link`, `schedule`, `student-profile`, `student-enrollment`, `submission`, `queue-entry`, `integration`. Credentials and authentication internals are never included.
+- `chatbot-knowledge` and `profiling-form` accept `default`; profiling presence is scoped to the active academic year. `schedule` accepts `me~departmentId` and is scoped to user, department and active year. Profile/enrollment accept `me`; enrollment is scoped to the active year. Submission accepts an existing verification ID or `me~STEP_CODE`. Returned record IDs are canonical storage IDs.
+- Presence operations run outside business timestamp ordering, never stamp business reads or writes, and are excluded from audit logging. They do not advance editing forms' frozen timestamps. Business conflicts still return `409` / `TS_ABORTED`; failed saves keep drafts rather than automatically refreshing over them.
+
 ## System (`/api`, `/`)
 
 | Method | Path | Access | Returns |
@@ -41,12 +54,17 @@ Every `/api/v1` request is one transaction under basic timestamp ordering (`src/
 |---|---|---|---|
 | ALL | /api/auth/sign-in/social | public | Better Auth response (redirect); 412 while Google integration is off |
 | ALL | /api/auth/* | public | Better Auth response (session, sign-up, callback, sign-out) behind rate limit |
+| POST | /api/auth/email-otp/send-verification-otp | public | Body `{ email, type: "sign-in" \| "email-verification" }`; sends a 6-digit code when delivery is available. Sign-in sends require Turnstile when enabled. Codes expire after 5 minutes, allow 3 wrong attempts, and work once. Unknown addresses receive the same response without account creation |
+| POST | /api/auth/sign-in/email-otp | public | Body `{ email, otp }`; signs in an existing account and verifies its email ownership |
+| POST | /api/auth/email-otp/verify-email | public | Body `{ email, otp }`; marks an existing email verified without creating a session. Optional, including after first login |
 | GET | /api/auth/admin-gate/status | session + admin | `{ unlocked, unlockedUntil, next, enrolled }` for the integration confirmation |
 | POST | /api/auth/admin-gate/pin | session + admin | Body `{ pin }`; starts the confirmation (8 tries per 15 min) |
 | POST | /api/auth/admin-gate/password | session + admin | Body `{ password }`; needs the PIN first. Skipped for admins with no password (Google-only sign-in) |
 | POST | /api/auth/admin-gate/code/send | session + admin | Emails a 6-digit code to the admin (10 min, one per minute); needs the password step |
 | POST | /api/auth/admin-gate/code/verify | session + admin | Body `{ code }`; 5 tries, single use |
 | POST | /api/auth/two-factor/enable, verify-totp, verify-backup-code | session + admin | Authenticator setup (once) and check; needs the emailed code first, 5 wrong tries restart the chain. A pass unlocks integration changes for 5 minutes. Other `/two-factor/*` paths answer `403` |
+
+Password signup creates a student account and a session without requiring email verification. Email-derived privileged roles require verified ownership and a new sign-in. Password resets revoke all existing sessions.
 
 ## Chat (`/api`)
 
@@ -109,7 +127,8 @@ Every `/api/v1` request is one transaction under basic timestamp ordering (`src/
 | GET | /api/v1/me/stamp | session + officer | `{ data: stamp }` |
 | PATCH | /api/v1/me/stamp | session + officer | `{ data: stamp }` |
 | GET | /api/v1/me/notifications | session | `{ data, page, pageSize, total }` |
-| POST | /api/v1/me/notifications/read | session | `{ data: mark-all result }` |
+
+Notification read markers live in account-scoped browser `localStorage`. The server no longer exposes a mark-read write endpoint. Existing stored read markers remain available for compatibility.
 
 ## Students (`/api/v1`)
 
@@ -235,7 +254,10 @@ Every `/api/v1` request is one transaction under basic timestamp ordering (`src/
 | GET | /api/v1/integrations | public (session for admin shape) | `{ data: rows }` (admin) or `{ data: { flags, turnstileSiteKey, overridesLoaded } }` |
 | PATCH | /api/v1/integrations/:key | session + admin + step-up | `{ data: row }`; `403 STEP_UP_REQUIRED` while locked |
 | PUT | /api/v1/integrations/:key/credentials | session + admin + step-up | `{ data: row }` (403 STEP_UP_REQUIRED/409/422/429 possible) |
+| POST | /api/v1/integrations/:key/credentials/validate | session + admin | `{ data: { key, version, fields } }`; `422` with `{ failures }`, `409`, `403`, `429` — writes nothing; no step-up required |
 | DELETE | /api/v1/integrations/:key/credentials | session + admin + step-up | `{ data: row }`; `403 STEP_UP_REQUIRED` while locked |
+| GET | /api/v1/integrations/authenticators | session + admin | `{ data: [{ userId, name, email, enrolled }] }` |
+| DELETE | /api/v1/integrations/authenticators/:userId | session + admin + step-up | `{ data: { userId, enrolled: false } }`; `403 STEP_UP_REQUIRED` while locked, `404` for a non-admin |
 
 ## Users (`/api/v1`)
 

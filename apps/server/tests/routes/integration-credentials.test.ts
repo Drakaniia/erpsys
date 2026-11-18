@@ -2,7 +2,8 @@ import express from "express";
 import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COLLECTIONS } from "../../src/lib/db/db.js";
-import { encryptField } from "../../src/lib/platform/credential-cipher.js";
+import { encryptField } from "../../src/lib/platform/credentials.js";
+import { resetRateLimits } from "../../src/lib/platform/rate-limit.js";
 import { errorHandler } from "../../src/middleware/errorHandler.js";
 import { v1Router } from "../../src/routes/index.js";
 import { fakeDb, type Row } from "../helpers/fakeDb.js";
@@ -44,7 +45,7 @@ const R2_VALUES = {
 function seed(): Record<string, Row[]> {
   return {
     [COLLECTIONS.integrationSetting]: [],
-    [COLLECTIONS.integrationCredential]: [],
+
     [COLLECTIONS.adminActionLog]: [],
     [COLLECTIONS.adminStepUp]: [
       {
@@ -85,6 +86,9 @@ beforeEach(async () => {
   holder.session = ADMIN;
   holder.probe = { ok: true };
   holder.probeCalls = 0;
+  // Validate and the two writes share one 10/min bucket per admin, so the
+  // budget must start clean or later tests inherit the earlier ones' spend.
+  resetRateLimits();
   context = fakeDb(seed());
   holder.db = context.db;
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -102,10 +106,25 @@ const call = (path: string, init?: RequestInit) =>
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
 
-const credentialDocs = () => context.store[COLLECTIONS.integrationCredential];
+const credentialDocs = () => context.store[COLLECTIONS.integrationSetting];
 const audits = () => context.store[COLLECTIONS.adminActionLog];
 
 describe("PUT /integrations/:key/credentials", () => {
+  it("requires step-up before saving credentials", async () => {
+    context.store[COLLECTIONS.adminStepUp] = [];
+
+    const response = await call("/integrations/r2/credentials", {
+      method: "PUT",
+      body: JSON.stringify({ version: 0, values: R2_VALUES }),
+    });
+
+    expect(response.status).toBe(403);
+    expect((await response.json()).data.code).toBe("STEP_UP_REQUIRED");
+    expect(holder.probeCalls).toBe(0);
+    expect(credentialDocs()).toHaveLength(0);
+    expect(audits()).toHaveLength(0);
+  });
+
   it("stores one encrypted document, bumps the version and audits the key names", async () => {
     const response = await call("/integrations/r2/credentials", {
       method: "PUT",
@@ -257,6 +276,140 @@ describe("PUT /integrations/:key/credentials", () => {
   });
 });
 
+describe("POST /integrations/:key/credentials/validate", () => {
+  beforeEach(() => {
+    context.store[COLLECTIONS.adminStepUp] = [];
+  });
+
+  it.each([
+    [null, 401],
+    [{ user: { id: "student1", email: "student@buksu.edu.ph", role: "STUDENT" } }, 403],
+  ])("rejects unauthorized validation with %s and status %s", async (session, status) => {
+    holder.session = session;
+
+    const response = await call("/integrations/r2/credentials/validate", {
+      method: "POST",
+      body: JSON.stringify({ version: 0, values: R2_VALUES }),
+    });
+
+    expect(response.status).toBe(status);
+    expect(holder.probeCalls).toBe(0);
+    expect(credentialDocs()).toHaveLength(0);
+    expect(audits()).toHaveLength(0);
+  });
+
+  it("answers with the merged group and writes nothing", async () => {
+    credentialDocs().push({
+      _id: "ic-1",
+      key: "r2",
+      values: {
+        R2_SECRET_ACCESS_KEY: encryptField(
+          "r2",
+          "R2_SECRET_ACCESS_KEY",
+          "stored-secret",
+        ),
+      },
+      version: 1,
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    });
+
+    const response = await call("/integrations/r2/credentials/validate", {
+      method: "POST",
+      body: JSON.stringify({
+        version: 1,
+        values: { R2_BUCKET: "erpsys-staging" },
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()).data;
+    expect(body.key).toBe("r2");
+    expect(body.version).toBe(1);
+
+    const bucket = body.fields.find((f: Row) => f.envKey === "R2_BUCKET");
+    expect(bucket).toEqual({
+      envKey: "R2_BUCKET",
+      set: true,
+      source: "draft",
+    });
+    // An untouched field reports where its value came from.
+    const secret = body.fields.find(
+      (f: Row) => f.envKey === "R2_SECRET_ACCESS_KEY",
+    );
+    expect(secret.source).toBe("stored");
+
+    // A dry run: no write, no version bump, no audit entry.
+    expect(credentialDocs()[0].version).toBe(1);
+    expect(Object.keys(credentialDocs()[0].values as object)).toEqual([
+      "R2_SECRET_ACCESS_KEY",
+    ]);
+    expect(audits()).toHaveLength(0);
+    // It does reach the provider, exactly as save would.
+    expect(holder.probeCalls).toBe(1);
+  });
+
+  it("reports a provider rejection with 422 and stores nothing", async () => {
+    holder.probe = {
+      ok: false,
+      failures: [{ key: "R2_BUCKET", reason: "bucket not found" }],
+    };
+
+    const response = await call("/integrations/r2/credentials/validate", {
+      method: "POST",
+      body: JSON.stringify({ version: 0, values: R2_VALUES }),
+    });
+
+    expect(response.status).toBe(422);
+    expect((await response.json()).data.failures).toEqual([
+      { key: "R2_BUCKET", reason: "bucket not found" },
+    ]);
+    expect(credentialDocs()).toHaveLength(0);
+    expect(audits()).toHaveLength(0);
+  });
+
+  it("rejects a half-filled pair without probing", async () => {
+    const response = await call("/integrations/r2/credentials/validate", {
+      method: "POST",
+      body: JSON.stringify({
+        version: 0,
+        values: { R2_ACCESS_KEY_ID: "only-the-id" },
+      }),
+    });
+
+    expect(response.status).toBe(422);
+    expect(holder.probeCalls).toBe(0);
+  });
+
+  it("rejects a stale version so a pass cannot outlive the row", async () => {
+    credentialDocs().push({
+      _id: "ic-1",
+      key: "r2",
+      values: {},
+      version: 5,
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    });
+
+    const response = await call("/integrations/r2/credentials/validate", {
+      method: "POST",
+      body: JSON.stringify({ version: 4, values: R2_VALUES }),
+    });
+
+    expect(response.status).toBe(409);
+  });
+
+  it("is closed for the locked Better Auth row", async () => {
+    const response = await call("/integrations/betterAuth/credentials/validate", {
+      method: "POST",
+      body: JSON.stringify({ version: 0, values: {} }),
+    });
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).data.code).toBe("INTEGRATION_LOCKED");
+  });
+});
+
 describe("public site key", () => {
   it("serves a newly saved site key on the next read, before any restart", async () => {
     holder.session = null;
@@ -280,6 +433,17 @@ describe("public site key", () => {
     const after = await (await call("/integrations")).json();
     expect(after.data.turnstileSiteKey).toBe("site-key-just-saved");
     expect(after.data.flags.turnstile).toBe(true);
+  });
+});
+
+describe("shared integration document", () => {
+  it("keeps a disabled switch while saving and resetting credentials", async () => {
+    expect((await call("/integrations/r2", { method: "PATCH", body: JSON.stringify({ enabled: false }) })).status).toBe(200);
+    expect((await call("/integrations/r2/credentials", { method: "PUT", body: JSON.stringify({ version: 0, values: R2_VALUES }) })).status).toBe(200);
+    expect(credentialDocs()).toHaveLength(1);
+    expect(credentialDocs()[0]).toMatchObject({ enabled: false, version: 1, enabledById: "admin1" });
+    expect((await call("/integrations/r2/credentials", { method: "DELETE" })).status).toBe(200);
+    expect(credentialDocs()[0]).toMatchObject({ enabled: false, version: 2, values: {} });
   });
 });
 
@@ -310,7 +474,8 @@ describe("DELETE /integrations/:key/credentials", () => {
     expect(row.credentials[0].source).not.toBe("stored");
     expect(credentialDocs()[0].values).toEqual({});
     expect(audits()[0].action).toBe("Reset Google sign-in credentials");
-    expect(context.store[COLLECTIONS.integrationSetting]).toHaveLength(0);
+    expect(context.store[COLLECTIONS.integrationSetting]).toHaveLength(1);
+    expect(context.store[COLLECTIONS.integrationSetting][0].enabled).toBeUndefined();
   });
 });
 
@@ -339,5 +504,87 @@ describe("GET /integrations/credentials/export", () => {
     expect(content).toContain("/etc/erpsys.env");
 
     expect(audits()[0].action).toBe("Exported integration credentials");
+  });
+});
+
+describe("the always-on Better Auth core", () => {
+  const coreRow = async () => {
+    const response = await call("/integrations");
+    expect(response.status).toBe(200);
+    return (await response.json()).data.find(
+      (candidate: Row) => candidate.key === "betterAuth",
+    );
+  };
+
+  it("is reported locked, with a status line per sign-in part", async () => {
+    const row = await coreRow();
+
+    expect(row.locked).toBe(true);
+    expect(row.credentials).toEqual([]);
+    expect(row.features.map((feature: Row) => feature.key)).toEqual([
+      "emailPassword",
+      "emailCode",
+      "emailVerification",
+      "studentSignUp",
+      "passwordReset",
+      "twoFactor",
+      "adminUnlock",
+      "adminAccounts",
+    ]);
+  });
+
+  it.each([
+    ["PATCH", "/integrations/betterAuth", { enabled: false }],
+    ["PUT", "/integrations/betterAuth/credentials", { version: 0, values: {} }],
+    ["DELETE", "/integrations/betterAuth/credentials", undefined],
+  ])(
+    "%s %s is refused with INTEGRATION_LOCKED and writes nothing",
+    async (method, path, body) => {
+      const response = await call(path, {
+        method,
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      });
+
+      expect(response.status).toBe(409);
+      expect((await response.json()).data.code).toBe("INTEGRATION_LOCKED");
+      expect(context.store[COLLECTIONS.integrationSetting]).toHaveLength(0);
+      expect(credentialDocs()).toHaveLength(0);
+      expect(audits()).toHaveLength(0);
+    },
+  );
+
+  it("cannot be switched off by a stored row left behind by an older build", async () => {
+    context.store[COLLECTIONS.integrationSetting].push({
+      _id: "is-1",
+      key: "betterAuth",
+      enabled: false,
+      updatedAt: new Date(),
+    });
+
+    expect((await coreRow()).enabled).toBe(true);
+  });
+});
+
+describe("/integrations/authenticators", () => {
+  it("lists admins with their enrollment, and a reset forgets the device and ends the unlock", async () => {
+    context.store.twoFactor = [{ _id: "tf1", userId: "admin1", verified: true }];
+
+    const list = await call("/integrations/authenticators");
+    expect((await list.json()).data).toEqual([
+      { userId: "admin1", name: "Admin", email: "admin@buksu.edu.ph", enrolled: true },
+    ]);
+
+    const response = await call("/integrations/authenticators/admin1", { method: "DELETE" });
+    expect(response.status).toBe(200);
+    expect(context.store.twoFactor).toHaveLength(0);
+    expect(context.store[COLLECTIONS.adminStepUp]).toHaveLength(0);
+    expect(context.store[COLLECTIONS.user][0].twoFactorEnabled).toBe(false);
+    expect(audits()[0].action).toBe("Reset authenticator");
+  });
+
+  it("refuses to reset a non-admin", async () => {
+    context.store[COLLECTIONS.user].push({ _id: "s1", name: "S", role: "STUDENT" });
+    const response = await call("/integrations/authenticators/s1", { method: "DELETE" });
+    expect(response.status).toBe(404);
   });
 });

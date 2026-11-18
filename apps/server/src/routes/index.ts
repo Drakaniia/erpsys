@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { editingPresenceRouter } from "./editing-presence/index.js";
 import { academicYearsRouter } from "./academic-years/index.js";
 import { advisersRouter } from "./advisers/index.js";
 import { auditLogsRouter } from "./audit-logs/index.js";
@@ -25,6 +26,7 @@ import { usersRouter } from "./users/index.js";
  */
 export const v1Router = Router();
 
+v1Router.use(editingPresenceRouter);
 v1Router.use(academicYearsRouter);
 v1Router.use(requirementsRouter);
 v1Router.use(reportsRouter);

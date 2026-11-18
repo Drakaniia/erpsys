@@ -19,9 +19,10 @@ export type StepVerificationRow = {
   evidence?: unknown;
   evidenceCount?: number;
   answers?: { label: string; value: string }[];
+  updatedAt?: Date | null;
 };
 
-export type StepKey = {
+type StepKey = {
   studentProfileId: string;
   stepId: string;
   academicYearId: string;

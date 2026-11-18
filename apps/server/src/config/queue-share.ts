@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-export const SHARE_TOKEN_VERSION = 1;
+const SHARE_TOKEN_VERSION = 1;
 
 type ShareTokenPayload = {
   v: number;
@@ -37,7 +37,7 @@ function signaturesMatch(a: string, b: string): boolean {
   return timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 
-export function signShareToken(
+function signShareToken(
   payload: ShareTokenPayload,
   secret: string,
 ): string {

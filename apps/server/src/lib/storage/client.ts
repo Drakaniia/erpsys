@@ -8,7 +8,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-export type R2ClientConfig = {
+type R2ClientConfig = {
   endpoint: string;
   accessKeyId: string;
   secretAccessKey: string;
@@ -16,7 +16,7 @@ export type R2ClientConfig = {
   region?: string;
 };
 
-export const R2_PUT_URL_EXPIRES_SECS = 15 * 60;
+const R2_PUT_URL_EXPIRES_SECS = 15 * 60;
 
 export function getR2Client(config: R2ClientConfig): S3Client {
   return new S3Client({
@@ -30,7 +30,7 @@ export function getR2Client(config: R2ClientConfig): S3Client {
   });
 }
 
-export type PresignedPutArgs = {
+type PresignedPutArgs = {
   bucket: string;
   key: string;
   contentType: string;
@@ -53,7 +53,7 @@ export async function presignedPutUrl(
   });
 }
 
-export type R2ObjectMeta = {
+type R2ObjectMeta = {
   sizeBytes: number | null;
   contentType: string | null;
   etag: string | null;
@@ -79,7 +79,7 @@ export async function headObjectExists(
   }
 }
 
-export type R2Download = {
+type R2Download = {
   status: number;
   contentType: string;
   contentLength?: string;

@@ -6,6 +6,8 @@ export type AvailabilityRow = {
   departmentId: string;
   isOpen: boolean;
   lastActiveAt?: Date | null;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
 };
 
 export class AdviserAvailabilityModel {

@@ -1,20 +1,21 @@
 import { COLLECTIONS, getDbSync } from "../lib/db/db.js";
 import { genId } from "../lib/db/ids.js";
 
-export type AdminActionRow = {
+type AdminActionRow = {
   _id: string;
   actorId: string;
   action: string;
   targetRef: string;
-  at: Date;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export class AdminActionLogModel {
   static async recent(limit: number): Promise<AdminActionRow[]> {
     return getDbSync()
-      .collection<AdminActionRow>(COLLECTIONS.adminActionLog)
-      .find({} as never)
-      .sort({ at: -1 })
+      .collection<AdminActionRow>(COLLECTIONS.auditLog)
+      .find({ action: { $exists: true } } as never)
+      .sort({ createdAt: -1 })
       .limit(limit)
       .toArray();
   }
@@ -25,15 +26,18 @@ export class AdminActionLogModel {
     targetRef: string,
     reason?: string,
   ): Promise<void> {
+    const at = new Date();
     await getDbSync()
-      .collection(COLLECTIONS.adminActionLog)
+      .collection(COLLECTIONS.auditLog)
       .insertOne({
         _id: genId("admin-action"),
+        kind: "action",
         actorId,
         action,
         targetRef,
         ...(reason ? { reason } : {}),
-        at: new Date(),
+        createdAt: at,
+        updatedAt: at,
       } as never);
   }
 }

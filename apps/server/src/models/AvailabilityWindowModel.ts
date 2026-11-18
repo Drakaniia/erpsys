@@ -13,9 +13,10 @@ export type AvailabilityWindowRow = {
   startMinute?: number;
   endMinute?: number;
   createdAt: Date;
+  updatedAt: Date;
 };
 
-export type WindowInput = Pick<
+type WindowInput = Pick<
   AvailabilityWindowRow,
   "kind" | "weekday" | "date" | "startMinute" | "endMinute"
 >;
@@ -73,6 +74,7 @@ export class AvailabilityWindowModel {
         departmentId,
         academicYearId,
         createdAt: now,
+        updatedAt: now,
       })) as never,
     );
   }
@@ -88,14 +90,6 @@ export class AvailabilityWindowModel {
     return result.deletedCount ?? 0;
   }
 
-  static async deleteByDepartment(departmentId: string): Promise<string[]> {
-    const rows = await windows()
-      .find({ departmentId } as never)
-      .toArray();
-    await windows().deleteMany({ departmentId } as never);
-    return [...new Set(rows.map((row) => row.adviserId))];
-  }
-
   static async deleteStaleYears(activeYearId: string): Promise<string[]> {
     const rows = await windows()
       .find({ academicYearId: { $ne: activeYearId } } as never)
@@ -106,4 +100,13 @@ export class AvailabilityWindowModel {
     } as never);
     return [...new Set(rows.map((row) => row.adviserId))];
   }
+
+  static async deleteByDepartment(departmentId: string): Promise<string[]> {
+    const rows = await windows()
+      .find({ departmentId } as never)
+      .toArray();
+    await windows().deleteMany({ departmentId } as never);
+    return [...new Set(rows.map((row) => row.adviserId))];
+  }
+
 }

@@ -1,6 +1,25 @@
 import { Router } from "express";
-import { requirementsController } from "../../controllers/requirements/RequirementsController.js";
-import { requireSession, requireSurface } from "../../middleware/auth.js";
+import { z } from "zod";
+import { ApiError } from "../../config/errors.js";
+import { genId } from "../../lib/db/ids.js";
+import {
+  requireSession,
+  requireSurface,
+  sessionUser,
+} from "../../middleware/auth.js";
+import { catchAsync } from "../../middleware/catchAsync.js";
+import {
+  okList,
+  okOne,
+  parseBody,
+  parsePagination,
+  parseQuery,
+} from "../../middleware/http.js";
+import { AdminActionLogModel } from "../../models/AdminActionLogModel.js";
+import {
+  RequirementModel,
+  type RequirementRow,
+} from "../../models/RequirementModel.js";
 
 /**
  * `/api/v1` — the enrollment requirement list; admin-only.
@@ -8,6 +27,23 @@ import { requireSession, requireSurface } from "../../middleware/auth.js";
 export const requirementsRouter = Router();
 
 const admin = [requireSession, requireSurface("admin")];
+const idParams = z.object({ id: z.string().min(1) });
+const label = z.string().trim().min(1).max(200);
+const notFound = () =>
+  new ApiError("NOT_FOUND", { message: "Requirement not found." });
+
+const toView = (row: RequirementRow) => ({
+  id: String(row._id),
+  label: row.label,
+  order: row.order,
+  isActive: row.isActive,
+});
+
+async function findOrThrow(id: string): Promise<RequirementRow> {
+  const row = await RequirementModel.findById(id);
+  if (!row) throw notFound();
+  return row;
+}
 
 /**
  * `GET /api/v1/requirements`
@@ -15,7 +51,15 @@ const admin = [requireSession, requireSurface("admin")];
  * Use: list requirement rows (query `page`, `pageSize`).
  * Returns: `{ data, page, pageSize, total }`.
  */
-requirementsRouter.get("/requirements", admin, requirementsController.list);
+requirementsRouter.get(
+  "/requirements",
+  admin,
+  catchAsync(async (req, res) => {
+    const items = (await RequirementModel.list()).map(toView);
+    const { page, pageSize } = parsePagination(req);
+    okList(res, items, page, pageSize, items.length);
+  }),
+);
 
 /**
  * `POST /api/v1/requirements`
@@ -24,7 +68,26 @@ requirementsRouter.get("/requirements", admin, requirementsController.list);
  * Use: add one — body `{ label }`.
  * Returns: `201` with `{ data: row }`.
  */
-requirementsRouter.post("/requirements", admin, requirementsController.create);
+requirementsRouter.post(
+  "/requirements",
+  admin,
+  catchAsync(async (req, res) => {
+    const input = parseBody(z.object({ label }), req);
+    const row = {
+      _id: genId("req"),
+      label: input.label,
+      order: (await RequirementModel.lastOrder()) + 1,
+      isActive: true,
+    };
+    await RequirementModel.insert(row);
+    await AdminActionLogModel.log(
+      sessionUser(req).id,
+      "Added requirement",
+      input.label,
+    );
+    okOne(res, toView(row), 201);
+  }),
+);
 
 /**
  * `PUT /api/v1/requirements/order`
@@ -37,7 +100,27 @@ requirementsRouter.post("/requirements", admin, requirementsController.create);
 requirementsRouter.put(
   "/requirements/order",
   admin,
-  requirementsController.reorder,
+  catchAsync(async (req, res) => {
+    const { orderedIds } = parseBody(
+      z.object({ orderedIds: z.array(z.string().min(1)).max(500) }),
+      req,
+    );
+    const ids = (await RequirementModel.list()).map((item) => String(item._id));
+    if (orderedIds.some((id) => !ids.includes(id))) throw notFound();
+    const finalIds = [
+      ...orderedIds,
+      ...ids.filter((id) => !orderedIds.includes(id)),
+    ];
+    for (const [index, id] of finalIds.entries()) {
+      await RequirementModel.update(id, { order: index });
+    }
+    await AdminActionLogModel.log(
+      sessionUser(req).id,
+      "Reordered requirements",
+      `${orderedIds.length} item(s)`,
+    );
+    okOne(res, { orderedIds });
+  }),
 );
 
 /**
@@ -50,7 +133,25 @@ requirementsRouter.put(
 requirementsRouter.patch(
   "/requirements/:id",
   admin,
-  requirementsController.update,
+  catchAsync(async (req, res) => {
+    const { id } = parseQuery(idParams, req);
+    const input = parseBody(
+      z.object({ label: label.optional(), isActive: z.boolean().optional() }),
+      req,
+    );
+    const existing = await findOrThrow(id);
+    const patch: Partial<RequirementRow> = {};
+    if (input.label !== undefined) patch.label = input.label;
+    if (input.isActive !== undefined) patch.isActive = input.isActive;
+    if (Object.keys(patch).length > 0) await RequirementModel.update(id, patch);
+    const updated = { ...existing, ...patch };
+    await AdminActionLogModel.log(
+      sessionUser(req).id,
+      "Updated requirement",
+      String(updated.label),
+    );
+    okOne(res, toView(updated));
+  }),
 );
 
 /**
@@ -63,5 +164,15 @@ requirementsRouter.patch(
 requirementsRouter.delete(
   "/requirements/:id",
   admin,
-  requirementsController.remove,
+  catchAsync(async (req, res) => {
+    const { id } = parseQuery(idParams, req);
+    const existing = await findOrThrow(id);
+    await RequirementModel.remove(id);
+    await AdminActionLogModel.log(
+      sessionUser(req).id,
+      "Deleted requirement",
+      existing.label,
+    );
+    okOne(res, { id });
+  }),
 );

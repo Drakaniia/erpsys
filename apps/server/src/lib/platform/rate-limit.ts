@@ -182,8 +182,9 @@ const CREDENTIAL_PATHS = new Set([
   "/sign-in/email",
   "/sign-up/email",
   "/sign-up/student",
-
-]);
+  "/sign-in/email-otp",
+  "/email-otp/send-verification-otp",
+  "/email-otp/verify-email",]);
 
 function authSubPath(req: Request): string {
   const path = (req.originalUrl ?? req.url ?? "").split("?")[0];
