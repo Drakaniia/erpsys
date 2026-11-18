@@ -15,6 +15,8 @@ export default function EnrolledTab({
   entries,
   total,
   loading,
+  error = false,
+  onretry,
   range,
   q,
   hasNextPage = false,
@@ -31,6 +33,8 @@ export default function EnrolledTab({
   entries: EnrolledEntry[];
   total: number;
   loading: boolean;
+  error?: boolean;
+  onretry?: () => void;
   range: EnrolledRange;
   q: string;
   hasNextPage?: boolean;
@@ -139,7 +143,12 @@ export default function EnrolledTab({
         </span>
       </div>
 
-      {entries.length === 0 && !loading ? (
+      {error ? (
+        <div role="alert" className="rounded-xl border border-border p-4 text-sm text-error">
+          Could not load enrolled students.
+          <button type="button" onClick={onretry} className="ml-3 underline">Retry</button>
+        </div>
+      ) : entries.length === 0 && !loading ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-surface-raised py-12 text-center">
           <svg
             className="mb-3 h-8 w-8 text-muted/40"
@@ -256,7 +265,7 @@ export default function EnrolledTab({
                       <button
                         type="button"
                         onClick={() => onrevert(entry)}
-                        className="press rounded-lg px-2.5 py-1 text-xs text-error opacity-0 transition-opacity hover:bg-error/10 focus-visible:opacity-100 group-hover:opacity-100"
+                        className="press rounded-lg px-2.5 py-1 text-xs text-error hover:bg-error/10"
                         aria-label={`Revert enrollment for ${entry.studentName}`}
                       >
                         Revert

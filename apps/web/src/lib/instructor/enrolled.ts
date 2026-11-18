@@ -38,7 +38,9 @@ export function useEnrolledState(
     api.instructor.getEnrolledByDept.queryOptions({
       input: {
         departmentId: deptId !== "manage" ? deptId : "",
-        filter: { range, q: q || undefined, limit },
+        range,
+        q: q || undefined,
+        limit,
       },
       enabled: deptId !== "manage" && view === "enrolled",
       refetchInterval:
@@ -72,6 +74,8 @@ export function useEnrolledState(
   // Changing department / view / range / query clears the selection.
   useEffect(() => {
     setSelectedIds(new Set());
+    setRevertEntry(null);
+    setBulkConfirmOpen(false);
   }, [deptId, view, range, q]);
 
   const rows: any[] = enrolledQuery.data?.data ?? [];
@@ -126,9 +130,8 @@ export function useEnrolledState(
     reason: string,
     dept: { id: string } | null,
   ) {
-    if (!dept || selectedIds.size === 0) return;
+    if (!dept || selectedIds.size === 0 || bulkRevertMutation.isPending) return;
     const ids = [...selectedIds];
-    setBulkConfirmOpen(false);
     try {
       const result = await bulkRevertMutation.mutateAsync({
         departmentId: dept.id,
@@ -136,6 +139,7 @@ export function useEnrolledState(
         reason,
       });
       const count = result.revertedCount ?? ids.length;
+      setBulkConfirmOpen(false);
       clearSelection();
       invalidateQueues();
       invalidateEnrolled();
@@ -162,7 +166,7 @@ export function useEnrolledState(
 
   async function confirmRevert(reason: string, dept: { id: string } | null) {
     const entry = revertEntry;
-    if (!entry || !dept) return;
+    if (!entry || !dept || revertMutation.isPending) return;
     try {
       await revertMutation.mutateAsync({
         ts: revertPresence.ts,
@@ -187,7 +191,7 @@ export function useEnrolledState(
     entry: { entryId: string; name: string } | null,
     dept: { id: string } | null,
   ) {
-    if (!entry || !dept || enrollMutation.isPending) return;
+    if (!entry || !dept || enrollMutation.isPending) return false;
     try {
       const result = await enrollMutation.mutateAsync({
         departmentId: dept.id,
@@ -201,12 +205,14 @@ export function useEnrolledState(
       } else {
         toast(`Enrolled — ${result.studentName}`);
       }
+      return true;
     } catch (e) {
       invalidateQueues();
       toast(
         (e as { message?: string }).message ?? "Could not complete enrollment",
         "error",
       );
+      return false;
     }
   }
 
@@ -218,6 +224,7 @@ export function useEnrolledState(
     revertMutation,
     bulkRevertMutation,
     revertEntry,
+
     selectedIds,
     selectedCount: selectedIds.size,
     bulkConfirmOpen,

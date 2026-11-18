@@ -211,6 +211,9 @@ export async function assertStudentLevelInScope(
     studentProfileId,
     academicYearId,
   );
+  if (enrollment && String(enrollment.departmentId) !== departmentId) {
+    throw new ApiError("CONFLICT", { message: "This student's department changed — refresh the queue." });
+  }
   const level = (enrollment?.yearLevel ?? null) as YearLevel | null;
   if (
     level === null ||
@@ -423,6 +426,9 @@ export async function serve(
       cause: { code: "QUEUE_CLOSED" },
     });
   }
+  if (!(await DepartmentModel.findById(input.departmentId))?.isActive) {
+    throw new ApiError("CONFLICT", { message: "This department is inactive." });
+  }
   const entry = await entryOrThrow(input.entryId, input.departmentId, yearId);
   if (entry.status === "IN_PROGRESS") {
     if (entry.servedById === adviserId) {
@@ -452,6 +458,10 @@ export async function serve(
     });
   }
 
+  const inProgress = await EnrollmentQueueModel.findInProgress(input.departmentId, yearId);
+  if (inProgress) {
+    throw new ApiError("CONFLICT", { message: "A student is already being served in this department." });
+  }
   let transitioned: boolean;
   try {
     transitioned = await EnrollmentQueueModel.transition(
@@ -518,12 +528,15 @@ export async function release(
       status: "WAITING",
       servedById: null,
       servedAt: null,
-    }))
+    }, adviserId))
   ) {
     return { entryId: String(entry._id), status: "WAITING" };
   }
   const latest = await EnrollmentQueueModel.findById(entry._id);
-  return { entryId: String(entry._id), status: latest?.status ?? "" };
+  if (latest?.status === "WAITING") return { entryId: String(entry._id), status: "WAITING" };
+  throw new ApiError("CONFLICT", {
+    message: "This student is no longer being served by you — refresh the queue.",
+  });
 }
 
 export async function moveToEnd(
@@ -569,7 +582,7 @@ export async function moveToEnd(
     joinedAt: movedAt,
     movedToEndById: adviserId,
     movedToEndAt: movedAt,
-  });
+  }, entry.status === "IN_PROGRESS" ? adviserId : undefined);
   if (!moved) {
     throw new ApiError("CONFLICT", {
       message: "This student's place changed — refresh and try again.",

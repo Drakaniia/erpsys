@@ -86,6 +86,7 @@ export async function complete(
     String(entry._id),
     "IN_PROGRESS",
     { status: "COMPLETED", servedById: adviserId, completedAt: now },
+    adviserId,
   );
   if (!ok) {
     throw new ApiError("CONFLICT", {

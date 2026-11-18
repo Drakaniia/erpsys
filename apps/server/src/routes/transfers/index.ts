@@ -96,7 +96,7 @@ transfersRouter.get(
  * Access: session + instructor surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: ask for a department — body `{ departmentId, yearLevels? }`.
- * Returns: `201` with `{ data: transfer }`.
+ * Returns: `201` with `{ data: transfer }`; `409` if requested levels span multiple owners.
  */
 transfersRouter.post(
   "/transfers",
@@ -117,12 +117,12 @@ transfersRouter.post(
     const dept = await assignableDepartment(input.departmentId);
     assertLevelsOffered(dept, requested);
 
-    const owner = (
-      await AdviserDepartmentModel.listOtherHolders(
-        input.departmentId,
-        requester.id,
-      )
-    ).find((holder) => yearLevelsOverlap(holder.yearLevels ?? [], requested));
+    const holders = (await AdviserDepartmentModel.listOtherHolders(input.departmentId, requester.id))
+      .filter((holder) => yearLevelsOverlap(holder.yearLevels ?? [], requested));
+    if (holders.length > 1) {
+      throw new ApiError("CONFLICT", { message: "Request year levels from one instructor at a time." });
+    }
+    const owner = holders[0];
     if (!owner) {
       throw new ApiError("CONFLICT", {
         message:
@@ -186,7 +186,7 @@ transfersRouter.post(
  * `PATCH /api/v1/transfers/:id`
  * Access: session + instructor surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
- * Use: the owner accepts or declines — body `{ accept }`.
+ * Use: the owner accepts or declines current pending state — body `{ accept }`; omit `ts` for a fresh server-anchored command.
  * Returns: `{ data: transfer }`.
  */
 transfersRouter.patch(
@@ -224,10 +224,18 @@ transfersRouter.patch(
       });
     }
 
-    if (!(await AdviserDepartmentModel.findLink(userId, row.departmentId))) {
+    const dept = await assignableDepartment(row.departmentId);
+    assertLevelsOffered(dept, normalizeYearLevels(row.yearLevels ?? []));
+    const ownerLink = await AdviserDepartmentModel.findLink(userId, row.departmentId);
+    if (!ownerLink || !yearLevelsOverlap(ownerLink.yearLevels ?? [], row.yearLevels ?? [])) {
       throw new ApiError("CONFLICT", {
         message: "That department is no longer assigned to you.",
       });
+    }
+    const currentOwners = (await AdviserDepartmentModel.listOtherHolders(row.departmentId, row.requesterId))
+      .filter((holder) => yearLevelsOverlap(holder.yearLevels ?? [], row.yearLevels ?? []));
+    if (currentOwners.length !== 1 || currentOwners[0].adviserId !== row.ownerId) {
+      throw new ApiError("CONFLICT", { message: "Ownership changed — request this transfer again." });
     }
     const transferredFromName = await runTransfer({
       departmentId: row.departmentId,
@@ -265,7 +273,7 @@ transfersRouter.patch(
  * `DELETE /api/v1/transfers/:id`
  * Access: session + instructor surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
- * Use: the requester withdraws.
+ * Use: the requester withdraws current pending state; omit `ts` for a fresh server-anchored command.
  * Returns: `{ data: transfer }`.
  */
 transfersRouter.delete(
@@ -292,7 +300,7 @@ transfersRouter.delete(
  * Access: session + instructor surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: claim a department nobody holds — body `{ yearLevels? }`.
- * Returns: `{ data: assignment }`.
+ * Returns: `{ data: assignment }`; `409` if another instructor holds any requested level.
  */
 transfersRouter.post(
   "/departments/:id/takeover",
@@ -304,6 +312,10 @@ transfersRouter.post(
     const requested = normalizeYearLevels(input.yearLevels);
     const dept = await assignableDepartment(departmentId);
     assertLevelsOffered(dept, requested);
+    const holders = await AdviserDepartmentModel.listOtherHolders(departmentId, adviser.id);
+    if (holders.some((holder) => yearLevelsOverlap(holder.yearLevels ?? [], requested))) {
+      throw new ApiError("CONFLICT", { message: "These year levels are assigned — request a transfer first." });
+    }
     const transferredFromName = await runTransfer({
       departmentId,
       adviserId: adviser.id,

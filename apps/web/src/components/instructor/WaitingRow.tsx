@@ -29,7 +29,7 @@ export default function WaitingRow({
   return (
     <div
       aria-current={selected ? "true" : undefined}
-      className={`group flex min-h-[52px] items-center gap-3 px-4 ${selected ? "bg-surface/60" : ""} ${locked ? "bg-surface/30" : ""}`}
+      className={`group flex min-h-[52px] flex-wrap items-center gap-3 px-4 py-2 ${selected ? "bg-surface/60" : ""} ${locked ? "bg-surface/30" : ""}`}
     >
       <span
         className={`w-8 shrink-0 text-sm tabular-nums ${position <= 5 ? "font-medium text-muted" : "text-muted/60"}`}
@@ -43,7 +43,7 @@ export default function WaitingRow({
       >
         {initials(entry.name)}
       </span>
-      <span className="flex min-w-0 flex-1 flex-col">
+      <span className="flex min-w-[100px] flex-1 flex-col">
         <span
           className={`truncate text-sm ${locked ? "text-muted" : "text-ink/70"}`}
         >
@@ -61,7 +61,7 @@ export default function WaitingRow({
           ? YEAR_LEVEL_LABELS[entry.yearLevel as keyof typeof YEAR_LEVEL_LABELS]
           : "No level"}
       </span>
-      <span className="shrink-0 text-xs text-muted/60 tabular-nums">
+      <span className="hidden shrink-0 text-xs text-muted/60 tabular-nums sm:inline">
         Joined {relativeTime(entry.joinedAt)}
       </span>
       {locked ? (
@@ -73,7 +73,7 @@ export default function WaitingRow({
         >
           Not your level
         </span>
-      ) : position === 1 && canServe && deptOpen ? (
+      ) : canServe && deptOpen ? (
         <button
           type="button"
           onClick={onserve}

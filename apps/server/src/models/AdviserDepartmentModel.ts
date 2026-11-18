@@ -21,6 +21,16 @@ export class AdviserDepartmentModel {
       .toArray();
   }
 
+  static async listForAssignment(
+    adviserId: string,
+    departmentIds: string[],
+  ): Promise<AdviserDepartmentRow[]> {
+    return getDbSync()
+      .collection<AdviserDepartmentRow>(COLLECTIONS.adviserDepartment)
+      .find({ $or: [{ adviserId }, { departmentId: { $in: departmentIds } }] } as never)
+      .toArray();
+  }
+
   static async findLink(
     adviserId: string,
     departmentId: string,
@@ -106,14 +116,6 @@ export class AdviserDepartmentModel {
       .toArray();
   }
 
-  static async insertMany(
-    rows: Array<AdviserDepartmentRow & { _id: string }>,
-  ): Promise<void> {
-    if (rows.length === 0) return;
-    await getDbSync()
-      .collection(COLLECTIONS.adviserDepartment)
-      .insertMany(rows as never);
-  }
 
   static async deleteByDepartment(departmentId: string): Promise<void> {
     await getDbSync()

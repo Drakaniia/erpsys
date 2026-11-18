@@ -203,7 +203,7 @@ departmentsRouter.post(
  * `PATCH /api/v1/departments/:id`
  * Access: session + instructor surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
- * Use: rename, and (admins only) deactivate — body `{ name?, isActive? }`.
+ * Use: rename an assigned department (admins may edit any), or admin-only deactivate — body `{ name?, isActive? }`.
  * Returns: `{ data: department }`.
  */
 departmentsRouter.patch(
@@ -223,6 +223,16 @@ departmentsRouter.patch(
       req,
     );
     const { callerId, isAdmin } = caller(req);
+    await requireDepartment(id);
+    if (input.isActive !== undefined && !isAdmin) {
+      throw new ApiError("FORBIDDEN", { message: "Only an admin can change department status." });
+    }
+    if (input.name !== undefined) await requireAssigned({ callerId, isAdmin }, id, "edit");
+    if (input.isActive === false && (await EnrollmentQueueModel.countInLine({
+      departmentId: id, status: { $in: ["WAITING", "IN_PROGRESS"] },
+    })) > 0) {
+      throw new ApiError("CONFLICT", { message: "Close the queue first — dept has students still in line." });
+    }
     let out: Record<string, unknown> = { id };
 
     if (input.name !== undefined) {
@@ -241,22 +251,7 @@ departmentsRouter.patch(
     }
 
     if (input.isActive !== undefined) {
-      if (!isAdmin) {
-        throw new ApiError("FORBIDDEN", {
-          message: "Only an admin can change department status.",
-        });
-      }
-      if (
-        !input.isActive &&
-        (await EnrollmentQueueModel.countInLine({
-          departmentId: id,
-          status: { $in: ["WAITING", "IN_PROGRESS"] },
-        })) > 0
-      ) {
-        throw new ApiError("CONFLICT", {
-          message: "Close the queue first — dept has students still in line.",
-        });
-      }
+
       const existing = await requireDepartment(id);
       await DepartmentModel.update(id, { isActive: input.isActive });
       await AdminActionLogModel.log(

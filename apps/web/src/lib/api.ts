@@ -174,7 +174,7 @@ async function send(route: ClientRoute, input: unknown): Promise<unknown> {
   const hasId = value.id !== undefined && value.id !== null;
   const def = route.update && hasId ? route.update : route;
   const { path, rest, params } = buildPath(def.path, value);
-  if (def.method !== "GET" && rest.ts === undefined) {
+  if (def.method !== "GET" && rest.ts === undefined && !route.serverTimestamp) {
     const ts = params.map((p) => tsById.get(p)).find((t) => t !== undefined);
     if (ts !== undefined) rest.ts = ts;
   }

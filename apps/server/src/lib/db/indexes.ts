@@ -8,6 +8,7 @@ const ix = (
 ): IndexDescription => ({ name, key, ...options });
 
 const INDEXES: [CollectionName, IndexDescription[]][] = [
+
   [COLLECTIONS.enrollmentQueue, [
     ix("uq_enrollment_queue_student_year", { studentProfileId: 1, academicYearId: 1 }, { unique: true }),
     ix("uq_enrollment_queue_department_serving", { departmentId: 1, academicYearId: 1 }, { unique: true, partialFilterExpression: { status: "IN_PROGRESS" } }),
@@ -20,7 +21,12 @@ const INDEXES: [CollectionName, IndexDescription[]][] = [
     ix("idx_student_profile_user", { userId: 1 }),
     ix("idx_student_profile_year", { academicYearId: 1 }),
   ]],
+  [COLLECTIONS.adviserDepartment, [
+    ix("idx_adviser_department_adviser_department", { adviserId: 1, departmentId: 1 }),
+    ix("idx_adviser_department_department", { departmentId: 1 }),
+  ]],
   [COLLECTIONS.adviserAvailability, [
+    ix("idx_adviser_availability_adviser_department_year", { adviserId: 1, departmentId: 1, academicYearId: 1 }),
     ix("idx_adviser_availability_year_open", { academicYearId: 1, isOpen: 1 }),
     ix("idx_adviser_availability_adviser_open", { adviserId: 1, isOpen: 1 }),
     ix("idx_adviser_availability_open_last_active", { isOpen: 1, lastActiveAt: 1 }),

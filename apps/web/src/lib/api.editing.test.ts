@@ -4,6 +4,18 @@ vi.mock("./notifications", () => ({ notify: { error: vi.fn() } }));
 afterEach(() => vi.unstubAllGlobals());
 
 describe("editing timestamp transport", () => {
+  it("does not anchor transfer commands to an older polling snapshot", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { incoming: [{ id: "transfer-polled" }], outgoing: [] }, ts: 10 })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { status: "DECLINED" } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { cancelled: true } })));
+    vi.stubGlobal("fetch", fetcher);
+    await api.instructor.listMyTransferRequests.call();
+    await api.instructor.respondDepartmentTransfer.call({ requestId: "transfer-polled", accept: false });
+    await api.instructor.cancelDepartmentTransfer.call({ requestId: "transfer-polled" });
+    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ accept: false });
+    expect(fetcher.mock.calls[2][1].body).toBeUndefined();
+  });
   it("keeps a form snapshot while newer reads arrive and sends it on POST edits", async () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: "entry-test" }], ts: 10 })))
@@ -17,4 +29,5 @@ describe("editing timestamp transport", () => {
     expect(JSON.parse(fetcher.mock.calls[2][1].body)).toMatchObject({ ts: 10 });
     expect(timestampOf(JSON.parse(JSON.stringify(old.data[0])))).toBe(10);
   });
+
 });

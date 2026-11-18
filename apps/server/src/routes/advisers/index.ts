@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { ApiError } from "../../config/errors.js";
 import { z } from "zod";
 import {
   deriveDepartmentCode,
@@ -119,7 +120,7 @@ advisersRouter.patch(
  * `PUT /api/v1/me/availability`
  * Access: session + instructor surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
- * Use: open or close my department's queue — body `{ departmentId, isOpen }`.
+ * Use: open an active assigned department or close my queue — body `{ departmentId, isOpen }`.
  * Returns: `{ data: availability }`.
  */
 advisersRouter.put(
@@ -131,10 +132,15 @@ advisersRouter.put(
       z.object({ departmentId: z.string().min(1), isOpen: z.boolean() }),
       req,
     );
-    const academicYearId = String(
-      (await activeYearOrThrow())._id,
-    );
-    await assertDepartmentAssigned(adviserId, departmentId);
+    const [year, , department] = await Promise.all([
+      activeYearOrThrow(),
+      assertDepartmentAssigned(adviserId, departmentId),
+      isOpen ? DepartmentModel.findById(departmentId) : Promise.resolve(null),
+    ]);
+    const academicYearId = String(year._id);
+    if (isOpen && !department?.isActive) {
+      throw new ApiError("CONFLICT", { message: "This department is inactive — it cannot accept students." });
+    }
     await AdviserAvailabilityModel.setOpen({
       adviserId,
       departmentId,
@@ -143,18 +149,10 @@ advisersRouter.put(
       now: new Date(),
     });
 
-    if (!isOpen) {
-      const serving = await EnrollmentQueueModel.findInProgress(
-        departmentId,
-        academicYearId,
-      );
-      if (serving?.servedById === adviserId) {
-        await release(adviserId, {
-          departmentId,
-          entryId: String(serving._id),
-        });
-      }
+    if (isOpen) {
+      return okOne(res, { departmentId, myOpen: true, isOpen: true, openBy: null });
     }
+    await EnrollmentQueueModel.releaseServingBy(departmentId, adviserId, academicYearId);
 
     const open = await AdviserAvailabilityModel.listOpenByDepartment(
       departmentId,
