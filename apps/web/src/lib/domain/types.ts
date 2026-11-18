@@ -2,7 +2,7 @@
  * Wire types the web renders.
  *
  * Copied verbatim from the server's services and views (`StudentRecordView`,
- * `RosterService`, `UserListService`, `SubmissionListService`, `sse`,
+ * `RosterService`, `UserListService`, `SubmissionListService`,
  * `integration-settings`, `storage`) when the web stopped importing server
  * code. They describe payloads, not behaviour, so there is nothing to keep in
  * sync beyond a response-shape change.
@@ -128,6 +128,7 @@ export type StepRegisterRow = {
 };
 
 export type IntegrationKey =
+  | "betterAuth"
   | "turnstile"
   | "r2"
   | "googleAuth"
@@ -171,18 +172,6 @@ export type CalendarStatus = {
   googleEmail: string | null;
   lastSyncAt: string | null;
   lastError: string | null;
-};
-
-export type LiveTopic =
-  | "transfer-requests"
-  | "notifications"
-  | "queue"
-  | "availability"
-  | "reconnect";
-
-export type LiveEvent = {
-  topic: LiveTopic;
-  at: string;
 };
 
 export type StorageRoute = "evidenceImage" | "mugshotCapture" | "stampImage";

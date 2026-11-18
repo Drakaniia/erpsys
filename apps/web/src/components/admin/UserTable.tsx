@@ -58,7 +58,7 @@ export default function UserTable({
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
-    if (!items.length) return;
+    if (listQuery.isSuccess && page > totalPages) onpagechange(totalPages);
     setSelected((prev) => {
       const next = new Set(prev);
       let changed = false;
@@ -123,51 +123,6 @@ export default function UserTable({
   const myId =
     (sessionQuery.data?.user as { id?: string } | undefined)?.id ?? "";
 
-  const [, setSelectedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    function moveSelection(delta: number) {
-      if (items.length === 0) return;
-      setSelectedId((prev) => {
-        const current = items.findIndex((i) => i.id === prev);
-        const next = Math.min(
-          items.length - 1,
-          Math.max(
-            0,
-            current === -1
-              ? delta > 0
-                ? 0
-                : items.length - 1
-              : current + delta,
-          ),
-        );
-        return items[next].id;
-      });
-    }
-    function onKeydown(e: KeyboardEvent) {
-      const target = e.target as HTMLElement | null;
-      const typing =
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable);
-      if (typing) return;
-      if (admin.roleDialog || admin.deleteDialog || admin.purgeTarget) return;
-      if (e.key === "j" || e.key === "ArrowDown") {
-        e.preventDefault();
-        moveSelection(1);
-        return;
-      }
-      if (e.key === "k" || e.key === "ArrowUp") {
-        e.preventDefault();
-        moveSelection(-1);
-        return;
-      }
-    }
-    window.addEventListener("keydown", onKeydown);
-    return () => window.removeEventListener("keydown", onKeydown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, admin.roleDialog, admin.deleteDialog, admin.purgeTarget]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -240,7 +195,7 @@ export default function UserTable({
                     myId={myId}
                     selected={selected.has(item.id)}
                     onToggle={toggleOne}
-                    onSelectRow={setSelectedId}
+
                     admin={admin}
                   />
                 ))

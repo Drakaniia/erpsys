@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, queryClient } from "$lib/api";
+import { useEditingPresence } from "$lib/editing-presence";
 import { intervalWhileVisible } from "$lib/polling";
 
 export type EnrolledRange = "today" | "ay" | "all";
@@ -74,6 +75,7 @@ export function useEnrolledState(
   }, [deptId, view, range, q]);
 
   const rows: any[] = enrolledQuery.data?.data ?? [];
+  const revertPresence = useEditingPresence("queue-entry", revertEntry?.enrollmentId, rows.find((row) => row.enrollmentId === revertEntry?.enrollmentId));
   const total: number =
     (enrolledQuery.data as { total?: number } | undefined)?.total ?? 0;
   const hasMore = rows.length < total && limit < 500;
@@ -161,9 +163,9 @@ export function useEnrolledState(
   async function confirmRevert(reason: string, dept: { id: string } | null) {
     const entry = revertEntry;
     if (!entry || !dept) return;
-    setRevertEntry(null);
     try {
       await revertMutation.mutateAsync({
+        ts: revertPresence.ts,
         departmentId: dept.id,
         enrollmentId: entry.enrollmentId,
         reason,
@@ -172,6 +174,7 @@ export function useEnrolledState(
       invalidateEnrolled();
       noteActivity();
       toast(`Reverted — ${entry.studentName} is back at #1`, "warning");
+      setRevertEntry(null);
     } catch (e) {
       toast(
         (e as { message?: string }).message ?? "Could not revert enrollment",
@@ -215,6 +218,7 @@ export function useEnrolledState(
     revertMutation,
     bulkRevertMutation,
     revertEntry,
+    revertPresence,
     selectedIds,
     selectedCount: selectedIds.size,
     bulkConfirmOpen,

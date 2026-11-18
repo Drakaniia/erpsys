@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useNotificationReadState } from "$lib/notification-read-state";
 import { relativeTime } from "$lib/officer/format";
 import { api } from "$lib/api";
 import { authClient } from "$lib/auth-client";
@@ -27,7 +28,7 @@ export default function NotificationCenter({
   onview?: ((item: NotificationItem) => void) | undefined;
   compact?: boolean;
 }) {
-  const queryClient = useQueryClient();
+
   const sessionQuery = authClient.useSession();
 
   // The 20s poll lives in the student and instructor state stores. This is a
@@ -43,13 +44,13 @@ export default function NotificationCenter({
       refetchOnWindowFocus: true,
     }),
   );
-  const items: NotificationItem[] =
-    itemsProp ?? (ownQuery.data?.data as NotificationItem[] | undefined) ?? [];
+  const { items, markRead } = useNotificationReadState(
+    sessionQuery.data?.user.id ?? "",
+    itemsProp ?? (ownQuery.data?.data as NotificationItem[] | undefined) ?? [],
+  );
   const unread = items.filter((n) => !n.readAt).length;
 
-  const markReadMutation = useMutation(
-    api.notifications.markAllRead.mutationOptions(),
-  );
+
 
   // The one generator shared with the Profile-tab door (D4). Downloading from a
   // row must never close the panel, dismiss the row, or touch read-state (D9),
@@ -134,15 +135,7 @@ export default function NotificationCenter({
     setPanelIn(false);
     // spec §7.6 — opening marks everything read
     if (unread > 0) {
-      try {
-        await markReadMutation.mutateAsync({});
-        queryClient.invalidateQueries({ queryKey: ["notifications"] });
-        queryClient.invalidateQueries({
-          queryKey: api.notifications.listMine.queryKey(),
-        });
-      } catch {
-        // polling reconciles
-      }
+      markRead();
     }
     requestAnimationFrame(() => {
       setPanelIn(true);

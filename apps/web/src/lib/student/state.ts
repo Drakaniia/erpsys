@@ -11,11 +11,7 @@ import type { NotificationItem, StepCode } from "$lib/student/types";
 import { api } from "$lib/api";
 import { LAUNCH_STALE_MS, visibleQueuePosition } from "$lib/perf/cache-policy";
 import { intervalWhileVisible } from "$lib/polling";
-import { connectLiveUpdates } from "$lib/live-updates";
-import {
-  refreshStudentQueries,
-  STUDENT_BACKSTOP_POLL_MS,
-} from "./live-refresh";
+
 
 export const EVIDENCE_CONFIG: Partial<
   Record<
@@ -28,6 +24,7 @@ export const EVIDENCE_CONFIG: Partial<
     hint: "Screenshot of your liked/followed pages",
     multiple: true,
   },
+
   MUGSHOT: {
     label: "Upload photo",
     hint: "JPEG, PNG or WebP — max 4 MB",
@@ -54,11 +51,6 @@ export function useStudentState(_email: string) {
     setParams(next, { replace: true });
   }
 
-  useEffect(
-    () => connectLiveUpdates((event) => refreshStudentQueries(event.topic)),
-    [],
-  );
-
   const sessionQuery = authClient.useSession();
   const sessionReady = !sessionQuery.isPending && Boolean(sessionQuery.data);
 
@@ -68,7 +60,7 @@ export function useStudentState(_email: string) {
       // No session, no request: without this the sign-out race fires
       // /api/v1/me/* against the cleared cookie and each lands a 401.
       enabled: sessionReady,
-      refetchInterval: intervalWhileVisible(STUDENT_BACKSTOP_POLL_MS),
+      refetchInterval: intervalWhileVisible(15_000),
       refetchOnWindowFocus: true,
     }),
   );
@@ -76,7 +68,7 @@ export function useStudentState(_email: string) {
     api.student.getMyQueueStatus.queryOptions({
       staleTime: LAUNCH_STALE_MS,
       enabled: sessionReady,
-      refetchInterval: intervalWhileVisible(STUDENT_BACKSTOP_POLL_MS),
+      refetchInterval: intervalWhileVisible(15_000),
       refetchOnWindowFocus: true,
     }),
   );
@@ -84,7 +76,7 @@ export function useStudentState(_email: string) {
     api.notifications.listMine.queryOptions({
       staleTime: LAUNCH_STALE_MS,
       enabled: sessionReady,
-      refetchInterval: intervalWhileVisible(STUDENT_BACKSTOP_POLL_MS),
+      refetchInterval: intervalWhileVisible(15_000),
       refetchOnWindowFocus: true,
     }),
   );
@@ -160,7 +152,7 @@ export function useStudentState(_email: string) {
 
   function openStep(code: StepCode) {
     setOpenCode(code);
-    updateUrl({ step: String(STEP_ORDER.indexOf(code) + 1) });
+    updateUrl({ tab: null, step: String(STEP_ORDER.indexOf(code) + 1) });
   }
 
   function closeSheet() {

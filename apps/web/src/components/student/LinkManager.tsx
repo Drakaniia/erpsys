@@ -115,7 +115,7 @@ export default function LinkManager({
               value={linkInput}
               onChange={(e) => oninput(e.target.value)}
               disabled={linkSaving || linkBusy}
-              className="min-w-0 flex-1 rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:border-primary focus:outline-none disabled:opacity-60"
+              className="min-w-0 flex-1 rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none disabled:opacity-60"
             />
             <button
               type="button"
@@ -137,7 +137,7 @@ export default function LinkManager({
             value={linkInput}
             onChange={(e) => oninput(e.target.value)}
             disabled={linkSaving || linkBusy}
-            className="min-w-0 flex-1 rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:border-primary focus:outline-none disabled:opacity-60"
+            className="min-w-0 flex-1 rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none disabled:opacity-60"
           />
           <button
             type="button"

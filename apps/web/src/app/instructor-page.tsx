@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { shortcutBlocked } from "$lib/ui/shortcut-guard";
 import CalendarBanner from "../components/instructor/CalendarBanner";
 import DepartmentManager from "../components/instructor/DepartmentManager";
 import InstructorDialogs from "./instructor-dialogs";
@@ -115,13 +116,8 @@ export function InstructorPage() {
 
   useEffect(() => {
     function onKeydown(e: KeyboardEvent) {
-      const target = e.target as HTMLElement | null;
-      const isTyping = !!(
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      );
+
+      const isTyping = shortcutBlocked(e);
       const hasDialog = !!(
         s.queue.closeConfirmOpen ||
         s.queue.removeConfirmOpen ||

@@ -64,7 +64,7 @@ export const STEP_STATE_LABELS: Record<StudentStepState, string> = {
 export const STEP_STATE_TONES: Record<StudentStepState, string> = {
   MISSING: "text-muted/70 bg-surface",
   PENDING: "text-ink/70 bg-ink/[0.04]",
-  SUBMITTED: "text-gold bg-gold/15",
+  SUBMITTED: "text-warning bg-gold/15",
   VERIFIED: "text-primary bg-primary/10",
   RETURNED: "text-error bg-error/10",
 };

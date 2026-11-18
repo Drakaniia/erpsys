@@ -8,6 +8,7 @@ import type { IntegrationKey } from "$lib/domain/types";
 export type { IntegrationKey };
 
 export type IntegrationFlags = {
+  betterAuth: boolean;
   turnstile: boolean;
   r2: boolean;
   googleAuth: boolean;
@@ -32,7 +33,26 @@ export type CredentialFieldView = {
   updatedByName: string | null;
 };
 
+/** One part of the always-on Better Auth core, as the server reports it. */
+export type AuthFeature = {
+  key:
+    | "emailPassword"
+    | "emailCode"
+    | "emailVerification"
+    | "studentSignUp"
+    | "passwordReset"
+    | "twoFactor"
+    | "adminUnlock"
+    | "adminAccounts";
+  label: string;
+  state: "on" | "limited" | "off";
+  note: string;
+};
+
 export type AdminIntegrationRow = {
+  /** Always on: no switch and no stored credentials (Better Auth). */
+  locked?: boolean;
+  features?: AuthFeature[] | null;
   key: IntegrationKey;
   label: string;
   description: string;
@@ -56,6 +76,18 @@ export type SaveCredentialsInput = {
   version: number;
   values: Record<string, string | null>;
 };
+/** One field of a validated group: whether it ends up set, and from where. */
+export type ValidatedField = {
+  envKey: string;
+  set: boolean;
+  source: "draft" | "stored" | "env";
+};
+
+export type CredentialValidation = {
+  key: IntegrationKey;
+  version: number;
+  fields: ValidatedField[];
+};
 
 /**
  * Everything reads as on until the query lands: a consumer must not hide a
@@ -63,6 +95,7 @@ export type SaveCredentialsInput = {
  * authoritative. Matches the server's computed defaults.
  */
 const ALL_ON: IntegrationFlags = {
+  betterAuth: true,
   turnstile: true,
   r2: true,
   googleAuth: true,
@@ -189,6 +222,18 @@ export function useSaveCredentials() {
   });
 }
 
+/**
+ * Dry run: the server answers with what the same body would do on save —
+ * every rule and the live provider probe — and writes nothing. Nothing is
+ * cached: a validation belongs to the drafts it judged.
+ */
+export function useValidateCredentials() {
+  return useMutation<CredentialValidation, Error, SaveCredentialsInput>({
+    mutationFn: (vars) =>
+      api.admin.validateIntegrationCredentials.call(vars) as Promise<CredentialValidation>,
+  });
+}
+
 export function useResetCredentials() {
   return useMutation<AdminIntegrationRow, Error, IntegrationKey>({
     mutationFn: (key) =>
@@ -214,6 +259,32 @@ export function useExportCredentials() {
         filename: string;
         content: string;
       }>,
+  });
+}
+
+export type AdminAuthenticator = {
+  userId: string;
+  name: string;
+  email: string;
+  enrolled: boolean;
+};
+
+export function useAuthenticators() {
+  return useQuery({
+    queryKey: ["integrations", "authenticators"],
+    queryFn: () =>
+      api.admin.listAuthenticators.call({}) as Promise<AdminAuthenticator[]>,
+  });
+}
+
+export function useResetAuthenticator() {
+  return useMutation<unknown, Error, string>({
+    mutationFn: (userId) => api.admin.resetAuthenticator.call({ userId }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["integrations", "authenticators"],
+      });
+    },
   });
 }
 

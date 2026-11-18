@@ -5,7 +5,11 @@ const ALLOWED_TAGS = [
   "p",
   "br",
   "strong",
+  "b",
   "em",
+  "i",
+  "u",
+  "div",
   "del",
   "code",
   "pre",
@@ -37,7 +41,7 @@ function hardenLinks(html: string): string {
     let next = attrs;
     next = next.replace(/\starget\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, " ");
     next = next.replace(/\srel\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, " ");
-    return `<a${next} target="_blank" rel="noopener noreferrer">`;
+    return `<a ${next} target="_blank" rel="noopener noreferrer">`;
   });
 }
 
@@ -50,6 +54,16 @@ function escapeHtml(text: string): string {
     .replace(/'/g, "&#39;");
 }
 
+export function sanitizeHtml(html: string): string {
+  if (!DOMPurify.isSupported) return escapeHtml(html);
+  return hardenLinks(
+    DOMPurify.sanitize(html, {
+      ALLOWED_TAGS,
+      ALLOWED_ATTR,
+    }),
+  );
+}
+
 export function renderMarkdown(source: string): string {
   const text = source.trim();
   if (text.length === 0) return "";
@@ -58,10 +72,5 @@ export function renderMarkdown(source: string): string {
 
   const rendered = marked.parse(text, { async: false, breaks: true }) as string;
 
-  return hardenLinks(
-    DOMPurify.sanitize(rendered, {
-      ALLOWED_TAGS,
-      ALLOWED_ATTR,
-    }),
-  );
+  return sanitizeHtml(rendered);
 }

@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import { useEditingPresence } from "$lib/editing-presence";
+import EditorPresence from "../ui/EditorPresence";
 import { useMutation } from "@tanstack/react-query";
 import EvidenceLightbox from "./EvidenceLightbox";
 import EvidenceSlot from "./EvidenceSlot";
@@ -56,6 +58,7 @@ export default function EvidenceSheet({
   );
 
   const locked = step.status === "VERIFIED";
+  const presence = useEditingPresence("submission", !locked ? `me~${step.code}` : null, step);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
@@ -80,6 +83,8 @@ export default function EvidenceSheet({
     setSubmitting(true);
     try {
       if (queuedUpload.current) await queuedUpload.current();
+      // Proof can be newer than the sheet snapshot after the upload above.
+      // Submit the current server-side evidence in a fresh transaction.
       await submitMutation.mutateAsync({ stepCode: step.code as EvidenceStep });
       queryClient.invalidateQueries({ queryKey: ["student"] });
       notify("Submitted — pending officer review.");
@@ -171,6 +176,7 @@ export default function EvidenceSheet({
   return (
     <>
       <div className="flex flex-col gap-4">
+        {!locked && <EditorPresence presence={presence} />}
         {step.reply ? <ReplyNotice reply={step.reply} /> : null}
 
         {step.status === "VERIFIED" ? (

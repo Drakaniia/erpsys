@@ -183,7 +183,7 @@ export default function RevertConfirmDialog({
               bulk ? "Reason for bulk revert" : "Reason for reverting"
             }
             aria-required="true"
-            className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
+            className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
           />
           <div className="mt-1 flex items-center justify-between">
             <p

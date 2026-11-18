@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { useEditingPresence } from "$lib/editing-presence";
+import EditorPresence from "../ui/EditorPresence";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   STUDENT_NUMBER_PATTERN,
@@ -28,6 +30,7 @@ export default function OnboardingModal({
   onclose?: () => void;
 }) {
   const hardGate = mode === "gate";
+  const presence = useEditingPresence("student-enrollment", data.profile ? "me" : null, data);
   const optionsQuery = useQuery(
     api.options.getSignupOptions.queryOptions({
       staleTime: 5 * 60 * 1000,
@@ -168,6 +171,7 @@ export default function OnboardingModal({
     setServerError(null);
     try {
       await saveMutation.mutateAsync({
+        ts: presence.ts,
         academicYearId,
         departmentId,
         yearLevel: yearLevel as never,
@@ -304,6 +308,7 @@ export default function OnboardingModal({
             </p>
           ) : null}
           <form className="mt-5 space-y-4" onSubmit={handleSubmit} noValidate>
+            <EditorPresence presence={presence} />
             {showNumberField ? (
               <div className="space-y-1.5">
                 <label
@@ -330,7 +335,7 @@ export default function OnboardingModal({
                   onBlur={() =>
                     setTouched((t) => ({ ...t, studentNumber: true }))
                   }
-                  className={`h-11 w-full rounded-xl border bg-surface px-3 text-[15px] tabular-nums text-ink outline-none placeholder:text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/25 ${numberError ? "border-error" : "border-border"}`}
+                  className={`h-11 w-full rounded-xl border bg-surface px-3 text-[15px] tabular-nums text-ink outline-none placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/25 ${numberError ? "border-error" : "border-border"}`}
                 />
                 {numberError ? (
                   <p

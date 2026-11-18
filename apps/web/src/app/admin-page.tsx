@@ -1,6 +1,7 @@
 import AdminTabBar from "../components/admin/AdminTabBar";
 import AdminReportsTab from "../components/admin/AdminReportsTab";
 import AuditLogTable from "../components/admin/AuditLogTable";
+
 import OverviewStats from "../components/admin/OverviewStats";
 import FirstRunBanner from "../components/admin/FirstRunBanner";
 import UserTable from "../components/admin/UserTable";
@@ -222,6 +223,7 @@ export function AdminPage() {
           <IntegrationsPanel
             registerrefresh={(fn) => registerRefresh("integrations", fn)}
           />
+
         ) : activeTab === "audit-log" ? (
           <AuditLogTable
             registerrefresh={(fn) => registerRefresh("audit-log", fn)}
