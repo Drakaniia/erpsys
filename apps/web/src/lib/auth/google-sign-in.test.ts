@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { googleSignInIntent } from "./google-sign-in";
+import { googleSignInCallback, googleSignInIntent } from "./google-sign-in";
+
+describe("googleSignInCallback", () => {
+  it("routes login through the Calendar-aware completion page", () => {
+    expect(googleSignInCallback()).toBe("/loading?provider=google");
+  });
+
+  it("preserves internal destinations", () => {
+    const url = new URL(googleSignInCallback("/instructor?tab=schedule"), "http://localhost");
+    expect(url.searchParams.get("dest")).toBe("/instructor?tab=schedule");
+  });
+
+  it.each(["//evil.example", "https://evil.example", "/\\\\evil.example"])("rejects external destination %s", (dest) => {
+    expect(googleSignInCallback(dest)).toBe("/loading?provider=google");
+  });
+});
 
 describe("googleSignInIntent", () => {
   describe("not signed in", () => {

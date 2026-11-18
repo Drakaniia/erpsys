@@ -54,6 +54,10 @@ vi.mock("../../src/lib/platform/integration-settings.js", async (importOriginal)
 }));
 
 import { CALENDAR_SCOPE } from "../../src/lib/google/calendar.js";
+import { env } from "../../src/lib/platform/env.js";
+
+const originalPublicUrl = env.PUBLIC_SITE_URL;
+const originalAuthUrl = env.BETTER_AUTH_URL;
 
 const ADVISER = {
   user: {
@@ -128,6 +132,8 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  env.PUBLIC_SITE_URL = originalPublicUrl;
+  env.BETTER_AUTH_URL = originalAuthUrl;
   await server.close();
   vi.clearAllMocks();
 });
@@ -178,6 +184,22 @@ describe("calendar status", () => {
 });
 
 describe("connecting", () => {
+  it.each([
+    ["http://localhost:5173", "http://localhost:5173"],
+    ["https://portal.example.org/", "https://portal.example.org"],
+    ["", "https://portal.example.org"],
+  ])("uses the same callback for consent and token exchange with public URL %s and auth URL %s", async (publicUrl, authUrl) => {
+    env.PUBLIC_SITE_URL = publicUrl;
+    env.BETTER_AUTH_URL = authUrl;
+    const { body } = await call("/me/calendar/connect");
+    const params = new URL(body.data.url).searchParams;
+    const callback = `${(publicUrl || authUrl).replace(/\/+$/, "")}/api/v1/calendar/callback`;
+    expect(params.get("redirect_uri")).toBe(callback);
+    const done = await call(`/calendar/callback?code=abc&state=${params.get("state")}`);
+    expect(done.location).toBe("/instructor?calendar=connected");
+    expect(google.exchangeCode).toHaveBeenCalledWith("abc", callback);
+  });
+
   it("hands out a consent URL for the narrow calendar scope", async () => {
     const { body } = await call("/me/calendar/connect");
     const url = new URL(body.data.url);

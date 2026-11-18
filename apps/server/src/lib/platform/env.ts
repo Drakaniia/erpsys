@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
-import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-dotenv.config({ path: path.resolve(process.cwd(), "../../.env") });
+dotenv.config({ path: fileURLToPath(new URL("../../../../../.env", import.meta.url)) });
 dotenv.config();
 
 const BASE: Record<string, string | undefined> = { ...process.env };
@@ -29,7 +29,7 @@ export const env = {
   DATABASE_URL: get("DATABASE_URL", DEFAULT_DATABASE_URL),
   BETTER_AUTH_SECRET: get("BETTER_AUTH_SECRET"),
   BETTER_AUTH_URL: get("BETTER_AUTH_URL", "http://localhost:5173"),
-  PUBLIC_SITE_URL: (get("PUBLIC_SITE_URL") || get("BETTER_AUTH_URL")).replace(/\/+$/, ""),
+  PUBLIC_SITE_URL: (get("PUBLIC_SITE_URL") || get("BETTER_AUTH_URL", "http://localhost:5173")).replace(/\/+$/, ""),
   WEB_ORIGIN: get("WEB_ORIGIN"),
   SERVE_WEB: !off("SERVE_WEB"),
   QUEUE_SHARE_SECRET: get("QUEUE_SHARE_SECRET") || get("BETTER_AUTH_SECRET"),

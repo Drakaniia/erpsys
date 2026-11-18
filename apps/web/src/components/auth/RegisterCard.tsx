@@ -4,6 +4,7 @@ import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { authClient, signUpStudent } from "$lib/auth-client";
+import { googleSignInCallback } from "$lib/auth/google-sign-in";
 import { api } from "$lib/api";
 import { YEAR_LEVELS } from "$lib/domain/constants";
 import {
@@ -162,7 +163,7 @@ export default function RegisterCard() {
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/",
+        callbackURL: googleSignInCallback(),
         errorCallbackURL: `${window.location.origin}/auth/error`,
       });
     } catch {
