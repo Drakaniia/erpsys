@@ -43,7 +43,10 @@ beforeEach(() => {
     "fetch",
     vi.fn(async (input: unknown, init?: RequestInit) => {
       const url = String(input);
-      if (init?.method === "PUT") {
+      if (url.includes("/api/v1/editing-presence/")) {
+        return json({ data: { resource: "schedule", recordId: "me~dept-1", editors: [] } });
+      }
+      if (init?.method === "PUT" && new URL(url, "http://localhost").pathname === "/api/v1/me/schedule") {
         puts.push(JSON.parse(String(init.body)));
         return putResponse();
       }
@@ -122,6 +125,10 @@ describe("ScheduleDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save schedule" }));
     await waitFor(() => expect(onclose).toHaveBeenCalled());
     expect(puts).toEqual([{ departmentId: "dept-1", windows: [WEEKLY] }]);
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/editing-presence/schedule/"),
+      expect.objectContaining({ method: "PUT" }),
+    );
   });
 
   it("shows the server's overlap message and stays open", async () => {
@@ -140,6 +147,10 @@ describe("ScheduleDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save schedule" }));
     expect((await screen.findByRole("alert")).textContent).toMatch(/Pick a date/);
     expect(puts).toHaveLength(0);
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/editing-presence/schedule/"),
+      expect.objectContaining({ method: "PUT" }),
+    );
   });
 
   it("removes a row", async () => {
