@@ -5,6 +5,7 @@ import {
   YEAR_LEVEL_LABELS,
 } from "$lib/domain/constants";
 import MultiSelectDropdown from "../ui/MultiSelectDropdown";
+import FilterDropdown from "../ui/FilterDropdown";
 import type { MultiSelectOption } from "$lib/ui/multi-select";
 import {
   activeStudentFilterCount,
@@ -148,26 +149,20 @@ export default function StudentFilters({
             All departments
           </button>
         </div>
-        <label className="flex items-center gap-2 text-sm text-muted">
+        <div className="flex items-center gap-2 text-sm text-muted">
           <span className="sr-only sm:not-sr-only">Academic year</span>
-          <select
+          <FilterDropdown
+            ariaLabel="Academic year"
             value={filters.academicYearId ?? ""}
-            onChange={(e) =>
-              onpatch({ academicYearId: e.currentTarget.value || null })
-            }
-            className="rounded-lg border border-border bg-surface-raised px-2.5 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary/40"
-          >
-            <option value="">
-              {activeYearId ? "Active year" : "Newest year"}
-            </option>
-            {years.map((year) => (
-              <option key={year.id} value={year.id}>
-                {year.label}
-                {year.isActive ? " · Active" : ""}
-              </option>
-            ))}
-          </select>
-        </label>
+            onchange={(value) => onpatch({ academicYearId: value || null })}
+            options={[
+              { value: "", label: activeYearId ? "Active year" : "Newest year" },
+              ...years.map((year) => ({
+                value: year.id, label: `${year.label}${year.isActive ? " · Active" : ""}`,
+              })),
+            ]}
+          />
+        </div>
         {scope === "all" && (
           <p className="text-xs text-muted/80" role="status">
             Showing all students in the college.
@@ -202,7 +197,10 @@ export default function StudentFilters({
           }
         />
         <div
-          className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 ${filters.stepCode || filters.stepState ? "border-primary/40 bg-primary/[0.06]" : "border-border bg-surface-raised"}`}
+          className="flex flex-wrap items-center gap-1.5"
+          role="group"
+          aria-label="Requirement"
+          title={requirementSummary}
         >
           <svg
             width="13"
@@ -217,43 +215,23 @@ export default function StudentFilters({
             <path d="M3 6h18M6 12h12M10 18h4" strokeLinecap="round" />
           </svg>
           <span className="sr-only">Requirement</span>
-          <select
-            aria-label="Requirement step"
-            title={requirementSummary}
+          <FilterDropdown
+            ariaLabel="Requirement step"
             value={filters.stepCode ?? ""}
-            onChange={(e) =>
-              onpatch({
-                stepCode: (e.currentTarget.value ||
-                  null) as StudentFilters["stepCode"],
-              })
-            }
-            className="bg-transparent text-sm text-ink focus:outline-none"
-          >
-            {stepOptions.map((option) => (
-              <option key={option.value || "any"} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Requirement state"
-            title={requirementSummary}
+            onchange={(value) => onpatch({ stepCode: (value || null) as StudentFilters["stepCode"] })}
+            options={stepOptions}
+            compact
+          />
+          <FilterDropdown
+            ariaLabel="Requirement state"
             value={filters.stepState ?? ""}
-            onChange={(e) =>
-              onpatch({
-                stepState: (e.currentTarget.value ||
-                  null) as StudentFilters["stepState"],
-              })
-            }
-            className="bg-transparent text-sm text-ink focus:outline-none"
-          >
-            <option value="">any state</option>
-            {STEP_STATES.map((state) => (
-              <option key={state} value={state}>
-                {STEP_STATE_LABELS[state]}
-              </option>
-            ))}
-          </select>
+            onchange={(value) => onpatch({ stepState: (value || null) as StudentFilters["stepState"] })}
+            options={[
+              { value: "", label: "Any state" },
+              ...STEP_STATES.map((state) => ({ value: state, label: STEP_STATE_LABELS[state] })),
+            ]}
+            compact
+          />
         </div>
         <div
           className="flex rounded-xl border border-border bg-surface p-0.5"

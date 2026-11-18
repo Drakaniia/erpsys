@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { prefersReducedMotion } from "$lib/motion";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useDropdownPanel } from "$lib/ui/use-dropdown-panel";
 import type { MultiSelectOption } from "$lib/ui/multi-select";
-import "./MultiSelectDropdown.css";
+import "./FilterDropdown.css";
 
 export default function MultiSelectDropdown({
   label,
@@ -20,6 +20,7 @@ export default function MultiSelectDropdown({
   id?: string;
   panelWidth?: string;
 }) {
+  const listId = useId();
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const summary = (() => {
     if (selected.length === 0) return placeholder;
@@ -33,6 +34,7 @@ export default function MultiSelectDropdown({
   const root = useRef<HTMLDivElement | null>(null);
   const triggerEl = useRef<HTMLButtonElement | null>(null);
   const listEl = useRef<HTMLDivElement | null>(null);
+  useDropdownPanel(open, triggerEl, listEl);
 
   useEffect(() => {
     if (!open) return;
@@ -42,6 +44,7 @@ export default function MultiSelectDropdown({
   }, [open, focusedIndex]);
 
   function openMenu() {
+    if (options.length === 0) return;
     setOpen(true);
     setFocusedIndex(
       Math.max(
@@ -72,6 +75,9 @@ export default function MultiSelectDropdown({
 
   function clearAll() {
     onchange([]);
+    listEl.current
+      ?.querySelector<HTMLElement>(`[data-index="${focusedIndex}"]`)
+      ?.focus();
   }
 
   function moveFocus(delta: number) {
@@ -94,6 +100,7 @@ export default function MultiSelectDropdown({
       }
     } else if (e.key === "Escape" && open) {
       e.preventDefault();
+      e.stopPropagation();
       close();
     }
   }
@@ -125,9 +132,11 @@ export default function MultiSelectDropdown({
       }
       case "Escape":
         e.preventDefault();
+        e.stopPropagation();
         close();
         break;
       case "Tab":
+        triggerEl.current?.focus();
         close(false);
         break;
     }
@@ -139,14 +148,12 @@ export default function MultiSelectDropdown({
       if (root.current && !root.current.contains(ev.target as Node))
         close(false);
     }
-    function onKeydown(ev: KeyboardEvent) {
-      if (ev.key === "Escape") close();
-    }
+
     document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeydown);
+
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeydown);
+
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -158,14 +165,12 @@ export default function MultiSelectDropdown({
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls={open ? listId : undefined}
         aria-label={label}
         onClick={toggle}
         onKeyDown={onTriggerKeydown}
-        className={`group inline-flex min-w-[148px] items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-[transform,background-color,color,border-color] duration-100 ease-out active:scale-[0.98] ${
-          selected.length
-            ? "border-primary/40 bg-primary/[0.06] font-medium text-ink"
-            : "border-border bg-surface-raised font-normal text-ink hover:bg-surface"
-        } ${open ? "bg-surface" : ""}`}
+        className="dropdown-trigger"
+        data-selected={selected.length > 0}
       >
         <span className="truncate">{summary}</span>
         {selected.length > 1 ? (
@@ -183,8 +188,7 @@ export default function MultiSelectDropdown({
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden="true"
-          className={`shrink-0 text-muted/70 transition-transform duration-150 ease-out ${open ? "rotate-180" : ""}`}
-          style={prefersReducedMotion() ? { transition: "none" } : undefined}
+          className="dropdown-chevron"
         >
           <path d="m6 9 6 6 6-6" />
         </svg>
@@ -193,14 +197,12 @@ export default function MultiSelectDropdown({
       {open ? (
         <div
           ref={listEl}
-          role="listbox"
-          aria-multiselectable="true"
-          aria-label={label}
+          popover="manual"
           tabIndex={-1}
           onKeyDown={onListKeydown}
-          className={`dropdown-panel absolute left-0 top-full z-50 mt-1.5 rounded-lg border border-border bg-surface-raised p-1 shadow-[0_4px_12px_rgba(0,0,0,0.04)] ${panelWidth}`}
-          style={{ transformOrigin: "top left" }}
+          className={`dropdown-panel apple-scrollbar ${panelWidth}`}
         >
+          <div id={listId} role="listbox" aria-label={label} aria-multiselectable="true">
           {options.map((opt, i) => {
             const checked = selectedSet.has(opt.value);
             return (
@@ -214,11 +216,9 @@ export default function MultiSelectDropdown({
                 title={opt.description ?? undefined}
                 onClick={() => toggleValue(opt.value)}
                 onPointerDown={(e) => e.preventDefault()}
-                className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm leading-5 transition-colors duration-100 ease-out ${
-                  i === focusedIndex
-                    ? "bg-surface text-ink"
-                    : "text-ink hover:bg-surface"
-                }`}
+                onPointerMove={() => setFocusedIndex(i)}
+                className="dropdown-option"
+                data-focused={i === focusedIndex}
               >
                 <span
                   aria-hidden="true"
@@ -258,6 +258,7 @@ export default function MultiSelectDropdown({
               </button>
             );
           })}
+          </div>
 
           {selected.length > 0 ? (
             <div className="mt-1 border-t border-border/60 pt-1">
