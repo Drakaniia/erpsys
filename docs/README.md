@@ -4,6 +4,9 @@ Design docs and runbooks for ERPSYS. Code-level conventions live in `../AGENTS.m
 
 ## Ops
 
+- [ops/collection-simplification.md](ops/collection-simplification.md) — collection consolidation, safe migration, and browser-local notification read markers.
+- [ops/collection-migration-qa.md](ops/collection-migration-qa.md) — applied migration evidence, full-suite results, browser coverage, and remaining QA findings.
+
 - [ops/deployment.md](ops/deployment.md) — deploy to a single Ubuntu server with Nginx, systemd, MongoDB Atlas, and GitHub Actions; also covers releases, incidents, and maintenance.
 - [ops/admin-step-up.md](ops/admin-step-up.md) — the four-step confirmation (PIN, password, emailed code, authenticator) before integration changes, its env settings, and the lost-device reset.
 - [ops/drive-verification.md](ops/drive-verification.md) — executable manual-E2E checklist for the Google Drive integration (spec §10).
@@ -29,8 +32,15 @@ Design docs and runbooks for ERPSYS. Code-level conventions live in `../AGENTS.m
 
 ## Paper
 
-- [paper/FINAL_PAPER.md](paper/FINAL_PAPER.md) — the capstone paper draft, structured after the
-  reference document, with `TODO` markers for team-supplied content.
+- [paper/FINAL_PAPER.md](paper/FINAL_PAPER.md) — Chapters 1–5, references, and supporting appendices,
+  with plain-language explanations and `TODO` markers for team-supplied evidence.
+- [paper/API_DOCUMENTATION.md](paper/API_DOCUMENTATION.md) — current mounted API contracts, request examples,
+  response behavior, authentication checks, and external-service documentation.
+  Rebuild the manuscript with `python docs/paper/api2paper.py` and check route coverage with
+  `python docs/paper/api2paper.py --check`; reviewed endpoint details live in its companion contract modules.
+- Word copies: [Final paper](paper/FINAL_PAPER.docx) and [API documentation](paper/API_DOCUMENTATION.docx).
+  Rebuild both with `python docs/paper/paper2docx.py`; re-render changed Mermaid diagrams first with
+  `python docs/paper/render_diagrams.py`.
 - [paper/REFERENCE_OUTLINE.md](paper/REFERENCE_OUTLINE.md) — the full heading/subheading outline of
   `paper/Collab Final Project Documentation.REFERENCE.pdf`, with page numbers.
 - [paper/todo.md](paper/todo.md) — checklist of the figures, screenshots and tables the paper still
