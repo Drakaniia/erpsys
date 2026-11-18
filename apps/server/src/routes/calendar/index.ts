@@ -1,8 +1,21 @@
 import { Router } from "express";
-import { calendarController } from "../../controllers/calendar/CalendarController.js";
-import { requireSession, requireSurface } from "../../middleware/auth.js";
+import { z } from "zod";
 import { slidingWindowRateLimit } from "../../lib/platform/rate-limit.js";
-import type { AuthedRequest } from "../../services/auth/AuthService.js";
+import {
+  requireSession,
+  requireSurface,
+  sessionUser,
+  type AuthedRequest,
+} from "../../middleware/auth.js";
+import { catchAsync } from "../../middleware/catchAsync.js";
+import { okOne } from "../../middleware/http.js";
+import {
+  beginCalendarConnect,
+  calendarStatus,
+  disconnectCalendar,
+  finishCalendarConnect,
+  resyncCalendar,
+} from "../../services/calendar.js";
 
 /**
  * `/api/v1` — an instructor's optional Google Calendar connection.
@@ -15,10 +28,16 @@ const calendarLimit = slidingWindowRateLimit({
   windowMs: 60_000,
   max: 10,
   key: (req) => {
-    const session = (req as AuthedRequest).session;
-    return session?.user?.id ? `calendar:${session.user.id}` : null;
+    const id = (req as AuthedRequest).session?.user?.id;
+    return id ? `calendar:${id}` : null;
   },
   message: "Too many calendar requests — wait a minute, then retry.",
+});
+
+const callbackQuery = z.object({
+  code: z.string().min(1).max(2048).optional(),
+  state: z.string().min(1).max(2048).optional(),
+  error: z.string().max(200).optional(),
 });
 
 /**
@@ -27,7 +46,13 @@ const calendarLimit = slidingWindowRateLimit({
  * Use: whether Calendar is available to me and how my connection is doing.
  * Returns: `{ data: { available, status, sync, googleEmail, lastSyncAt, lastError } }`.
  */
-calendarRouter.get("/me/calendar", instructor, calendarController.status);
+calendarRouter.get(
+  "/me/calendar",
+  instructor,
+  catchAsync(async (req, res) => {
+    okOne(res, await calendarStatus(sessionUser(req).id));
+  }),
+);
 
 /**
  * `GET /api/v1/me/calendar/connect`
@@ -39,7 +64,9 @@ calendarRouter.get(
   "/me/calendar/connect",
   instructor,
   calendarLimit,
-  calendarController.connect,
+  catchAsync(async (req, res) => {
+    okOne(res, await beginCalendarConnect(sessionUser(req).id));
+  }),
 );
 
 /**
@@ -52,7 +79,23 @@ calendarRouter.get(
   "/calendar/callback",
   instructor,
   calendarLimit,
-  calendarController.callback,
+  catchAsync(async (req, res) => {
+    const userId = sessionUser(req).id;
+    const query = callbackQuery.safeParse(req.query);
+    let outcome = "error";
+    if (query.success && query.data.code && query.data.state) {
+      try {
+        await finishCalendarConnect(userId, {
+          code: query.data.code,
+          state: query.data.state,
+        });
+        outcome = "connected";
+      } catch {
+        outcome = "error";
+      }
+    }
+    res.redirect(`/instructor?calendar=${outcome}`);
+  }),
 );
 
 /**
@@ -66,7 +109,9 @@ calendarRouter.post(
   "/me/calendar/sync",
   instructor,
   calendarLimit,
-  calendarController.sync,
+  catchAsync(async (req, res) => {
+    okOne(res, await resyncCalendar(sessionUser(req).id));
+  }),
 );
 
 /**
@@ -77,4 +122,12 @@ calendarRouter.post(
  * ERPSYS schedule stays.
  * Returns: `{ data: status }`.
  */
-calendarRouter.delete("/me/calendar", instructor, calendarController.disconnect);
+calendarRouter.delete(
+  "/me/calendar",
+  instructor,
+  catchAsync(async (req, res) => {
+    const userId = sessionUser(req).id;
+    await disconnectCalendar(userId, true);
+    okOne(res, await calendarStatus(userId));
+  }),
+);

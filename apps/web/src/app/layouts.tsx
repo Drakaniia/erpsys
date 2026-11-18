@@ -41,13 +41,19 @@ export function AppLayout() {
     markLaunch("first-surface");
   }, [pathname]);
   return (
-    <div className="grid h-svh grid-rows-[auto_1fr]">
+    <div className="relative grid h-svh grid-rows-[auto_1fr]">
+      <a
+        href="#content"
+        className="absolute left-2 top-2 z-[100] -translate-y-20 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white focus:translate-y-0"
+      >
+        Skip to content
+      </a>
       <Header />
-      <main className="overflow-y-auto">
+      <div id="content" tabIndex={-1} className="overflow-y-auto outline-none">
         <Suspense fallback={<PageLoader label="Loading console" />}>
           <Outlet />
         </Suspense>
-      </main>
+      </div>
     </div>
   );
 }

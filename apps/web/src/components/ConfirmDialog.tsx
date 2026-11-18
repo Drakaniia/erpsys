@@ -34,9 +34,9 @@ export default function ConfirmDialog({
     if (!open) return;
     const panel = panelRef.current;
     if (!panel) return;
-    const trap = dialogTrap(panel, { onEscape: onclose });
+    const trap = dialogTrap(panel, { onEscape: busy ? undefined : onclose });
     return () => trap.destroy();
-  }, [open, onclose]);
+  }, [open, onclose, busy]);
 
   if (!presence.mounted) return null;
 
@@ -49,10 +49,7 @@ export default function ConfirmDialog({
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
       aria-describedby={body ? "confirm-dialog-body" : undefined}
-      onClick={onclose}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onclose();
-      }}
+      onClick={busy ? undefined : onclose}
     >
       <div
         ref={panelRef}

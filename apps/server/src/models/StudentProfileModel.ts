@@ -6,6 +6,7 @@ export type StudentProfileRow = {
   studentNumber: string;
   academicYearId: string;
   createdAt?: Date | null;
+  updatedAt?: Date | null;
 };
 
 export class StudentProfileModel {

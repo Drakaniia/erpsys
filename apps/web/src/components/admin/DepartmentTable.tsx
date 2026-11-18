@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ConfirmDialog from "../ConfirmDialog";
 import YearLevelModal from "../YearLevelModal";
@@ -49,7 +50,7 @@ export default function DepartmentTable({
     if (!editingLevelsFor) return;
     const target = editingLevelsFor;
     try {
-      await yearLevelsMutation.mutateAsync({ id: target.id, yearLevels });
+      await yearLevelsMutation.mutateAsync({ id: target.id, yearLevels, ts: levelsPresence.ts });
       ontoast(
         yearLevels.length === 0
           ? `${target.code} now offers all year levels`
@@ -93,6 +94,8 @@ export default function DepartmentTable({
 
   // ---- Inline edit ----
   const [editingId, setEditingId] = useState<string | null>(null);
+  const presence = useEditTimestamp("department", editingId, departments.find((d) => d.id === editingId));
+  const levelsPresence = useEditTimestamp("department", editingLevelsFor?.id, editingLevelsFor);
   const [editName, setEditName] = useState("");
   const [editError, setEditError] = useState("");
 
@@ -111,6 +114,7 @@ export default function DepartmentTable({
     try {
       await updateMutation.mutateAsync({
         id: editingId,
+        ts: presence.ts,
         name: editName.trim(),
       });
       ontoast("Department updated");
@@ -166,6 +170,7 @@ export default function DepartmentTable({
 
   return (
     <div className="flex flex-col gap-4">
+
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted">
           Students see this list at step 6. Deactivated departments stay hidden
@@ -191,8 +196,8 @@ export default function DepartmentTable({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-border bg-surface-raised">
-        <table className="w-full border-collapse text-sm">
+      <div className="apple-scrollbar overflow-x-auto rounded-xl border border-border bg-surface-raised">
+        <table className="w-full min-w-[640px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs font-medium text-muted">
               <th className="px-4 py-2 font-medium">Name</th>

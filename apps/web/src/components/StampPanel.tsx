@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "$lib/api";
 import {
@@ -23,7 +24,9 @@ export default function StampPanel({
     api.officer.getStamp.queryOptions({ enabled: open && isOfficerSurface }),
   );
   const updateStamp = useMutation(api.officer.updateStamp.mutationOptions());
+  const presence = useEditTimestamp("stamp", open && isOfficerSurface ? "me" : null, stampQuery.data);
 
+  const initialized = useRef(false);
   const [stampName, setStampName] = useState("");
   const [stampSignatureUrl, setStampSignatureUrl] = useState<string | null>(
     null,
@@ -42,7 +45,9 @@ export default function StampPanel({
   const canUpload = flags.r2;
 
   useEffect(() => {
-    if (open && stampQuery.data) {
+    if (!open) initialized.current = false;
+    if (open && stampQuery.data && !initialized.current) {
+      initialized.current = true;
       setStampName(stampQuery.data.name ?? "");
       setStampSignatureUrl(stampQuery.data.signatureUrl);
       setPendingSignatureFile(null);
@@ -82,7 +87,7 @@ export default function StampPanel({
         input.signatureUrl = done.fileUrl;
         input.signatureFileKey = done.fileKey;
       }
-      await updateStamp.mutateAsync(input);
+      await updateStamp.mutateAsync({ ...input, ts: presence.ts });
       await queryClient.invalidateQueries({ queryKey: ["officer"] });
       onclose();
       setSuccessOpen(true);
@@ -107,6 +112,7 @@ export default function StampPanel({
   return (
     <>
       <div className="space-y-3 px-3 py-2">
+
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-ink">My stamp</p>
           <button

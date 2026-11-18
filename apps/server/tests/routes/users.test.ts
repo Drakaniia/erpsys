@@ -108,13 +108,14 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.session]: [],
     [COLLECTIONS.account]: [],
     [COLLECTIONS.notification]: [],
+    [COLLECTIONS.chatbotKnowledge]: [],
     [COLLECTIONS.verification]: [],
     [COLLECTIONS.stepVerification]: [],
     [COLLECTIONS.upload]: [],
     [COLLECTIONS.enrollmentQueue]: [],
     [COLLECTIONS.adviserDepartment]: [],
     [COLLECTIONS.adviserAvailability]: [],
-    [COLLECTIONS.chatbotKnowledge]: [],
+
   };
 }
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import type { SocialMediaLinkData } from "$lib/officer/types";
 import ConfirmDialog from "../ConfirmDialog";
 import EmptyState from "../ui/EmptyState";
@@ -15,7 +16,7 @@ export default function SocialMediaLinksPanel({
   data: SocialMediaLinkData[] | undefined;
   isLoading?: boolean;
   busy: boolean;
-  onsave: (name: string, url: string, id?: string) => void;
+  onsave: (name: string, url: string, id?: string, ts?: number) => Promise<boolean>;
   onremove: (id: string) => void;
   onreorder: (orderedIds: string[]) => void;
 }) {
@@ -27,6 +28,7 @@ export default function SocialMediaLinksPanel({
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
   const items = data ?? [];
+  const presence = useEditTimestamp("social-link", editingId !== "new" ? editingId : null, items.find((item) => item.id === editingId));
 
   function startAdd() {
     setNameInput("");
@@ -66,14 +68,15 @@ export default function SocialMediaLinksPanel({
     return true;
   }
 
-  function submit() {
+  async function submit() {
     if (!validate(nameInput, urlInput)) return;
-    onsave(
+    const saved = await onsave(
       nameInput.trim(),
       urlInput.trim(),
       editingId === "new" ? undefined : (editingId ?? undefined),
+      presence.ts,
     );
-    setEditingId(null);
+    if (saved) setEditingId(null);
   }
 
   function move(id: string, dir: -1 | 1) {
@@ -91,6 +94,7 @@ export default function SocialMediaLinksPanel({
 
   return (
     <div>
+
       {isLoading && data === undefined ? (
         <SocialLinksSkeleton />
       ) : items.length === 0 && editingId !== "new" ? (

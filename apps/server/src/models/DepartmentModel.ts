@@ -6,6 +6,8 @@ export type DepartmentRow = {
   name: string;
   isActive: boolean;
   yearLevels?: YearLevel[];
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
 };
 
 export class DepartmentModel {

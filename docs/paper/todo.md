@@ -77,7 +77,7 @@ placeholders in that file; do not renumber here without renumbering there.
 ## 5. Chapter 4 figures
 
 - [ ] **Table 4.1** CVSS findings — replace placeholders with the real assessment
-- [ ] **Figure 4.1** Physical deployment diagram — `4-1-physical.png`
+- [x] **Figure 4.1** Physical deployment diagram — `4-1-physical.png` (source `4-1-physical.svg`)
 - [ ] Network capture / scan evidence (ports, TLS, headers) — `4-2-scan.png`
 
 ## 6. API documentation figures

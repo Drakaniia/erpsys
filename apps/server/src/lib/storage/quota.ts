@@ -41,7 +41,7 @@ export function quotaExceededBody(message: string): {
   return { code: STORAGE_QUOTA_CODE, message };
 }
 
-export type MintGate = {
+type MintGate = {
   bytesStored: number;
   sizeBytes: number;
   quotaBytes?: number;
@@ -64,7 +64,7 @@ export function shouldBlockMint(
   return null;
 }
 
-export type StorageUsageDoc = {
+type StorageUsageDoc = {
   month: string;
   bytesStored: number;
   classAOps: number;
@@ -126,7 +126,7 @@ export async function addStoredBytes(
     .collection(STORAGE_USAGE_COLLECTION)
     .updateOne(
       { month },
-      { $set: { ...next, updatedAt: now } },
+      { $set: { ...next, updatedAt: now }, $setOnInsert: { createdAt: now } },
       { upsert: true },
     );
   return { ...next, updatedAt: now };
@@ -152,7 +152,7 @@ export async function incOps(
     .collection(STORAGE_USAGE_COLLECTION)
     .updateOne(
       { month },
-      { $set: { ...next, updatedAt: now } },
+      { $set: { ...next, updatedAt: now }, $setOnInsert: { createdAt: now } },
       { upsert: true },
     );
   return { ...next, updatedAt: now };
@@ -179,7 +179,7 @@ export async function reconcileUsage(
     .collection(STORAGE_USAGE_COLLECTION)
     .updateOne(
       { month },
-      { $set: { ...next, updatedAt: now } },
+      { $set: { ...next, updatedAt: now }, $setOnInsert: { createdAt: now } },
       { upsert: true },
     );
   return { usage: { ...next, updatedAt: now }, clamped: true, divergence };

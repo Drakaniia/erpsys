@@ -166,7 +166,8 @@ function seed(): Record<string, Row[]> {
         actorId: "adm1",
         action: "Created department",
         targetRef: "CT — College of Technologies",
-        at: new Date("2025-06-02T08:00:00Z"),
+        createdAt: new Date("2025-06-02T08:00:00Z"),
+        updatedAt: new Date("2025-06-02T08:00:00Z"),
       },
     ],
   };
@@ -240,6 +241,53 @@ describe("admin overview", () => {
       actorName: "Admin",
       at: "2025-06-02T08:00:00.000Z",
     });
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["null", null],
+    ["empty", ""],
+    ["malformed", "not-a-date"],
+    ["invalid Date", new Date(NaN)],
+    ["out of range", "999999-01-01T00:00:00Z"],
+    ["object", {}],
+    ["array", []],
+    ["number", 123],
+  ])("keeps admin activity with a %s timestamp without failing", async (_label, createdAt) => {
+    context.store[COLLECTIONS.adminActionLog]!.push({
+      _id: "log-invalid",
+      actorId: "adm1",
+      action: "Updated department",
+      targetRef: "dept-1",
+      ...(createdAt === undefined ? {} : { createdAt }),
+    });
+
+    for (const hasActiveYear of [true, false]) {
+      if (!hasActiveYear) context.store[COLLECTIONS.academicYear] = [];
+      const { status, body } = await call("/me/overview");
+      expect(status).toBe(200);
+      expect(body.data.recentActivity).toHaveLength(2);
+      expect(body.data.recentActivity).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: "log-invalid",
+          action: "Updated department",
+          actorName: "Admin",
+          at: "",
+        }),
+        expect.objectContaining({
+          id: "log-1",
+          at: "2025-06-02T08:00:00.000Z",
+        }),
+      ]));
+    }
+  });
+
+  it("accepts a parseable string timestamp in admin activity", async () => {
+    context.store[COLLECTIONS.adminActionLog]![0]!.createdAt =
+      "2025-06-02T16:00:00+08:00";
+    const { status, body } = await call("/me/overview");
+    expect(status).toBe(200);
+    expect(body.data.recentActivity[0].at).toBe("2025-06-02T08:00:00.000Z");
   });
 
   it("buckets the last fourteen campus days of queue joins and completions", async () => {

@@ -93,15 +93,32 @@ describe("dialogTrap", () => {
     expect(document.activeElement?.id).toBe("a");
   });
 
-  it("restores focus to the opener and stops listening on destroy", () => {
+  it("restores focus to the opener and stops listening on destroy", async () => {
     const onEscape = vi.fn();
     const { opener, destroy } = mount("<button>a</button>", { onEscape });
     destroy();
+    await Promise.resolve();
     expect(document.activeElement).toBe(opener);
     document.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Escape", cancelable: true }),
     );
     expect(onEscape).not.toHaveBeenCalled();
+  });
+
+  // Parents re-render with fresh callbacks (e.g. a 15s poll), which rebuilds
+  // the trap; focus must stay in the field the user is editing.
+  it("keeps focus in place when rebuilt for the same panel", async () => {
+    const { panel, opener, destroy } = mount(
+      "<button id='a'>a</button><input id='field' />",
+    );
+    document.getElementById("field")?.focus();
+    destroy();
+    const again = dialogTrap(panel);
+    await Promise.resolve();
+    expect(document.activeElement?.id).toBe("field");
+    again.destroy();
+    await Promise.resolve();
+    expect(document.activeElement).toBe(opener);
   });
 
   it("hands other keys to onKey and skips the trap when it claims one", () => {

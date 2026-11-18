@@ -1,5 +1,8 @@
 export const STUDENT_NUMBER_PATTERN = /^\d+$/;
 
+export const STUDENT_NUMBER_IN_USE_MESSAGE =
+  "That student number is already in use.";
+
 const INSTITUTIONAL_STUDENT_DOMAIN = "@student.buksu.edu.ph";
 
 export function deriveStudentNumberFromEmail(
@@ -20,7 +23,7 @@ export const STEP_CODES = [
   "CONSENT",
   "ENROLLMENT",
 ] as const;
-export type StepCode = (typeof STEP_CODES)[number];
+type StepCode = (typeof STEP_CODES)[number];
 
 export const PRE_ENROLLMENT_STEP_CODES = [
   "ASSESSMENT",
@@ -29,7 +32,6 @@ export const PRE_ENROLLMENT_STEP_CODES = [
   "MUGSHOT",
   "CONSENT",
 ] as const;
-export type PreEnrollmentStepCode = (typeof PRE_ENROLLMENT_STEP_CODES)[number];
 
 export const UPLOAD_STEP_CODES = [
   "SOCIAL_MEDIA",

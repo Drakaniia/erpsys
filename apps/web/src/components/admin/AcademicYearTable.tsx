@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ConfirmDialog from "../ConfirmDialog";
 import ActivateYearDialog from "./ActivateYearDialog";
@@ -76,6 +77,7 @@ export default function AcademicYearTable({
 
   // ---- Edit (active year only) ----
   const [editingId, setEditingId] = useState<string | null>(null);
+  const presence = useEditTimestamp("academic-year", editingId, years.find((y) => y.id === editingId));
   const [editLabel, setEditLabel] = useState("");
   const [editSemester, setEditSemester] = useState("");
   const [editError, setEditError] = useState("");
@@ -96,6 +98,7 @@ export default function AcademicYearTable({
     try {
       await updateMutation.mutateAsync({
         id: editingId,
+        ts: presence.ts,
         label: editLabel.trim(),
         semesterLabel: editSemester.trim(),
       });
@@ -136,6 +139,7 @@ export default function AcademicYearTable({
 
   return (
     <div className="flex flex-col gap-4">
+
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted">
           One active year at a time. Activating a new year resets students'
@@ -161,8 +165,8 @@ export default function AcademicYearTable({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-border bg-surface-raised">
-        <table className="w-full border-collapse text-sm">
+      <div className="apple-scrollbar overflow-x-auto rounded-xl border border-border bg-surface-raised">
+        <table className="w-full min-w-[560px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs font-medium text-muted">
               <th className="px-4 py-2 font-medium">Academic year</th>

@@ -1,6 +1,6 @@
 import { COLLECTIONS, getDbSync, refIn } from "../lib/db/db.js";
 
-export type AccountRow = {
+type AccountRow = {
   _id: string;
   userId: string;
   providerId: string;

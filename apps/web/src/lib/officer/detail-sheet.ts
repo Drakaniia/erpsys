@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import { api, queryClient } from "$lib/api";
 import { useStorageUpload } from "$lib/storage/use-storage-upload";
@@ -34,6 +35,7 @@ export function useDetailSheetState(
     }),
   );
 
+  const presence = useEditTimestamp("submission", verificationId, detailQuery.data);
   const verifyMutation = useMutation(api.officer.verifyStep.mutationOptions());
   const replyMutation = useMutation(api.officer.replyStep.mutationOptions());
   const revokeMutation = useMutation(api.officer.revokeStamp.mutationOptions());
@@ -138,7 +140,7 @@ export function useDetailSheetState(
   async function handleVerify() {
     await doVerify(
       verificationId,
-      verifyMutation,
+      { mutateAsync: (input) => verifyMutation.mutateAsync({ ...input, ts: presence.ts }) },
       stampQuery.data as never,
       (p) => {
         setLocalStatus(p.localStatus as StepStatus);
@@ -155,7 +157,7 @@ export function useDetailSheetState(
   async function handleReply(chips: string[], note: string) {
     await doReply(
       verificationId,
-      replyMutation,
+      { mutateAsync: (input) => replyMutation.mutateAsync({ ...input, ts: presence.ts }) },
       chips,
       note,
       officerName,
@@ -170,7 +172,7 @@ export function useDetailSheetState(
   async function handleRevoke() {
     await doRevoke(
       verificationId,
-      revokeMutation,
+      { mutateAsync: (input) => revokeMutation.mutateAsync({ ...input, ts: presence.ts }) },
       officerName,
       (patch) => {
         if (patch.localStatus) setLocalStatus(patch.localStatus as StepStatus);
@@ -185,7 +187,7 @@ export function useDetailSheetState(
     await doCapture(
       dataUrl,
       verificationId,
-      captureMutation,
+      { mutateAsync: (input) => captureMutation.mutateAsync({ ...input, ts: presence.ts }) },
       {
         uploadFile: async (file: File) => {
           const done = await uploadMugshot(file, {
@@ -209,6 +211,7 @@ export function useDetailSheetState(
 
   return {
     detailQuery,
+
     stampQuery,
     verifyMutation,
     replyMutation,

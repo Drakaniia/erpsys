@@ -4,11 +4,13 @@ export type UserRow = {
   _id: string;
   name?: string | null;
   email?: string;
+  emailVerified?: boolean;
   image?: string | null;
   role?: string;
   isOutsideOrg?: boolean;
   blockedAt?: Date | null;
   createdAt?: Date | null;
+  updatedAt?: Date | null;
   stampName?: string | null;
   stampGraphicUrl?: string | null;
   stampSignatureUrl?: string | null;
@@ -23,6 +25,7 @@ export class UserModel {
           _id: 1,
           name: 1,
           email: 1,
+          emailVerified: 1,
           role: 1,
           isOutsideOrg: 1,
           blockedAt: 1,
@@ -30,14 +33,6 @@ export class UserModel {
       });
   }
 
-  static async findByEmail(email: string): Promise<UserRow | null> {
-    return getDbSync()
-      .collection<UserRow>(COLLECTIONS.user)
-      .findOne(
-        { email: email.trim().toLowerCase() } as never,
-        { projection: { _id: 1, name: 1, email: 1, role: 1 } },
-      );
-  }
 
   static async findByIds(ids: string[]): Promise<UserRow[]> {
     if (ids.length === 0) return [];
@@ -110,14 +105,5 @@ export class UserModel {
     return result.matchedCount > 0;
   }
 
-  static async promoteToAdmin(id: string): Promise<void> {
-    await getDbSync()
-      .collection(COLLECTIONS.user)
-      .updateOne(
-        idIn([id]) as never,
-        {
-          $set: { role: "ADMIN", isOutsideOrg: false },
-        } as never,
-      );
-  }
+
 }

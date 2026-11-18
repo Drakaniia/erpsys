@@ -1,4 +1,5 @@
 import RoleChangeDialog from "./RoleChangeDialog";
+
 import DeleteAccountDialog from "./DeleteAccountDialog";
 import PurgeAccountDialog from "./PurgeAccountDialog";
 import type { UserItem } from "$lib/admin/types";
@@ -22,7 +23,11 @@ export default function UserRowDialogs({
   onCloseDelete,
   onClosePurge,
 }: {
-  roleDialog: { role: RoleLever; targets: UserItem[] } | null;
+  roleDialog: {
+    role: RoleLever;
+    targets: UserItem[];
+    excluded: number;
+  } | null;
   deleteDialog: { targets: UserItem[] } | null;
   purgeTarget: UserItem | null;
   busy: boolean;
@@ -39,18 +44,12 @@ export default function UserRowDialogs({
 }) {
   return (
     <>
+
       <RoleChangeDialog
         open={roleDialog !== null}
         role={roleDialog?.role ?? "SBO_OFFICER"}
         names={(roleDialog?.targets ?? []).map((t) => t.name)}
-        excludedCount={
-          roleDialog
-            ? roleDialog.targets.length -
-              (roleDialog.role === "SBO_OFFICER"
-                ? selectedPromotableCount
-                : selectedDemotableCount)
-            : 0
-        }
+        excludedCount={roleDialog?.excluded ?? 0}
         busy={busy}
         onconfirm={onConfirmRole}
         onclose={onCloseRole}

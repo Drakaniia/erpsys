@@ -2,7 +2,10 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { authClient } from "$lib/auth-client";
 import { homeRouteForRole } from "$lib/auth/redirect";
-import { googleSignInIntent } from "$lib/auth/google-sign-in";
+import {
+  googleSignInCallback,
+  googleSignInIntent,
+} from "$lib/auth/google-sign-in";
 import { isInternalPath } from "$lib/auth/completion-gate";
 
 /**
@@ -14,8 +17,8 @@ import { isInternalPath } from "$lib/auth/completion-gate";
  * offering to link them to themselves produced a dialog whose confirm always
  * failed. Gate on the LINKED PROVIDERS instead - see google-sign-in.ts.
  *
- * OAuth returns to `dest` when it is an internal path, otherwise to `/`, where
- * the root gate sends the account to the console its role owns.
+ * OAuth returns through `/loading`, which connects an instructor's Calendar
+ * when needed before sending the account to its internal destination or home.
  */
 export function useGoogleSignIn({
   dest,
@@ -39,9 +42,13 @@ export function useGoogleSignIn({
   async function signInWithGoogle() {
     if (googleBusy) return;
     setGoogleBusy(true);
-    sessionStorage.setItem("lastAuthProvider", "google");
+    try {
+      sessionStorage.setItem("lastAuthProvider", "google");
+    } catch {
+      /* storage blocked */
+    }
     const origin = window.location.origin;
-    const googleCb = `${origin}${isInternalPath(dest) ? dest : "/"}`;
+    const googleCb = `${origin}${googleSignInCallback(dest)}`;
 
     try {
       const currentSession = await authClient.getSession();
@@ -76,7 +83,11 @@ export function useGoogleSignIn({
       if (intent === "continue" && currentUser) {
         // Already authenticated with this identity - no OAuth round trip
         // and nothing to link. Send them where they were headed.
-        navigate(dest ?? homeRouteForRole(currentUser.role));
+        navigate(
+          googleSignInCallback(
+            isInternalPath(dest) ? dest : homeRouteForRole(currentUser.role),
+          ),
+        );
         return;
       }
 
@@ -96,7 +107,7 @@ export function useGoogleSignIn({
     if (!pendingGoogleUser.current) return;
 
     const origin = window.location.origin;
-    const linkCb = `${origin}${isInternalPath(dest) ? dest : "/"}`;
+    const linkCb = `${origin}${googleSignInCallback(dest)}`;
     const result = await authClient.linkSocial({
       provider: "google",
       callbackURL: linkCb,
@@ -113,7 +124,7 @@ export function useGoogleSignIn({
 
     setLinkDialogOpen(false);
     pendingGoogleUser.current = null;
-    navigate(`/loading?message=Account+linked+successfully…`);
+    navigate(`${googleSignInCallback(dest)}&message=Account+linked+successfully…`);
   }
 
   function handleLinkCancel() {

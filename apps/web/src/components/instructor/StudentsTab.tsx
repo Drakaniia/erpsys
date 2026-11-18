@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, queryClient } from "$lib/api";
 import { intervalWhileVisible } from "$lib/polling";
 import {
-  buildStudentFilterInput,
+
   buildStudentQuery,
   hasActiveStudentFilters,
   nextSortFor,
@@ -100,12 +100,12 @@ export default function StudentsTab({
       setParams(next, { replace: true, preventScrollReset: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [directoryQuery.isSuccess, yearsQuery.isSuccess]);
+  }, [directoryQuery.data, yearsQuery.data, scope, params]);
 
   const [cursor, setCursor] = useState<string | null>(null);
   const [rows, setRows] = useState<RosterRow[]>([]);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
-  const filterKey = JSON.stringify(buildStudentFilterInput(filters, scope));
+  const filterKey = JSON.stringify(buildStudentQuery(filters, { scope }));
   const lastFilterKey = useRef(filterKey);
 
   useEffect(() => {
@@ -148,9 +148,16 @@ export default function StudentsTab({
       setRows(data.data);
       return;
     }
-    if (lastAppended.current.has(cursor)) return;
+    if (lastAppended.current.has(cursor)) {
+      const fresh = new Map(data.data.map((row) => [row.studentProfileId, row]));
+      setRows((prev) => prev.map((row) => fresh.get(row.studentProfileId) ?? row));
+      return;
+    }
     lastAppended.current.add(cursor);
-    setRows((prev) => [...prev, ...data.data]);
+    setRows((prev) => {
+      const seen = new Set(prev.map((row) => row.studentProfileId));
+      return [...prev, ...data.data.filter((row) => !seen.has(row.studentProfileId))];
+    });
   }, [rosterPage, cursor]);
 
   const total = rosterPage?.total ?? null;

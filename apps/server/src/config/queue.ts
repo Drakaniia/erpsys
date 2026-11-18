@@ -6,7 +6,7 @@ import {
   type YearLevel,
 } from "./constants.js";
 
-export const LINE_STATUSES = ["WAITING", "IN_PROGRESS"];
+const LINE_STATUSES = ["WAITING", "IN_PROGRESS"];
 
 export type AvailabilityRow = {
   adviserId: string;
@@ -20,7 +20,7 @@ export type ServingRow = {
   servedById?: string | null;
 };
 
-export type AdviserLevelRow = {
+type AdviserLevelRow = {
   adviserId: string;
   departmentId: string;
   yearLevels?: readonly YearLevel[];

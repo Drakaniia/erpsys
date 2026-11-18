@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation } from "@tanstack/react-query";
 import ReplyNotice from "./ReplyNotice";
 import StampDisplay from "./StampDisplay";
@@ -18,12 +19,13 @@ export default function AssessmentSheet({
   const busy = applyMutation.isPending;
 
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const presence = useEditTimestamp("submission", confirmOpen ? "me~ASSESSMENT" : null, step);
   const [applyError, setApplyError] = useState<string | null>(null);
 
   async function apply() {
     setApplyError(null);
     try {
-      await applyMutation.mutateAsync({});
+      await applyMutation.mutateAsync({ ts: presence.ts });
       setConfirmOpen(false);
       queryClient.invalidateQueries({ queryKey: ["student"] });
       notify("Application received — awaiting officer review");
@@ -39,6 +41,7 @@ export default function AssessmentSheet({
   return (
     <>
       <div className="flex flex-col gap-4">
+
         {step.reply ? <ReplyNotice reply={step.reply} /> : null}
 
         {step.status === "VERIFIED" ? (
@@ -156,7 +159,10 @@ export default function AssessmentSheet({
             tabIndex={-1}
             className="w-full max-w-sm rounded-2xl border border-border bg-surface-raised p-5 shadow-[0_16px_40px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.06)]"
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Escape") setConfirmOpen(false);
+            }}
           >
             <h3 className="text-base font-semibold tracking-tight text-ink">
               Apply for assessment?
@@ -191,6 +197,7 @@ export default function AssessmentSheet({
             <div className="mt-4 flex gap-2">
               <button
                 type="button"
+                autoFocus
                 onClick={() => setConfirmOpen(false)}
                 className="flex h-11 flex-1 items-center justify-center rounded-xl border border-border bg-surface text-sm font-semibold text-ink transition-[transform,background-color] duration-100 ease-out active:scale-[0.97]"
               >

@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+
 import { useIntegrations } from "$lib/integrations/use-integrations";
 import { absoluteTime } from "$lib/officer/format";
 import { useFormEditorWindow } from "$lib/officer/form-editor-window";
@@ -42,6 +43,7 @@ export default function ProfilingFormPanel({
   const { flags } = useIntegrations();
   const formsEnabled = flags.googleForms;
   const editor = useFormEditorWindow(data?.editUrl);
+
 
   if (isLoading && !data) return <ProfilingFormSkeleton />;
   if (!hasActiveYear) {
@@ -100,6 +102,7 @@ export default function ProfilingFormPanel({
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface-raised p-4">
+
       <div>
         <p className="text-[15px] font-semibold text-ink">{data.title}</p>
         <p className="text-xs text-muted">

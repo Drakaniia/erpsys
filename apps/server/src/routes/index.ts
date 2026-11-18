@@ -1,4 +1,5 @@
 import { Router } from "express";
+
 import { academicYearsRouter } from "./academic-years/index.js";
 import { advisersRouter } from "./advisers/index.js";
 import { auditLogsRouter } from "./audit-logs/index.js";
@@ -24,6 +25,7 @@ import { usersRouter } from "./users/index.js";
  * `/api/v1` — every resource router mounts here exactly once, in this order.
  */
 export const v1Router = Router();
+
 
 v1Router.use(academicYearsRouter);
 v1Router.use(requirementsRouter);

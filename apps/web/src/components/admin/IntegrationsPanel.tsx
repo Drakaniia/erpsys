@@ -7,6 +7,7 @@ import EmptyState from "../ui/EmptyState";
 import IntegrationCredentialsEditor from "./IntegrationCredentialsEditor";
 import IntegrationSetupGuide, { setupGuideFor } from "./IntegrationSetupGuide";
 import CoreConfigSection from "./CoreConfigSection";
+import AuthenticatorSection from "./AuthenticatorSection";
 import { relativeTime } from "$lib/officer/format";
 import { queryClient } from "$lib/api";
 import {
@@ -14,6 +15,7 @@ import {
   useExportCredentials,
   useSetIntegration,
   type AdminIntegrationRow,
+  type AuthFeature,
   type IntegrationKey,
 } from "$lib/integrations/use-integrations";
 
@@ -24,16 +26,18 @@ const RESTART_COMMAND = "sudo systemctl restart erpsys";
 
 const SELECTED_PARAM = "integration";
 
-type StatusTone = "live" | "restart" | "missing" | "off";
+type StatusTone = "live" | "core" | "restart" | "missing" | "off";
 
 const STATUS_LABEL: Record<StatusTone, string> = {
   live: "Live",
+  core: "Always on",
   restart: "Restart to apply",
   missing: "Needs credentials",
   off: "Off",
 };
 
 function statusOf(row: AdminIntegrationRow): StatusTone {
+  if (row.locked) return row.configured ? "core" : "missing";
   if (!row.enabled) return "off";
   if (row.pendingRestart) return "restart";
   if (!row.configured) return "missing";
@@ -41,7 +45,11 @@ function statusOf(row: AdminIntegrationRow): StatusTone {
 }
 
 function defaultKey(rows: AdminIntegrationRow[]): IntegrationKey {
-  return (rows.find((row) => statusOf(row) !== "live") ?? rows[0]).key;
+  return (rows.find((row) => !isLive(statusOf(row))) ?? rows[0]).key;
+}
+
+function isLive(tone: StatusTone): boolean {
+  return tone === "live" || tone === "core";
 }
 
 /**
@@ -163,7 +171,7 @@ export default function IntegrationsPanel({
     );
   }
 
-  const liveCount = rows.filter((row) => statusOf(row) === "live").length;
+  const liveCount = rows.filter((row) => isLive(statusOf(row))).length;
   const pending = rows.filter((row) => row.pendingRestart);
   const bootFailed = rows.some((row) => row.overridesLoaded === false);
   // Below lg the list and the detail are separate screens; an explicit
@@ -255,6 +263,7 @@ export default function IntegrationsPanel({
         </div>
       </div>
 
+
       <CoreConfigSection />
     </div>
   );
@@ -262,7 +271,7 @@ export default function IntegrationsPanel({
 
 /** Shape as well as colour, so the four states survive greyscale. */
 function StatusMark({ tone }: { tone: StatusTone }) {
-  if (tone === "live") {
+  if (tone === "live" || tone === "core") {
     return (
       <span
         aria-hidden="true"
@@ -387,11 +396,12 @@ function IntegrationDetail({
         </div>
         <div className="flex shrink-0 items-center gap-2.5 sm:pt-1">
           <span className="text-sm font-medium text-ink" aria-hidden="true">
-            {row.enabled ? "On" : "Off"}
+            {row.locked ? "Always on" : row.enabled ? "On" : "Off"}
           </span>
           <AppleSwitch
             checked={row.enabled}
             ariaLabel={`${row.label}, currently ${row.enabled ? "enabled" : "disabled"}`}
+            disabled={row.locked}
             busy={busy}
             onchange={onflip}
           />
@@ -444,6 +454,10 @@ function IntegrationDetail({
           defaultOpen={!row.configured}
         />
 
+        <AuthFeatures row={row} />
+
+        {row.key === "betterAuth" ? <AuthenticatorSection /> : null}
+
         <section aria-labelledby={`${headingId}-credentials`}>
           <h3
             id={`${headingId}-credentials`}
@@ -459,12 +473,55 @@ function IntegrationDetail({
               saving this token.
             </p>
           ) : null}
-          <IntegrationCredentialsEditor row={row} />
+          {row.locked ? (
+            <p className="mt-1 text-sm leading-relaxed text-pretty text-muted">
+              It has no credentials of its own. The signing secret and the
+              public URL are deployment env values
+              (<code>BETTER_AUTH_SECRET</code>, <code>BETTER_AUTH_URL</code>),
+              so they can't be edited or exported from here.
+            </p>
+          ) : (
+            <IntegrationCredentialsEditor row={row} />
+          )}
         </section>
       </div>
     </article>
   );
 }
+
+/** The always-on core: one status line per sign-in and unlock part. */
+function AuthFeatures({ row }: { row: AdminIntegrationRow }) {
+  const features = row.features ?? [];
+  if (features.length === 0) return null;
+  return (
+    <section>
+      <h3 className="text-sm font-medium text-ink">Status</h3>
+      <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+        {features.map((feature) => (
+          <li key={feature.key} className="flex flex-col gap-1 px-3 py-2.5">
+            <span className="flex flex-wrap items-baseline justify-between gap-x-3">
+              <span className="text-sm text-ink">{feature.label}</span>
+              <span
+                className={`text-xs ${feature.state === "on" ? "text-muted" : "text-warning"}`}
+              >
+                {FEATURE_STATE[feature.state]}
+              </span>
+            </span>
+            <span className="text-xs leading-relaxed text-pretty text-muted">
+              {feature.note}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+const FEATURE_STATE: Record<AuthFeature["state"], string> = {
+  on: "On",
+  limited: "Limited",
+  off: "Off",
+};
 
 function PanelSkeleton() {
   return (

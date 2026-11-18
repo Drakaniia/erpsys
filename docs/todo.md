@@ -165,3 +165,53 @@ github Name: Melvis Alfonse Palmares
 ‎github email: bogythegreat@gmail.com
 
 and radomize the commit date starting from october 1 up to now
+
+
+ISSUE IN THE FINAL PAPER, DONT MENTION SYTEM FILES LIKE "(apps/server/src/routes/storage/index.ts)." OR "ENROLLMENT_ADVISER" REMOVE EVEYWHERE,
+
+SPLIT THE API DODCUMENTATION AND CHAPTERS 1-5
+
+Definition of Terms IS WRONG,  REFER TO THE @Collab Final Project Documentation.REFERENCE.pdf  TERMS LIKE THE  API, CONCURRENCY, RBACC, JWT  ETC..
+
+
+IN THE 2.2.1 , REMOVE THE 1ST COLUMN
+
+FOR THE 2.2.2 REMOVE THE VERIFICATION COLUMN
+
+THE 2.2.4 System Interface and Execution IS WRONG, REFER TO THE REFERENCE,
+
+IN THE 3.5. Integration Strategies, ITS WRONG, DONT TABLE IT, YOU CAN BULLET IT (A,B,C), WITHT ROLE, BENEFIT, AND COLCLUSION
+
+DONT MENTION NGINX EVERYWHERE
+
+MAKE SURE EVERYTHING ESPECIALLY IN CHAPTER 5 IN LEYMANS TERM
+
+the first step we missed is we should make a normalized version of the database in sql tables, we make 1st normal form to the 3rd or final normal form. but we skip it.. can we create a sql version first based on the prblem statement or the system itselt. look for duplication, and not needed tables, we make the collections as simple possible and minimal tables  that has created at and updated at in each collections
+
+database backup
+
+admin can change role to admin also, not just one
+
+security policy document in page
+
+
+backup
+
+add created at and updated at in all collections, with all that has edit
+
+database concurency, add array  when two person editing, bot can edit but only one is saved. not just in the middleware
+
+timestamp. when two person editing, not just timestamp.ts  make it two array in the databse. meaning is it like timsetamp concurency control?  it should be displayed array with two user editing and
+
+add only 1 ip access list
+
+in the database.. 
+
+add sir Gil in Mongodb Database
+
+rate limiting and ui.  so user dont spam login
+
+
+smiplify collections, drop duplicate, make some in local session instead of storing in collections, make collections simple as possible 
+
+in chatbot knowledge page.  remove the preview and the markdown. maek it real editor whithout needing the markdown..  add new buttons like list unorder list, bold, underline, itallic , bold, h1 h2 or h3. all

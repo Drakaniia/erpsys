@@ -7,14 +7,12 @@ export default function UserTableRow({
   myId,
   selected,
   onToggle,
-  onSelectRow,
   admin,
 }: {
   item: any;
   myId: string;
   selected: boolean;
   onToggle: (id: string) => void;
-  onSelectRow: (id: string) => void;
   admin: any;
 }) {
   const isMe = item.id === myId;
@@ -24,8 +22,7 @@ export default function UserTableRow({
     <tr
       key={item.id}
       className={`h-[52px] ${selected ? "bg-primary/5" : "hover:bg-surface"}`}
-      onClick={() => onSelectRow(item.id)}
-      aria-selected={selected}
+
     >
       <td className="px-4">
         <input

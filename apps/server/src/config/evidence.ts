@@ -1,4 +1,4 @@
-export const DRAFT_EVIDENCE_TTL_MS = 24 * 60 * 60 * 1000;
+const DRAFT_EVIDENCE_TTL_MS = 24 * 60 * 60 * 1000;
 
 export const DRAFT_EVIDENCE_KINDS = [
   "SOCIAL_SCREENSHOT",

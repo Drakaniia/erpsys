@@ -7,9 +7,11 @@ export type ClientRoute = {
   path: string;
   update?: { method: ClientRoute["method"]; path: string };
   list?: boolean;
+  serverTimestamp?: boolean;
 };
 
 export const ROUTES = {
+
   me: {
     // The aggregate launch read — one round trip for the landing surface.
     getLaunch: { method: "GET", path: "/api/v1/me/launch" },
@@ -19,7 +21,8 @@ export const ROUTES = {
   },
   notifications: {
     listMine: { method: "GET", path: "/api/v1/me/notifications", list: true },
-    markAllRead: { method: "POST", path: "/api/v1/me/notifications/read" },
+
+
   },
   admin: {
     getOverview: { method: "GET", path: "/api/v1/me/overview" },
@@ -116,9 +119,21 @@ export const ROUTES = {
       method: "DELETE",
       path: "/api/v1/integrations/:key/credentials",
     },
+    validateIntegrationCredentials: {
+      method: "POST",
+      path: "/api/v1/integrations/:key/credentials/validate",
+    },
     exportIntegrationCredentials: {
       method: "GET",
       path: "/api/v1/integrations/credentials/export",
+    },
+    listAuthenticators: {
+      method: "GET",
+      path: "/api/v1/integrations/authenticators",
+    },
+    resetAuthenticator: {
+      method: "DELETE",
+      path: "/api/v1/integrations/authenticators/:userId",
     },
   },
   student: {
@@ -181,10 +196,12 @@ export const ROUTES = {
     respondDepartmentTransfer: {
       method: "PATCH",
       path: "/api/v1/transfers/:id",
+      serverTimestamp: true,
     },
     cancelDepartmentTransfer: {
       method: "DELETE",
       path: "/api/v1/transfers/:id",
+      serverTimestamp: true,
     },
     getMyQueues: { method: "GET", path: "/api/v1/queues" },
     getEnrolledByDept: {

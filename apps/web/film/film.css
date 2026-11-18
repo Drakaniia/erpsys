@@ -1,0 +1,7 @@
+@import '../src/app.css';
+@source '../src';
+.film-app *, .film-app *::after, .film-app *::before { animation-duration: 0s !important; animation-delay: 0s !important; transition-duration: 0s !important; scroll-behavior: auto !important; caret-color: transparent; }
+.film-app :focus-visible { outline: none; }
+.film-app { scrollbar-width: none; }
+.film-app *::-webkit-scrollbar { display:none; }
+.film-app .confetti-piece { display:none; }

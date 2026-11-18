@@ -1,4 +1,4 @@
-export type ApiErrorOptions = {
+type ApiErrorOptions = {
   message?: string;
   cause?: unknown;
   data?: unknown;

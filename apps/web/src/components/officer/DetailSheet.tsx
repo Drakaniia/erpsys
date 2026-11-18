@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import DetailSheetMain from "./DetailSheetMain";
+
 import EvidenceLightbox from "./EvidenceLightbox";
 import Skeleton from "../ui/Skeleton";
 import { useDetailSheetState } from "$lib/officer/detail-sheet";
@@ -157,6 +158,7 @@ export default function DetailSheet({
         >
           <div className="h-1 w-8 rounded-full bg-border/60"></div>
         </div>
+
         {ds.detailQuery.isPending && !ds.data ? (
           <div className="px-5 py-4" aria-hidden="true">
             <div className="flex items-start gap-3 border-b border-border pb-4">

@@ -4,6 +4,8 @@ import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COLLECTIONS } from "../../src/lib/db/db.js";
 import { errorHandler } from "../../src/middleware/errorHandler.js";
+import { timestampOrdering } from "../../src/middleware/timestamp.js";
+import { guardDb, nextTs } from "../../src/lib/db/timestamp-ordering.js";
 import { notFoundHandler } from "../../src/middleware/notFound.js";
 import { v1Router } from "../../src/routes/index.js";
 import { fakeDb, type Row } from "../helpers/fakeDb.js";
@@ -71,7 +73,7 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.stepVerification]: [],
     [COLLECTIONS.upload]: [],
     [COLLECTIONS.storageUsage]: [],
-    [COLLECTIONS.integrationSetting]: [],
+
     [COLLECTIONS.user]: [
       {
         _id: "stud1",
@@ -86,7 +88,7 @@ function seed(): Record<string, Row[]> {
 async function serve(): Promise<{ url: string; close: () => Promise<void> }> {
   const app = express();
   app.use(express.json());
-  app.use("/api/v1", v1Router);
+  app.use("/api/v1", timestampOrdering, v1Router);
   app.use(notFoundHandler);
   app.use(errorHandler);
   const server = app.listen(0);
@@ -107,7 +109,7 @@ beforeEach(async () => {
   holder.deleted = 0;
   holder.download = null;
   context = fakeDb(seed());
-  holder.db = context.db;
+  holder.db = guardDb(context.db as never);
   vi.spyOn(console, "log").mockImplementation(() => {});
   server = await serve();
 });
@@ -185,6 +187,43 @@ describe("storage session", () => {
       size: 1000,
     });
     expect(response.status).toBe(403);
+  });
+});
+
+describe("proof upload and submission timestamps", () => {
+  it("uses a fresh transaction to review proof uploaded after the sheet opened", async () => {
+    const sheetTs = nextTs();
+    const session = await mint({
+      route: "evidenceImage", stepCode: "MUGSHOT", mime: "image/jpeg", size: 1000,
+    });
+    expect(session.status).toBe(201);
+    const { data } = await session.json();
+    const completed = await call("/storage/complete", {
+      method: "POST", body: JSON.stringify({ uploadId: data.uploadId }),
+    });
+    expect(completed.status).toBe(200);
+
+    // The old sheet snapshot predates the proof the student just uploaded.
+    const stale = await call("/me/steps/MUGSHOT/submission", {
+      method: "POST", body: JSON.stringify({ ts: sheetTs }),
+    });
+    expect(stale.status).toBe(409);
+    expect((await stale.json()).data.code).toBe("TS_ABORTED");
+    expect(context.store[COLLECTIONS.stepVerification]).toHaveLength(0);
+
+    const submitted = await call("/me/steps/MUGSHOT/submission", { method: "POST" });
+    expect(submitted.status).toBe(201);
+    expect((await submitted.json()).data.evidence).toEqual([
+      expect.objectContaining({ id: data.uploadId, kind: "MUGSHOT" }),
+    ]);
+    expect(context.store[COLLECTIONS.stepVerification][0]).toMatchObject({
+      status: "SUBMITTED", evidence: { uploadIds: [data.uploadId] },
+    });
+
+    context.store[COLLECTIONS.stepVerification][0].status = "VERIFIED";
+    const locked = await call("/me/steps/MUGSHOT/submission", { method: "POST" });
+    expect(locked.status).toBe(409);
+    expect((await locked.json()).error).toBe("This step is already verified.");
   });
 });
 

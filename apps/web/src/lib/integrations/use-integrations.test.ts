@@ -71,6 +71,7 @@ describe("useIntegrations", () => {
     });
     expect(result.current.pending).toBe(true);
     expect(result.current.flags).toEqual({
+      betterAuth: true,
       turnstile: true,
       r2: true,
       googleAuth: true,

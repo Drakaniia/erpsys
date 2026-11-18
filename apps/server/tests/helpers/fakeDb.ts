@@ -20,6 +20,10 @@ function matchesValue(rowValue: unknown, filterValue: unknown): boolean {
     !Array.isArray(filterValue)
   ) {
     const operator = filterValue as Record<string, unknown>;
+    if ("$elemMatch" in operator) {
+      return Array.isArray(rowValue) && rowValue.some((item) => matches(item as Row, operator.$elemMatch as Row));
+    }
+    if ("$size" in operator) return Array.isArray(rowValue) && rowValue.length === operator.$size;
     if (Array.isArray(operator.$in)) {
       return operator.$in.some((value) => String(value) === String(rowValue));
     }
@@ -167,6 +171,7 @@ export function fakeDb(seed: Record<string, Row[]>) {
           return { ...row };
         },
         insertOne: async (doc: Row) => {
+          if (rows.some((row) => row._id === doc._id)) throw Object.assign(new Error("Duplicate _id"), { code: 11000 });
           rows.push({ ...doc });
           return { insertedId: doc._id };
         },

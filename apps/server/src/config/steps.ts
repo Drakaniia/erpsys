@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { STEP_CODES, UPLOAD_STEP_CODES } from "./constants.js";
+import { UPLOAD_STEP_CODES } from "./constants.js";
 
 export const KIND_FOR_STEP: Record<string, string> = {
   SOCIAL_MEDIA: "SOCIAL_SCREENSHOT",
@@ -10,7 +10,7 @@ export const KIND_FOR_STEP: Record<string, string> = {
 
 export const uploadStepCodeSchema = z.enum(UPLOAD_STEP_CODES);
 
-export type ChipTone = "success" | "warning" | "info" | "muted";
+type ChipTone = "success" | "warning" | "info" | "muted";
 
 export function chipForStatus(status: string): {
   label: string;
@@ -38,7 +38,7 @@ const STEP_HINTS: Record<string, string> = {
   CONSENT: "Upload signed papers",
 };
 
-export type StepHintContext = {
+type StepHintContext = {
   readyForQueue: boolean;
   queueStatus: string | null;
   hasProfilingForm: boolean;
@@ -67,16 +67,6 @@ export function stepHintFor(
   return STEP_HINTS[code] ?? "";
 }
 
-export function progressOf(statuses: readonly string[]): {
-  verifiedCount: number;
-  progressPercent: number;
-} {
-  const verifiedCount = statuses.filter((s) => s === "VERIFIED").length;
-  return {
-    verifiedCount,
-    progressPercent: Math.round((verifiedCount / STEP_CODES.length) * 100),
-  };
-}
 
 export function evidenceUploadIds(evidence: unknown): string[] {
   if (!evidence || typeof evidence !== "object") return [];

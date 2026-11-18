@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { YEAR_LEVEL_LABELS, type YearLevel } from "$lib/domain/constants";
 import {
@@ -34,6 +35,7 @@ export default function StudentYearLevel({ data }: { data: MyStepsData }) {
   const offeredLevels = offeredYearLevels(courseOption);
 
   const [levelModalOpen, setLevelModalOpen] = useState(false);
+  const presence = useEditTimestamp("student-enrollment", levelModalOpen ? "me" : null, data);
   const [levelError, setLevelError] = useState<string | null>(null);
   const saveLevelMutation = useMutation(
     api.student.saveEnrollment.mutationOptions(),
@@ -52,6 +54,7 @@ export default function StudentYearLevel({ data }: { data: MyStepsData }) {
     try {
       await saveLevelMutation.mutateAsync({
         academicYearId,
+        ts: presence.ts,
         // The course is not editable here — the Profile tab owns that. Sending
         // the existing one keeps this a single-field edit rather than a second
         // place where a course can be changed.
@@ -73,6 +76,7 @@ export default function StudentYearLevel({ data }: { data: MyStepsData }) {
 
   return (
     <>
+
       <button
         type="button"
         onClick={() => setLevelModalOpen(true)}

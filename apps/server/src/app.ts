@@ -2,7 +2,6 @@ import express, { type Express } from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { env, webOrigins } from "./lib/platform/env.js";
-import { requestLogMiddleware } from "./lib/platform/request-log.js";
 import { restRateLimit } from "./lib/platform/rate-limit.js";
 import { auditTrail } from "./middleware/audit.js";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -12,11 +11,11 @@ import { timestampOrdering } from "./middleware/timestamp.js";
 import { authRouter } from "./routes/auth/index.js";
 import { chatRouter } from "./routes/chat/index.js";
 import { v1Router } from "./routes/index.js";
-import { systemRouter } from "./routes/system/index.js";
 
 export function buildApp(): Express {
   const app = express();
   app.set("trust proxy", 1);
+  app.disable("x-powered-by");
 
   const allowedOrigins = webOrigins();
   if (allowedOrigins.length > 0) {
@@ -43,13 +42,13 @@ export function buildApp(): Express {
     });
   }
 
-  app.use(requestLogMiddleware);
-
-  app.use(systemRouter);
+  app.get("/api/health", (_req, res) => {
+    res.json({ ok: true });
+  });
   app.use("/api/auth", authRouter);
   app.use("/api", chatRouter);
 
-  app.use(express.json());
+  app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true }));
 
   app.use("/api", restRateLimit);
@@ -74,9 +73,8 @@ export function buildApp(): Express {
   app.use(notFoundHandler);
   if (env.SERVE_WEB) {
     app.get("/{*splat}", spaFallback);
-  } else {
-    app.use((_req, res) => res.status(404).json({ error: "Not found." }));
   }
+  app.use((_req, res) => res.status(404).json({ error: "Not found." }));
 
   app.use(errorHandler);
   return app;

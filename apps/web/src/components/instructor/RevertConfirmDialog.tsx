@@ -55,9 +55,9 @@ export default function RevertConfirmDialog({
     if (!open) return;
     const panel = panelRef.current;
     if (!panel) return;
-    const trap = dialogTrap(panel, { onEscape: onclose });
+    const trap = dialogTrap(panel, { onEscape: () => { if (!busy) onclose(); } });
     return () => trap.destroy();
-  }, [open, onclose]);
+  }, [open, busy, onclose]);
 
   if (!presence.mounted) return null;
 
@@ -73,10 +73,7 @@ export default function RevertConfirmDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="revert-dialog-title"
-      onClick={onclose}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onclose();
-      }}
+      onClick={() => { if (!busy) onclose(); }}
     >
       <div
         ref={panelRef}
@@ -183,7 +180,7 @@ export default function RevertConfirmDialog({
               bulk ? "Reason for bulk revert" : "Reason for reverting"
             }
             aria-required="true"
-            className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
+            className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
           />
           <div className="mt-1 flex items-center justify-between">
             <p

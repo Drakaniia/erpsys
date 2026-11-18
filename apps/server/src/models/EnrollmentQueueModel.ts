@@ -10,6 +10,8 @@ export type QueueEntryRow = {
   servedAt?: Date | null;
   completedAt?: Date | null;
   servedById?: string | null;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
 };
 
 export class EnrollmentQueueModel {
@@ -63,23 +65,19 @@ export class EnrollmentQueueModel {
       } as never);
   }
 
-  static async updateById(
-    id: string,
-    patch: Record<string, unknown>,
-  ): Promise<void> {
-    await getDbSync()
-      .collection(COLLECTIONS.enrollmentQueue)
-      .updateOne(idIn([id]) as never, { $set: patch } as never);
-  }
 
   static async transition(
     id: string,
     from: string,
     patch: Record<string, unknown>,
+    servedById?: string,
   ): Promise<boolean> {
     const result = await getDbSync()
       .collection(COLLECTIONS.enrollmentQueue)
-      .updateOne({ _id: id, status: from } as never, { $set: patch } as never);
+      .updateOne(
+        { _id: id, status: from, ...(servedById !== undefined ? { servedById } : {}) } as never,
+        { $set: patch } as never,
+      );
     return (result.matchedCount ?? 0) > 0;
   }
 
@@ -161,11 +159,6 @@ export class EnrollmentQueueModel {
       .toArray();
   }
 
-  static async deleteById(id: string): Promise<void> {
-    await getDbSync()
-      .collection(COLLECTIONS.enrollmentQueue)
-      .deleteOne(idIn([id]) as never);
-  }
 
   static async listForYear(
     academicYearId: string,
@@ -185,12 +178,6 @@ export class EnrollmentQueueModel {
       .toArray();
   }
 
-  static async deleteByIds(ids: string[]): Promise<void> {
-    if (ids.length === 0) return;
-    await getDbSync()
-      .collection(COLLECTIONS.enrollmentQueue)
-      .deleteMany({ _id: { $in: [...new Set(ids)] } } as never);
-  }
 
   static async listByStatus(
     departmentIds: string[],
@@ -244,7 +231,7 @@ export class EnrollmentQueueModel {
     return rows[0] ?? null;
   }
 
-  /** Return every student this adviser is serving outside `keepDepartmentIds`. */
+
   static async releaseServingExcept(
     adviserId: string,
     keepDepartmentIds: string[],
@@ -266,12 +253,14 @@ export class EnrollmentQueueModel {
   static async releaseServingBy(
     departmentId: string,
     adviserId: string,
+    academicYearId?: string,
   ): Promise<void> {
     await getDbSync()
       .collection(COLLECTIONS.enrollmentQueue)
       .updateMany(
         {
           departmentId,
+          ...(academicYearId !== undefined ? { academicYearId } : {}),
           status: "IN_PROGRESS",
           servedById: adviserId,
         } as never,

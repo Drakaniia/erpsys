@@ -3,6 +3,8 @@ import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COLLECTIONS } from "../../src/lib/db/db.js";
 import { errorHandler } from "../../src/middleware/errorHandler.js";
+import { timestampOrdering } from "../../src/middleware/timestamp.js";
+import { guardDb } from "../../src/lib/db/timestamp-ordering.js";
 import { v1Router } from "../../src/routes/index.js";
 import { fakeDb, type Row } from "../helpers/fakeDb.js";
 
@@ -10,6 +12,7 @@ const holder = vi.hoisted(() => ({
   session: null as unknown,
   db: null as unknown,
   r2Client: null as unknown,
+  r2Deletes: [] as unknown[],
   responses: [] as unknown[],
 }));
 
@@ -25,8 +28,12 @@ vi.mock("../../src/lib/storage/configured-client.js", () => ({
   configuredR2Client: () => holder.r2Client,
 }));
 vi.mock("../../src/lib/storage/client.js", () => ({
-  deleteR2Object: () => new Promise<void>(() => {}),
+  deleteR2Object: (_client: unknown, target: unknown) => {
+    holder.r2Deletes.push(target);
+    return new Promise<void>(() => {});
+  },
 }));
+
 vi.mock("../../src/lib/google/forms.js", () => ({
   readForm: async () => ({
     items: [
@@ -85,14 +92,14 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.upload]: [],
     [COLLECTIONS.notification]: [],
     [COLLECTIONS.studentEnrollment]: [],
-    [COLLECTIONS.profilingForm]: [],
+
   };
 }
 
 async function serve(): Promise<{ url: string; close: () => Promise<void> }> {
   const app = express();
   app.use(express.json());
-  app.use("/api/v1", v1Router);
+  app.use("/api/v1", timestampOrdering, v1Router);
   app.use(errorHandler);
   const server = app.listen(0);
   await new Promise<void>((resolve) => server.once("listening", resolve));
@@ -109,8 +116,9 @@ let server: { url: string; close: () => Promise<void> };
 beforeEach(async () => {
   holder.session = STUDENT;
   holder.r2Client = null;
+  holder.r2Deletes = [];
   context = fakeDb(seed());
-  holder.db = context.db;
+  holder.db = guardDb(context.db as never);
   vi.spyOn(console, "error").mockImplementation(() => {});
   server = await serve();
 });
@@ -165,6 +173,7 @@ describe("evidence uploads", () => {
   it("answers without waiting on the R2 object delete", async () => {
     const created = await (await upload("MUGSHOT")).json();
     const id = created.data.evidence[0].id;
+    context.store[COLLECTIONS.upload][0]!.backend = "r2";
     holder.r2Client = {};
 
     let timer: NodeJS.Timeout;
@@ -181,6 +190,34 @@ describe("evidence uploads", () => {
 
     expect(response.status).toBe(200);
     expect(context.store[COLLECTIONS.upload]).toHaveLength(0);
+  });
+
+  // A client-supplied fileKey can name any object in the bucket; only rows the
+  // storage flow finalized (backend r2) may reach the R2 delete.
+  it("never deletes an R2 object for a client-registered key", async () => {
+    const created = await (await upload("MUGSHOT")).json();
+    holder.r2Client = {};
+    const response = await call(`/evidence/${created.data.evidence[0].id}`, {
+      method: "DELETE",
+    });
+    expect(response.status).toBe(200);
+    expect(holder.r2Deletes).toHaveLength(0);
+  });
+
+  it("refuses to delete an upload that backs a verified step", async () => {
+    const created = await (await upload("MUGSHOT")).json();
+    const id = created.data.evidence[0].id;
+    context.store[COLLECTIONS.stepVerification].push({
+      _id: "v-4",
+      studentProfileId: "profile-1",
+      stepId: "step-4",
+      academicYearId: "ay-1",
+      status: "VERIFIED",
+      evidence: { uploadIds: [id] },
+    });
+    const response = await call(`/evidence/${id}`, { method: "DELETE" });
+    expect(response.status).toBe(409);
+    expect(context.store[COLLECTIONS.upload]).toHaveLength(1);
   });
 
   it("answers 404 for someone else's upload", async () => {
@@ -305,12 +342,10 @@ describe("step submission", () => {
 
     beforeEach(() => {
       holder.responses = [];
-      context.store[COLLECTIONS.profilingForm].push({
-        _id: "form-1",
-        academicYearId: "ay-1",
+      context.store[COLLECTIONS.academicYear][0].profilingForm = {
         formId: "gf-1",
         responderUri: "https://docs.google.com/forms/d/e/gf-1/viewform",
-      });
+      };
     });
 
     it("stores the student's latest response as labelled answers", async () => {
@@ -350,7 +385,7 @@ describe("step submission", () => {
     });
 
     it("needs a form to be set up", async () => {
-      context.store[COLLECTIONS.profilingForm].length = 0;
+      context.store[COLLECTIONS.academicYear][0].profilingForm = null;
       expect((await post()).status).toBe(412);
     });
   });

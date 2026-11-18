@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { timestampOf } from "$lib/api";
 import { useMutation } from "@tanstack/react-query";
 import { api, queryClient } from "$lib/api";
 import type { UserItem } from "$lib/admin/types";
@@ -45,6 +46,7 @@ export function useUserAdmin({
   const [roleDialog, setRoleDialog] = useState<{
     role: RoleLever;
     targets: UserItem[];
+    excluded: number;
   } | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     targets: UserItem[];
@@ -53,14 +55,14 @@ export function useUserAdmin({
   const [busy, setBusy] = useState(false);
 
   function askSingle(item: UserItem, role: RoleLever) {
-    setRoleDialog({ role, targets: [item] });
+    setRoleDialog({ role, targets: [item], excluded: 0 });
   }
 
   function askBulk(role: RoleLever) {
     const targets =
       role === "SBO_OFFICER" ? selectedPromotable : selectedDemotable;
     if (targets.length === 0) return;
-    setRoleDialog({ role, targets });
+    setRoleDialog({ role, targets, excluded: selectedCount - targets.length });
   }
 
   async function confirmRoleChange() {
@@ -71,6 +73,7 @@ export function useUserAdmin({
       if (targets.length === 1) {
         await setRoleMutation.mutateAsync({
           userId: targets[0].id,
+          ts: timestampOf(targets[0]),
           role: targetRole,
         });
         ontoast(

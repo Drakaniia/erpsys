@@ -25,6 +25,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@remotion/cli": "4.0.544",
+    "@remotion/tailwind-v4": "4.0.544",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/react": "^16.3.0",
     "@types/d3-array": "^3.2.2",
@@ -35,6 +37,7 @@
     "@types/react": "^19.1.1",
     "@types/react-dom": "^19.1.1",
     "@vitejs/plugin-react": "^5.0.4",
+    "remotion": "4.0.544",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
@@ -45,7 +48,10 @@
     "build": "vite build",
     "check": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
     "dev": "vite",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "film:prepare": "node film/prepare.mjs",
+    "film:studio": "node film/prepare.mjs && remotion studio film/index.tsx",
+    "film:render": "node film/prepare.mjs && remotion render film/index.tsx TheEnrollmentRecord ../../media/ERPSYS-The-Enrollment-Record.mp4 --codec=h264 --crf=17 --concurrency=4"
   },
   "type": "module",
   "version": "0.0.0"

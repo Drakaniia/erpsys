@@ -3,10 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
 import { authClient } from "$lib/auth-client";
 import { notify } from "$lib/notifications";
+import { useNotificationReadState } from "$lib/notification-read-state";
+import type { NotificationItem } from "$lib/student/types";
 import { api } from "$lib/api";
 import { LAUNCH_STALE_MS } from "$lib/perf/cache-policy";
 import { intervalWhileVisible } from "$lib/polling";
-import { connectLiveUpdates } from "$lib/live-updates";
 import { useQueueState, IDLE_PROMPT_MS } from "$lib/instructor/queue";
 import { useEnrolledState, type EnrolledRange } from "$lib/instructor/enrolled";
 import { studentsTabSelected } from "$lib/instructor/students";
@@ -131,32 +132,22 @@ export function useInstructorState() {
       staleTime: LAUNCH_STALE_MS,
       // No session, no request — same sign-out race as the student surface.
       enabled: sessionReady,
-      refetchInterval: intervalWhileVisible(20_000),
+      refetchInterval: intervalWhileVisible(15_000),
       refetchOnWindowFocus: true,
     }),
   );
-  const notificationItems = notificationsQuery.data?.data ?? [];
-  const transferNotices = (
-    (notificationsQuery.data?.data ?? []) as any[]
-  ).filter((n) => n.type === "DEPARTMENT_QUEUE_TRANSFERRED" && !n.readAt);
-  const markNotificationsReadMutation = useMutation(
-    api.notifications.markAllRead.mutationOptions(),
+  const { items: notificationItems, markRead: dismissTransferNotices } = useNotificationReadState(
+    sessionQuery.data?.user.id ?? "",
+    (notificationsQuery.data?.data ?? []) as NotificationItem[],
   );
-  async function dismissTransferNotices() {
-    try {
-      await markNotificationsReadMutation.mutateAsync({});
-      queryClient.invalidateQueries({
-        queryKey: api.notifications.listMine.queryKey(),
-      });
-    } catch {
-      // Polling reconciles on the next tick.
-    }
-  }
+  const transferNotices = notificationItems.filter(
+    (n) => n.type === "DEPARTMENT_QUEUE_TRANSFERRED" && !n.readAt,
+  );
 
   const transferRequestsQuery = useQuery(
     api.instructor.listMyTransferRequests.queryOptions({
       staleTime: LAUNCH_STALE_MS,
-      refetchInterval: intervalWhileVisible(20_000),
+      refetchInterval: intervalWhileVisible(15_000),
       refetchOnWindowFocus: true,
     }),
   );
@@ -167,11 +158,16 @@ export function useInstructorState() {
     api.instructor.respondDepartmentTransfer.mutationOptions(),
   );
   async function respondTransfer(requestId: string, accept: boolean) {
+    if (respondTransferMutation.isPending) return;
     try {
       const res = await respondTransferMutation.mutateAsync({
         requestId,
         accept,
       });
+      await queryClient.cancelQueries({ queryKey: api.instructor.listMyTransferRequests.queryKey() });
+      queryClient.setQueryData(api.instructor.listMyTransferRequests.queryKey(), (current: typeof transferRequestsQuery.data) => current && ({
+        ...current, incoming: current.incoming.filter((request: { id: string }) => request.id !== requestId),
+      }));
       toast(
         accept
           ? res.transferredFromName
@@ -198,35 +194,6 @@ export function useInstructorState() {
     }
   }
 
-  useEffect(
-    () =>
-      connectLiveUpdates((event) => {
-        queryClient.invalidateQueries({
-          queryKey: api.notifications.listMine.queryKey(),
-        });
-        if (
-          event.topic === "queue" ||
-          event.topic === "availability" ||
-          event.topic === "reconnect"
-        ) {
-          queryClient.invalidateQueries({
-            queryKey: api.instructor.getMyQueues.queryKey(),
-          });
-        }
-        if (event.topic !== "transfer-requests") return;
-        queryClient.invalidateQueries({
-          queryKey: api.instructor.listMyTransferRequests.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: api.instructor.listDepartments.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: api.instructor.getMyQueues.queryKey(),
-        });
-      }),
-    [queryClient],
-  );
-
   const enrolled = useEnrolledState(
     () => activeDeptId,
     () => activeView,
@@ -238,8 +205,10 @@ export function useInstructorState() {
   );
 
   async function confirmServe() {
-    await enrolled.confirmServe(queue.serveEntry, queue.activeDept);
-    queue.closeValidateDialog();
+    if (queue.servingBusy || queue.availabilityMutation.isPending) return;
+    if (await enrolled.confirmServe(queue.serveEntry, queue.activeDept)) {
+      queue.closeValidateDialog();
+    }
   }
 
   async function confirmRevert(reason: string) {

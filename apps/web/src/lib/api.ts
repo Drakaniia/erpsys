@@ -15,12 +15,27 @@ export const TS_ABORTED = "TS_ABORTED";
 // The server's transaction timestamp for every record id the client has seen;
 // edits send it back so a stale edit is aborted instead of overwriting.
 const tsById = new Map<string, number>();
+const tsByObject = new WeakMap<object, number>();
+export function timestampOf(data: unknown): number | undefined {
+  if (!data || typeof data !== "object") return undefined;
+  const stamp = (data as { _editTs?: unknown })._editTs;
+  return typeof stamp === "number" ? stamp : tsByObject.get(data);
+}
+export function recordTimestamp(id: string): number | undefined {
+  return tsById.get(id);
+}
 
 function rememberTs(data: unknown, ts: number): void {
+  if (data && typeof data === "object") tsByObject.set(data, ts);
   for (const row of Array.isArray(data) ? data : [data]) {
     if (!row || typeof row !== "object") continue;
+    tsByObject.set(row, ts);
+    (row as { _editTs?: number })._editTs = ts;
     const id = (row as { _id?: unknown; id?: unknown })._id ?? (row as { id?: unknown }).id;
     if (id !== undefined && id !== null) tsById.set(String(id), ts);
+    for (const nested of Object.values(row)) {
+      if (nested && typeof nested === "object") rememberTs(nested, ts);
+    }
   }
 }
 
@@ -138,9 +153,9 @@ async function request(route: ClientRoute, input: unknown): Promise<unknown> {
       error.status === 409 &&
       (error.data as { code?: string } | undefined)?.code === TS_ABORTED
     ) {
-      void queryClient.invalidateQueries();
+
       notify.error(
-        "This record changed since you opened it. It has been reloaded — please try again.",
+        "Save rejected: this record changed or a newer editor read it. Your draft is unchanged. Reload before retrying.",
       );
       throw error;
     }
@@ -159,7 +174,7 @@ async function send(route: ClientRoute, input: unknown): Promise<unknown> {
   const hasId = value.id !== undefined && value.id !== null;
   const def = route.update && hasId ? route.update : route;
   const { path, rest, params } = buildPath(def.path, value);
-  if (def.method !== "GET" && def.method !== "POST" && rest.ts === undefined) {
+  if (def.method !== "GET" && rest.ts === undefined && !route.serverTimestamp) {
     const ts = params.map((p) => tsById.get(p)).find((t) => t !== undefined);
     if (ts !== undefined) rest.ts = ts;
   }

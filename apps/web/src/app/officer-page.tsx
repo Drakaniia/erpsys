@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { shortcutBlocked } from "$lib/ui/shortcut-guard";
 import { useNavigate } from "react-router";
 
 import OfficerBell from "../components/officer/OfficerBell";
@@ -115,13 +116,7 @@ export function OfficerPage() {
 
   useEffect(() => {
     function onKeydown(e: KeyboardEvent) {
-      const target = e.target as HTMLElement | null;
-      const typing = !!(
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      );
+      const typing = shortcutBlocked(e);
       const action = getOfficerShortcutAction(e.key, {
         isTyping: typing,
         guideOpen: s.guideOpen,

@@ -1,4 +1,5 @@
-import { COLLECTIONS, getDb, idIn, refIn } from "../lib/db/db.js";
+import { resetAuthenticator } from "../config/auth/admin-gate.js";
+import { COLLECTIONS, getDb } from "../lib/db/db.js";
 
 const email = process.argv[2]?.trim().toLowerCase();
 if (!email) {
@@ -14,13 +15,8 @@ if (!user) {
   console.error(`no user with email ${email}`);
   process.exit(1);
 }
-const userId = String(user._id);
 
-await db.collection("twoFactor").deleteMany({ userId: refIn([userId]) } as never);
-await db.collection(COLLECTIONS.adminStepUp).deleteMany({ _id: userId } as never);
-await db
-  .collection(COLLECTIONS.user)
-  .updateOne(idIn([userId]) as never, { $set: { twoFactorEnabled: false } });
+await resetAuthenticator(String(user._id));
 
 console.log(`reset authenticator for ${email}; set it up again on the next integration change`);
 process.exit(0);

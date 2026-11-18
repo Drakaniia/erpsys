@@ -10,6 +10,7 @@ export type UploadRow = {
   sizeBytes?: number | null;
   mimeType?: string | null;
   createdAt?: Date | null;
+  updatedAt?: Date | null;
   expiresAt?: Date | null;
   expiredAt?: Date | null;
   filePurgedAt?: Date | null;

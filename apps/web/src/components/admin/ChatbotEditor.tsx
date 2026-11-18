@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ConfirmDialog from "../ConfirmDialog";
 import { renderMarkdown } from "$lib/chat/markdown";
 import { api, queryClient } from "$lib/api";
 import { relativeTime } from "$lib/officer/format";
+import KnowledgeEditor from "./KnowledgeEditor";
 
 export default function ChatbotEditor({
   ontoast,
@@ -30,36 +32,31 @@ export default function ChatbotEditor({
   // ---- Editor state ----
   const [draft, setDraft] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [savedContent, setSavedContent] = useState("");
 
   useEffect(() => {
-    if (!loaded && docQuery.data) {
-      setDraft(docQuery.data.content);
+    if (!loaded && docQuery.isSuccess) {
+      const content = docQuery.data?.content ?? "";
+      setDraft(content);
+      setSavedContent(content);
       setLoaded(true);
     }
-  }, [loaded, docQuery.data]);
+  }, [loaded, docQuery.data, docQuery.isSuccess]);
 
-  const dirty = loaded && draft !== (docQuery.data?.content ?? "");
-  const wordCount = draft.trim() ? draft.trim().split(/\s+/).length : 0;
-
-  // The preview pane is browser-only anyway, and `renderMarkdown` escapes
-  // rather than sanitises when DOMPurify has no DOM (SSR), so no extra guard.
-  const safeRendered = useMemo(() => renderMarkdown(draft), [draft]);
-
-  const [previewMode, setPreviewMode] = useState<"split" | "edit" | "preview">(
-    "split",
-  );
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 900px)");
-    const update = () => setPreviewMode(mq.matches ? "split" : "edit");
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
+  const presence = useEditTimestamp("chatbot-knowledge", docQuery.isSuccess ? "default" : null, docQuery.data);
+  const dirty = loaded && draft !== savedContent;
+  const wordCount = useMemo(() => {
+    const text = document.createElement("div");
+    text.innerHTML = renderMarkdown(draft).replace(/<[^>]+>/g, " ");
+    return text.textContent?.trim().split(/\s+/).filter(Boolean).length ?? 0;
+  }, [draft]);
 
   // ---- Save ----
   async function save() {
     try {
-      const res = await saveMutation.mutateAsync({ content: draft });
+      const res = await saveMutation.mutateAsync({ content: draft, ts: presence.ts });
+      presence.saved(res);
+      setSavedContent(draft);
       ontoast(`Saved — version ${res.version}`);
       queryClient.invalidateQueries({ queryKey: ["admin"] });
     } catch (e) {
@@ -90,7 +87,9 @@ export default function ChatbotEditor({
   };
 
   function ondiscard() {
-    setDraft(docQuery.data?.content ?? "");
+    const content = docQuery.data?.content ?? "";
+    setDraft(content);
+    setSavedContent(content);
     setLeaving(false);
     resolveLeave.current?.(true);
     resolveLeave.current = null;
@@ -108,11 +107,12 @@ export default function ChatbotEditor({
 
   return (
     <div className="flex flex-col gap-4">
+
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-0.5">
           <p className="text-sm text-muted">
-            This markdown document grounds the chatbot — answers come strictly
-            from it. Saving is live.
+            This document grounds the chatbot — answers come strictly from it.
+            Use the toolbar to format your content. Saving is live.
           </p>
           <p className="text-xs text-muted">
             {docQuery.data?.updatedByName
@@ -127,7 +127,7 @@ export default function ChatbotEditor({
         </div>
         <button
           onClick={save}
-          disabled={!dirty || saveMutation.isPending}
+          disabled={!loaded || !dirty || saveMutation.isPending}
           className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-40"
         >
           {saveMutation.isPending
@@ -152,52 +152,7 @@ export default function ChatbotEditor({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-border bg-surface-raised">
-        {previewMode === "edit" && (
-          <div className="flex border-b border-border">
-            <button
-              onClick={() => setPreviewMode("edit")}
-              className="px-4 py-2 text-sm font-medium text-primary transition-[transform,background-color] duration-100 ease-out active:scale-[0.97]"
-              aria-current="true"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => setPreviewMode("preview")}
-              className="px-4 py-2 text-sm text-muted transition-[transform,background-color] duration-100 ease-out hover:text-ink active:scale-[0.97]"
-            >
-              Preview
-            </button>
-          </div>
-        )}
-
-        <div className={previewMode === "split" ? "grid grid-cols-2" : ""}>
-          {previewMode !== "preview" && (
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.currentTarget.value)}
-              aria-label="Knowledge document (markdown)"
-              placeholder={"# Enrollment process\n\nDescribe the steps here…"}
-              spellCheck={false}
-              className={`h-[480px] w-full resize-y border-0 bg-surface-raised p-4 font-mono text-sm leading-relaxed text-ink placeholder:text-muted focus:outline-none ${
-                previewMode === "split" ? "border-r border-border" : ""
-              }`}
-            />
-          )}
-          {previewMode !== "edit" && (
-            <div
-              className="prose-sm h-[480px] max-w-none overflow-y-auto p-4 text-sm leading-relaxed text-ink"
-              aria-label="Preview"
-            >
-              {safeRendered ? (
-                <div dangerouslySetInnerHTML={{ __html: safeRendered }} />
-              ) : (
-                <p className="text-muted">Nothing to preview yet.</p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      <KnowledgeEditor value={draft} onChange={setDraft} disabled={!loaded} />
 
       <ConfirmDialog
         open={leaving}

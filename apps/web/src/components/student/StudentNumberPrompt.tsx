@@ -1,4 +1,5 @@
 import { useState } from "react";
+
 import { STUDENT_NUMBER_PATTERN } from "$lib/domain/constants";
 
 export default function StudentNumberPrompt({
@@ -12,6 +13,7 @@ export default function StudentNumberPrompt({
   onsave: (value: string) => void;
   ondismiss: () => void;
 }) {
+
   const [value, setValue] = useState("");
   const [touched, setTouched] = useState(false);
 
@@ -28,6 +30,7 @@ export default function StudentNumberPrompt({
 
   return (
     <div className="rounded-2xl border border-border bg-surface-raised p-4">
+
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[15px] font-semibold text-ink">
@@ -75,7 +78,7 @@ export default function StudentNumberPrompt({
             aria-describedby={
               invalid || error ? "student-number-error" : undefined
             }
-            className="h-12 w-full rounded-xl border border-border bg-surface px-3 text-[15px] tabular-nums text-ink outline-none placeholder:text-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/25"
+            className="h-12 w-full rounded-xl border border-border bg-surface px-3 text-[15px] tabular-nums text-ink outline-none placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/25"
           />
           {error || invalid ? (
             <p

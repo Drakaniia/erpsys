@@ -1,13 +1,15 @@
+import { ApiError } from "../../config/errors.js";
 import { COLLECTIONS, getDbSync, idIn } from "../db/db.js";
 import { genId } from "../db/ids.js";
-import { env } from "./env.js";
 import {
   credentialCollection,
   decryptDocValues,
   overridesLoaded,
-} from "./env-overrides.js";
+} from "./credentials.js";
+import { env } from "./env.js";
 
 export const INTEGRATION_KEYS = [
+  "betterAuth",
   "turnstile",
   "r2",
   "googleAuth",
@@ -19,7 +21,19 @@ export const INTEGRATION_KEYS = [
 
 export type IntegrationKey = (typeof INTEGRATION_KEYS)[number];
 
+export const LOCKED_INTEGRATIONS: readonly IntegrationKey[] = ["betterAuth"];
+
+export const integrationLocked = (key: IntegrationKey) => LOCKED_INTEGRATIONS.includes(key);
+
+export function lockedError(key: IntegrationKey): ApiError {
+  return new ApiError("CONFLICT", {
+    message: `${INTEGRATION_LABEL[key]} is always on. It runs every sign-in and session, and its settings come from the deployment env.`,
+    data: { code: "INTEGRATION_LOCKED" },
+  });
+}
+
 export const INTEGRATION_LABEL: Record<IntegrationKey, string> = {
+  betterAuth: "Better Auth",
   turnstile: "Bot protection",
   r2: "File uploads",
   googleAuth: "Google sign-in",
@@ -30,14 +44,15 @@ export const INTEGRATION_LABEL: Record<IntegrationKey, string> = {
 };
 
 export const INTEGRATION_CONSEQUENCE: Record<IntegrationKey, string> = {
-  turnstile:
-    "Sign-in and registration become unchallenged. Bots can reach the form.",
+  betterAuth:
+    "It can't be turned off. Every sign-in, session, registration, password reset and admin unlock runs through it.",
+  turnstile: "Sign-in and registration become unchallenged. Bots can reach the form.",
   r2: "New uploads are refused. Existing files stay readable.",
   googleAuth:
-    "Email and password become the only sign-in. Google-linked accounts without a password need the reset flow.",
+    "Google sign-in stops. Use a password or an emailed sign-in code when email delivery is available.",
   cloudflareChat: "The student chat disappears. Knowledge stays editable here.",
   email:
-    "Password resets and turn alerts are no longer emailed. Students must ask the office to reset a password.",
+    "Email-code login, email verification, password resets, admin unlock codes and turn alerts cannot be emailed. Password and Google sign-in remain available.",
   googleForms:
     "Officers can't create the profiling form and students can't send in their Profiling response. The step stays visible with an unavailable notice.",
   googleCalendar:
@@ -53,98 +68,71 @@ export type IntegrationState = {
 type IntegrationSettingDoc = {
   _id: string;
   key: IntegrationKey;
-  enabled: boolean;
-  updatedById?: string;
-  updatedAt: Date;
-  createdAt: Date;
+  enabled?: boolean;
+  enabledById?: string;
+  enabledAt?: Date;
 };
 
-function turnstileSiteKey(): string {
-  return env.VITE_TURNSTILE_SITE_KEY.trim();
-}
-
-function present(value: string): boolean {
-  return value.trim().length > 0;
-}
-
-export function defaultEnabled(key: IntegrationKey): boolean {
-  switch (key) {
-    case "googleAuth":
-      return env.GOOGLE_CLIENT_ID.trim().length > 0;
-    case "googleCalendar":
-      return integrationConfigured("googleCalendar");
-    default:
-      return true;
-  }
-}
+const present = (value: string) => value.trim().length > 0;
+const googleClient = () =>
+  present(env.GOOGLE_CLIENT_ID) && present(env.GOOGLE_CLIENT_SECRET);
 
 export function integrationConfigured(key: IntegrationKey): boolean {
   switch (key) {
+    case "betterAuth":
+      return present(env.BETTER_AUTH_SECRET) && present(env.BETTER_AUTH_URL);
     case "turnstile":
-      return present(env.TURNSTILE_SECRET_KEY) && present(turnstileSiteKey());
+      return present(env.TURNSTILE_SECRET_KEY) && present(env.VITE_TURNSTILE_SITE_KEY);
     case "r2":
-      return (
-        present(env.R2_ENDPOINT) &&
-        present(env.R2_ACCESS_KEY_ID) &&
-        present(env.R2_SECRET_ACCESS_KEY)
-      );
+      return present(env.R2_ENDPOINT) && present(env.R2_ACCESS_KEY_ID) && present(env.R2_SECRET_ACCESS_KEY);
     case "googleAuth":
-      return present(env.GOOGLE_CLIENT_ID) && present(env.GOOGLE_CLIENT_SECRET);
+      return googleClient();
     case "cloudflareChat":
-      return (
-        present(env.CLOUDFLARE_ACCOUNT_ID) && present(env.CLOUDFLARE_API_TOKEN)
-      );
+      return present(env.CLOUDFLARE_ACCOUNT_ID) && present(env.CLOUDFLARE_API_TOKEN);
     case "email":
       return present(env.BREVO_API_KEY) && present(env.MAIL_FROM);
     case "googleForms":
-      return (
-        present(env.GOOGLE_FORMS_REFRESH_TOKEN) &&
-        present(env.GOOGLE_CLIENT_ID) &&
-        present(env.GOOGLE_CLIENT_SECRET)
-      );
+      return present(env.GOOGLE_FORMS_REFRESH_TOKEN) && googleClient();
     case "googleCalendar":
-      return (
-        present(env.CALENDAR_TOKEN_KEY) &&
-        present(env.GOOGLE_CLIENT_ID) &&
-        present(env.GOOGLE_CLIENT_SECRET)
-      );
+      return present(env.CALENDAR_TOKEN_KEY) && googleClient();
   }
 }
 
-function computedFlags(): Record<IntegrationKey, boolean> {
-  return {
-    turnstile: defaultEnabled("turnstile"),
-    r2: defaultEnabled("r2"),
-    googleAuth: defaultEnabled("googleAuth"),
-    cloudflareChat: defaultEnabled("cloudflareChat"),
-    email: defaultEnabled("email"),
-    googleForms: defaultEnabled("googleForms"),
-    googleCalendar: defaultEnabled("googleCalendar"),
-  };
+export function defaultEnabled(key: IntegrationKey): boolean {
+  if (key === "googleAuth") return present(env.GOOGLE_CLIENT_ID);
+  if (key === "googleCalendar") return integrationConfigured(key);
+  return true;
 }
 
-async function readStoredFlags(): Promise<Record<IntegrationKey, boolean>> {
-  const rows = await getDbSync()
-    .collection<IntegrationSettingDoc>(COLLECTIONS.integrationSetting)
-    .find({} as never)
-    .toArray();
-  const flags = computedFlags();
-  for (const row of rows) flags[row.key] = row.enabled;
-  return flags;
-}
+const settings = () =>
+  getDbSync().collection<IntegrationSettingDoc>(COLLECTIONS.integrationSetting);
+
+const computedFlags = () =>
+  Object.fromEntries(INTEGRATION_KEYS.map((key) => [key, defaultEnabled(key)])) as Record<
+    IntegrationKey,
+    boolean
+  >;
 
 async function loadFlags(): Promise<Record<IntegrationKey, boolean>> {
   try {
-    return await readStoredFlags();
+    const flags = computedFlags();
+    for (const row of await settings().find({} as never).toArray()) {
+      if (integrationLocked(row.key)) continue;
+      if (typeof row.enabled === "boolean") flags[row.key] = row.enabled;
+    }
+    return flags;
   } catch (error) {
-    console.error(
-      "[integration-settings] flag read failed — falling back to computed defaults",
-      error,
-    );
+    console.error("[integration-settings] flag read failed — falling back to computed defaults", error);
     flagsPromise = null;
     return computedFlags();
   }
 }
+
+export type PublicIntegrationPayload = {
+  flags: Record<IntegrationKey, boolean>;
+  turnstileSiteKey: string;
+  overridesLoaded: boolean;
+};
 
 let flagsPromise: Promise<Record<IntegrationKey, boolean>> | null = null;
 let payloadPromise: Promise<PublicIntegrationPayload> | null = null;
@@ -154,50 +142,37 @@ export function invalidateIntegrationCache(): void {
   payloadPromise = null;
 }
 
-export async function integrationEnabled(
-  key: IntegrationKey,
-): Promise<boolean> {
+export async function integrationEnabled(key: IntegrationKey): Promise<boolean> {
   flagsPromise ??= loadFlags();
-  const flags = await flagsPromise;
-  return flags[key];
+  return (await flagsPromise)[key];
 }
 
-export type PublicIntegrationPayload = {
-  flags: Record<IntegrationKey, boolean>;
-  turnstileSiteKey: string;
-  overridesLoaded: boolean;
-};
-
-async function turnstileSiteKeyFromStore(): Promise<string | null> {
+async function storedTurnstileSiteKey(): Promise<string | null> {
   try {
     const doc = await credentialCollection().findOne({ key: "turnstile" } as never);
     if (!doc) return null;
     const decrypted = decryptDocValues(doc);
-    if (decrypted.unreadable) return null;
-    return decrypted.values.VITE_TURNSTILE_SITE_KEY ?? null;
+    return decrypted.unreadable ? null : (decrypted.values.VITE_TURNSTILE_SITE_KEY ?? null);
   } catch {
     return null;
   }
 }
 
 async function loadPayload(): Promise<PublicIntegrationPayload> {
-  const [states, storedSiteKey] = await Promise.all([
+  const [states, siteKey] = await Promise.all([
     allIntegrationStates(),
-    turnstileSiteKeyFromStore(),
+    storedTurnstileSiteKey(),
   ]);
   return {
     flags: Object.fromEntries(
-      INTEGRATION_KEYS.map((key) => [
-        key,
-        states[key]?.enabled ?? defaultEnabled(key),
-      ]),
+      INTEGRATION_KEYS.map((key) => [key, states[key].enabled]),
     ) as Record<IntegrationKey, boolean>,
-    turnstileSiteKey: (storedSiteKey ?? env.VITE_TURNSTILE_SITE_KEY).trim(),
+    turnstileSiteKey: (siteKey ?? env.VITE_TURNSTILE_SITE_KEY).trim(),
     overridesLoaded: overridesLoaded(),
   };
 }
 
-export async function publicIntegrationPayload(): Promise<PublicIntegrationPayload> {
+export function publicIntegrationPayload(): Promise<PublicIntegrationPayload> {
   payloadPromise ??= loadPayload().catch((error) => {
     payloadPromise = null;
     throw error;
@@ -205,50 +180,32 @@ export async function publicIntegrationPayload(): Promise<PublicIntegrationPaylo
   return payloadPromise;
 }
 
-export async function loadPublicIntegrationFlags(): Promise<
-  Record<IntegrationKey, boolean>
-> {
-  return (await publicIntegrationPayload()).flags;
-}
-
-export async function allIntegrationStates(): Promise<
-  Record<IntegrationKey, IntegrationState>
-> {
+export async function allIntegrationStates(): Promise<Record<IntegrationKey, IntegrationState>> {
   const db = getDbSync();
-  const rows = await db
-    .collection<IntegrationSettingDoc>(COLLECTIONS.integrationSetting)
-    .find({} as never)
-    .toArray();
-
+  const rows = await settings().find({} as never).toArray();
   const byKey = new Map(rows.map((row) => [row.key, row] as const));
-  const actorIds = [
-    ...new Set(
-      rows.map((row) => row.updatedById).filter((id): id is string => !!id),
-    ),
-  ];
+  const actorIds = [...new Set(rows.flatMap((row) => (row.enabledById ? [row.enabledById] : [])))];
   const names = new Map<string, string>();
   if (actorIds.length > 0) {
     const users = await db
       .collection<{ _id: unknown; name?: string }>(COLLECTIONS.user)
       .find(idIn(actorIds) as never)
       .toArray();
-    for (const user of users) {
-      if (user.name) names.set(String(user._id), user.name);
-    }
+    for (const user of users) if (user.name) names.set(String(user._id), user.name);
   }
-
-  const states = {} as Record<IntegrationKey, IntegrationState>;
-  for (const key of INTEGRATION_KEYS) {
-    const row = byKey.get(key);
-    states[key] = {
-      enabled: row ? row.enabled : defaultEnabled(key),
-      updatedAt: row ? new Date(row.updatedAt).toISOString() : null,
-      updatedByName: row?.updatedById
-        ? (names.get(String(row.updatedById)) ?? null)
-        : null,
-    };
-  }
-  return states;
+  return Object.fromEntries(
+    INTEGRATION_KEYS.map((key) => {
+      const row = byKey.get(key);
+      return [
+        key,
+        {
+          enabled: typeof row?.enabled === "boolean" && !integrationLocked(key) ? row.enabled : defaultEnabled(key),
+          updatedAt: row?.enabledAt ? new Date(row.enabledAt).toISOString() : null,
+          updatedByName: row?.enabledById ? (names.get(String(row.enabledById)) ?? null) : null,
+        },
+      ];
+    }),
+  ) as Record<IntegrationKey, IntegrationState>;
 }
 
 export async function setIntegrationEnabled(args: {
@@ -256,27 +213,25 @@ export async function setIntegrationEnabled(args: {
   enabled: boolean;
   actorId: string;
 }): Promise<void> {
-  const db = getDbSync();
+  if (integrationLocked(args.key)) throw lockedError(args.key);
   const at = new Date();
-  await db.collection(COLLECTIONS.integrationSetting).updateOne(
+  await settings().updateOne(
     { key: args.key } as never,
     {
-      $set: {
-        key: args.key,
-        enabled: args.enabled,
-        updatedById: args.actorId,
-        updatedAt: at,
-      },
-      $setOnInsert: { _id: genId("integration"), createdAt: at },
+      $set: { key: args.key, enabled: args.enabled, enabledById: args.actorId, enabledAt: at },
+      $setOnInsert: { _id: genId("integration"), values: {}, version: 0, createdAt: at },
     } as never,
-    { upsert: true } as never,
+    { upsert: true },
   );
   invalidateIntegrationCache();
-  await db.collection(COLLECTIONS.adminActionLog).insertOne({
+  await getDbSync().collection(COLLECTIONS.auditLog).insertOne({
     _id: genId("admin-action"),
+    kind: "action",
     actorId: args.actorId,
     action: `${args.enabled ? "Enabled" : "Disabled"} ${INTEGRATION_LABEL[args.key]}`,
     targetRef: args.key,
     at,
+    createdAt: at,
+    updatedAt: at,
   } as never);
 }

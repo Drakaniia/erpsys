@@ -5,6 +5,8 @@ export type RequirementRow = {
   label: string;
   order: number;
   isActive: boolean;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
 };
 
 export class RequirementModel {

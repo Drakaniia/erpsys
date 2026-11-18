@@ -19,6 +19,7 @@ vi.mock("../../src/lib/db/db.js", async (importOriginal) => {
     await importOriginal<typeof import("../../src/lib/db/db.js")>();
   return { ...actual, getDbSync: () => holder.db };
 });
+
 vi.mock("../../src/lib/google/forms.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/lib/google/forms.js")>()),
   createForm: vi.fn(async () => ({
@@ -51,7 +52,7 @@ function seed(): Record<string, Row[]> {
     ],
     [COLLECTIONS.enrollmentQueue]: [],
     [COLLECTIONS.stepVerification]: [],
-    [COLLECTIONS.profilingForm]: [],
+
     [COLLECTIONS.adminActionLog]: [],
     [COLLECTIONS.socialMediaLink]: [
       {
@@ -63,7 +64,6 @@ function seed(): Record<string, Row[]> {
       },
     ],
     [COLLECTIONS.chatbotKnowledge]: [],
-    [COLLECTIONS.integrationSetting]: [],
     [COLLECTIONS.adminStepUp]: [
       {
         _id: "admin1",
@@ -118,6 +118,21 @@ const call = (path: string, init?: RequestInit) =>
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
 
+describe("removed editor tracking", () => {
+  it("does not expose presence endpoints or register a tracking collection", async () => {
+    for (const [method, path] of [
+      ["GET", "/editing-presence"],
+      ["GET", "/editing-presence/department/dept1"],
+      ["PUT", "/editing-presence/department/dept1/tab"],
+      ["DELETE", "/editing-presence/department/dept1/tab"],
+    ]) {
+      expect((await call(path, { method })).status).toBe(404);
+    }
+    expect(Object.values(COLLECTIONS)).not.toContain("editing_presence");
+    expect(context.store.editing_presence).toBeUndefined();
+  });
+});
+
 describe("academic years", () => {
   it("blocks activation while the current year still has an open queue", async () => {
     context.store[COLLECTIONS.enrollmentQueue].push({
@@ -150,15 +165,15 @@ describe("academic years", () => {
     const years = context.store[COLLECTIONS.academicYear];
     expect(years.find((y) => y._id === "ay-1")?.isActive).toBe(false);
     expect(years.filter((y) => y.isActive)).toHaveLength(1);
+    const created = years.find((y) => y.label === "2026-2027" && y._id !== "ay-2");
+    expect(created?.createdAt).toBeInstanceOf(Date);
+    expect(created?.updatedAt).toEqual(created?.createdAt);
   });
 
   it("refuses to delete a year that holds records", async () => {
-    context.store[COLLECTIONS.profilingForm].push({
-      _id: "form-1",
-      academicYearId: "ay-1",
-      fields: [],
-      updatedAt: new Date(),
-    });
+    context.store[COLLECTIONS.academicYear][0].profilingForm = {
+      formId: "form-1", updatedAt: new Date(),
+    };
     const response = await call("/academic-years/ay-1", { method: "DELETE" });
     expect(response.status).toBe(409);
   });
@@ -240,6 +255,7 @@ describe("content", () => {
     expect(list.data.map((l: Row) => l.id)).toEqual([createdId, "sml-1"]);
   });
 
+
   it("bumps the knowledge doc version", async () => {
     await call("/chatbot-knowledge", {
       method: "PUT",
@@ -250,6 +266,14 @@ describe("content", () => {
       body: JSON.stringify({ content: "second" }),
     });
     expect((await second.json()).data.version).toBe(2);
+
+    // The read names the last editor so the admin page can show who changed it.
+    const read = await (await call("/chatbot-knowledge")).json();
+    expect(read.data).toMatchObject({
+      content: "second",
+      version: 2,
+      updatedByName: "Admin",
+    });
   });
 
   it("serves signup options publicly", async () => {
@@ -263,60 +287,5 @@ describe("content", () => {
     expect(body.data.departments.map((d: Row) => d.name)).toEqual([
       "College of Technologies",
     ]);
-  });
-});
-
-describe("integrations", () => {
-  it("answers booleans when signed out and rows for an admin", async () => {
-    holder.session = null;
-    const anon = await (await call("/integrations")).json();
-    expect(anon.data.flags).toEqual({
-      turnstile: true,
-      r2: true,
-      googleAuth: expect.any(Boolean),
-      cloudflareChat: true,
-      email: true,
-      googleForms: true,
-      googleCalendar: expect.any(Boolean),
-    });
-    expect(typeof anon.data.turnstileSiteKey).toBe("string");
-    expect(anon.data.overridesLoaded).toBe(true);
-    expect(anon.data.credentials).toBeUndefined();
-
-    holder.session = ADMIN;
-    const admin = await (await call("/integrations")).json();
-    expect(admin.data.map((row: Row) => row.key)).toEqual([
-      "googleAuth",
-      "googleForms",
-      "googleCalendar",
-      "turnstile",
-      "r2",
-      "cloudflareChat",
-      "email",
-    ]);
-    const google = admin.data[0];
-    expect(google.version).toBe(0);
-    expect(google.pendingRestart).toBe(false);
-    expect(google.credentials.map((f: Row) => f.envKey)).toEqual([
-      "GOOGLE_CLIENT_ID",
-      "GOOGLE_CLIENT_SECRET",
-    ]);
-    expect(google.credentials[0].source).not.toBe("stored");
-  });
-
-  it("toggles a known key and rejects an unknown one", async () => {
-    const toggled = await call("/integrations/r2", {
-      method: "PATCH",
-      body: JSON.stringify({ enabled: false }),
-    });
-    expect(toggled.status).toBe(200);
-    expect((await toggled.json()).data).toEqual({ key: "r2", enabled: false });
-    expect(context.store[COLLECTIONS.adminActionLog]).toHaveLength(1);
-
-    const unknown = await call("/integrations/sms", {
-      method: "PATCH",
-      body: JSON.stringify({ enabled: false }),
-    });
-    expect(unknown.status).toBe(404);
   });
 });

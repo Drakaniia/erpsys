@@ -1,10 +1,8 @@
 import type { RequestHandler } from "express";
-import { logPath } from "../lib/platform/request-log.js";
-import {
-  AUDITED_METHODS,
-  AuditLogService,
-} from "../services/audit-logs/AuditLogService.js";
-import type { AuthedRequest } from "../services/auth/AuthService.js";
+import { AuditLogModel } from "../models/AuditLogModel.js";
+import type { AuthedRequest } from "./auth.js";
+
+export const AUDITED_METHODS = ["POST", "PUT", "PATCH", "DELETE"] as const;
 
 const audited = new Set<string>(AUDITED_METHODS);
 
@@ -13,13 +11,13 @@ export const auditTrail: RequestHandler = (req, res, next) => {
   res.on("finish", () => {
     const user = (req as AuthedRequest).session?.user;
     if (!user) return;
-    AuditLogService.record({
+    AuditLogModel.insert({
       actorId: user.id,
       actorName: user.name ?? "",
       actorEmail: user.email,
       role: user.role ?? "",
       method: req.method,
-      path: logPath(req.originalUrl || req.url || "/"),
+      path: (req.originalUrl || req.url || "/").split("?")[0],
       status: res.statusCode,
       ip: req.ip ?? "",
     }).catch((error: unknown) => console.error("[audit] write failed", error));

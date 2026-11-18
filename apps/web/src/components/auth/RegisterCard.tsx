@@ -4,6 +4,7 @@ import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { authClient, signUpStudent } from "$lib/auth-client";
+import { googleSignInCallback } from "$lib/auth/google-sign-in";
 import { api } from "$lib/api";
 import { YEAR_LEVELS } from "$lib/domain/constants";
 import {
@@ -61,6 +62,15 @@ export default function RegisterCard() {
     setFormError(
       "Verification failed. Click Retry and complete the challenge again.",
     );
+  }
+
+  function resetTurnstile() {
+    try {
+      turnstileRef.current?.reset();
+    } catch {
+      /* ignore */
+    }
+    setTurnstileToken("");
   }
 
   const form = useForm({
@@ -121,24 +131,13 @@ export default function RegisterCard() {
         password: value.password,
         "cf-turnstile-response": turnstileToken,
       });
+      resetTurnstile();
       if (result.error) {
         setFormError(
           result.error.message || "Registration failed. Please try again.",
         );
-        try {
-          turnstileRef.current?.reset();
-        } catch {
-          /* ignore */
-        }
-        setTurnstileToken("");
         return;
       }
-      try {
-        turnstileRef.current?.reset();
-      } catch {
-        /* ignore */
-      }
-      setTurnstileToken("");
       navigate(`/loading?message=Creating+your+account…`);
     },
   });
@@ -162,7 +161,11 @@ export default function RegisterCard() {
     if (googleBusy) return;
     setGoogleBusy(true);
     try {
-      await authClient.signIn.social({ provider: "google", callbackURL: "/" });
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: googleSignInCallback(),
+        errorCallbackURL: `${window.location.origin}/auth/error`,
+      });
     } catch {
       setGoogleBusy(false);
     }
@@ -171,16 +174,8 @@ export default function RegisterCard() {
   return (
     <div className="w-full">
       <div>
-        <h1 className="text-[30px] leading-[1.1] font-bold tracking-[-0.03em] text-auth-ink">
-          Create your student account
-        </h1>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted">
-          For students without an institutional email — have your student number
-          ready.
-        </p>
-
         <form
-          className="mt-7 space-y-5"
+          className="grid gap-5 sm:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -212,7 +207,7 @@ export default function RegisterCard() {
           </form.Field>
 
           {!optionsLoading && !enrollmentOpen ? (
-            <p className="auth-alert" role="alert">
+            <p className="auth-alert sm:col-span-2" role="alert">
               {NO_ACADEMIC_YEAR_MESSAGE}
             </p>
           ) : (
@@ -291,14 +286,17 @@ export default function RegisterCard() {
 
           <form.Field name="email">
             {(field) => (
-              <AuthField
-                field={field}
-                label="Email"
-                type="email"
-                autocomplete="email"
-                placeholder="you@gmail.com"
-                onedit={() => setFormError("")}
-              />
+              <div className="sm:col-span-2">
+                <AuthField
+                  field={field}
+                  label="Email"
+                  type="email"
+                  autocomplete="email"
+                  placeholder="you@gmail.com"
+                  hint="For students without an institutional email."
+                  onedit={() => setFormError("")}
+                />
+              </div>
             )}
           </form.Field>
 
@@ -328,21 +326,27 @@ export default function RegisterCard() {
           </form.Field>
 
           {turnstileEnabled ? (
-            <Turnstile
-              ref={turnstileRef}
-              sitekey={turnstileSiteKey}
-              action="signup"
-              onToken={(t) => {
-                setTurnstileToken(t);
-                if (t) setFormError("");
-              }}
-              onExpire={handleTurnstileExpire}
-              onError={handleTurnstileError}
-            />
+            <div className="sm:col-span-2">
+              <Turnstile
+                ref={turnstileRef}
+                sitekey={turnstileSiteKey}
+                action="signup"
+                onToken={(t) => {
+                  setTurnstileToken(t);
+                  if (t) setFormError("");
+                }}
+                onExpire={handleTurnstileExpire}
+                onError={handleTurnstileError}
+              />
+            </div>
           ) : null}
 
           {formError ? (
-            <p className="auth-alert" role="alert" aria-live="polite">
+            <p
+              className="auth-alert sm:col-span-2"
+              role="alert"
+              aria-live="polite"
+            >
               {formError}
             </p>
           ) : null}
@@ -358,20 +362,12 @@ export default function RegisterCard() {
               </button>
             )}
           </form.Subscribe>
-        </form>
 
-        {showGoogle ? (
-          <>
-            <div className="mt-7 flex items-center gap-3 text-[13px] text-muted">
-              <span className="h-px flex-1 bg-auth-border" />
-              Or sign in with
-              <span className="h-px flex-1 bg-auth-border" />
-            </div>
-
+          {showGoogle ? (
             <button
               type="button"
               onClick={() => void signInWithGoogle()}
-              className="auth-btn-secondary mt-4"
+              className="auth-btn-secondary"
               disabled={googleBusy}
               aria-busy={googleBusy}
             >
@@ -386,14 +382,14 @@ export default function RegisterCard() {
               ) : (
                 <>
                   <GoogleIcon />
-                  Google
+                  Continue with Google
                 </>
               )}
             </button>
-          </>
-        ) : null}
+          ) : null}
+        </form>
 
-        <p className="mt-6 text-center text-[13px] text-muted">
+        <p className="mt-5 text-center text-[13px] text-muted">
           Already have an account?{" "}
           <Link
             to="/login"

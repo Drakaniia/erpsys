@@ -1,13 +1,23 @@
-import { createAuthEndpoint } from "better-auth/api";
-import { setSessionCookie } from "better-auth/cookies";
-import type { Db } from "mongodb";
+import { APIError, createAuthEndpoint, signUpEmail } from "better-auth/api";
 import { z } from "zod";
-import { STUDENT_NUMBER_PATTERN, YEAR_LEVELS } from "../constants.js";
 import {
-  SignUpService,
-  type SignUpAdapter,
-  type SignUpInput,
-} from "../../services/auth/SignUpService.js";
+  STUDENT_NUMBER_IN_USE_MESSAGE,
+  STUDENT_NUMBER_PATTERN,
+  YEAR_LEVELS,
+  YEAR_LEVEL_LABELS,
+  departmentAcceptsLevel,
+  deriveStudentNumberFromEmail,
+  type YearLevel,
+} from "../constants.js";
+import { ApiError } from "../errors.js";
+import { getDbSync } from "../../lib/db/db.js";
+import { purgeUserById } from "../../lib/db/user-purge.js";
+import { AcademicYearModel } from "../../models/AcademicYearModel.js";
+import { DepartmentModel } from "../../models/DepartmentModel.js";
+import { StudentEnrollmentModel } from "../../models/StudentEnrollmentModel.js";
+import { StudentProfileModel } from "../../models/StudentProfileModel.js";
+import { UserModel } from "../../models/UserModel.js";
+
 
 const bodySchema = z
   .object({
@@ -27,9 +37,75 @@ const bodySchema = z
   })
   .passthrough();
 
-export function createStudentSignUpPlugin(db: Db) {
-  void db;
 
+function isDuplicateKeyError(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 4; depth += 1) {
+    if (typeof current !== "object" || current === null) return false;
+    if ((current as { code?: unknown }).code === 11000) return true;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
+async function place(input: {
+  userId: string;
+  studentNumber: string;
+  academicYearId: string;
+  departmentId: string;
+  yearLevel: YearLevel;
+}): Promise<void> {
+  const rollback = async (
+    message: string,
+    code = "BAD_REQUEST",
+  ): Promise<never> => {
+    await purgeUserById(getDbSync(), input.userId);
+    throw new ApiError(code, { message });
+  };
+
+  const year = await AcademicYearModel.findById(input.academicYearId);
+  if (!year) return rollback("Pick an academic year from the list.");
+  const department = await DepartmentModel.findById(input.departmentId);
+  if (!department || !department.isActive) {
+    return rollback("Pick a course from the list.");
+  }
+  if (!departmentAcceptsLevel(department.yearLevels ?? [], input.yearLevel)) {
+    return rollback(
+      `${department.name} doesn't offer ${YEAR_LEVEL_LABELS[input.yearLevel]}.`,
+    );
+  }
+
+  const profileId = crypto.randomUUID();
+  try {
+    await StudentProfileModel.insert({
+      _id: profileId,
+      userId: input.userId,
+      studentNumber: input.studentNumber,
+      academicYearId: year._id,
+    });
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      return rollback(STUDENT_NUMBER_IN_USE_MESSAGE);
+    }
+    return rollback(
+      "Could not save your student number — please try again.",
+      "INTERNAL_SERVER_ERROR",
+    );
+  }
+  try {
+    await StudentEnrollmentModel.insert({
+      _id: crypto.randomUUID(),
+      studentProfileId: profileId,
+      academicYearId: year._id,
+      departmentId: department._id,
+      yearLevel: input.yearLevel,
+    });
+  } catch {
+    return rollback("Could not save your enrollment — please try again.");
+  }
+}
+
+export function createStudentSignUpPlugin() {
   return {
     id: "student-signup",
     pathMethods: { "/sign-up/student": "POST" } as const,
@@ -38,19 +114,66 @@ export function createStudentSignUpPlugin(db: Db) {
         "/sign-up/student",
         { method: "POST", body: bodySchema, cloneRequest: true },
         async (ctx) => {
-          const body = ctx.body as SignUpInput & { password: string };
-          const result = await SignUpService.register({
-            input: body,
-            adapter: ctx.context.internalAdapter as unknown as SignUpAdapter,
-            hashPassword: (password) => ctx.context.password.hash(password),
-            password: body.password,
-          });
-          await setSessionCookie(
-            ctx,
-            { session: result.session, user: result.user } as never,
-            false,
+          const input = ctx.body;
+          const adapter = ctx.context.internalAdapter;
+          const db = getDbSync();
+          const email = input.email.toLowerCase();
+
+          if (email.endsWith("@student.buksu.edu.ph")) {
+            throw new APIError("BAD_REQUEST", {
+              message: "Institutional accounts sign in with Google instead.",
+            });
+          }
+
+          const existingUser = await adapter.findUserByEmail(email);
+          if (existingUser?.user) {
+            const blocked = await UserModel.findById(existingUser.user.id);
+            if (!blocked?.blockedAt) {
+              throw new APIError("BAD_REQUEST", {
+                message:
+                  "An account with this email already exists — sign in instead.",
+              });
+            }
+            await purgeUserById(db, blocked._id);
+          }
+
+          const existingProfile = await StudentProfileModel.findByStudentNumber(
+            input.studentNumber,
           );
-          return ctx.json({ token: result.session.token, user: result.user });
+          if (existingProfile && existingProfile.userId !== "") {
+            const owner = await UserModel.findById(existingProfile.userId);
+            if (owner?.blockedAt) {
+              await purgeUserById(db, String(owner._id));
+            } else if (
+              deriveStudentNumberFromEmail(email) !== input.studentNumber ||
+              !owner?.email
+            ) {
+              throw new APIError("BAD_REQUEST", {
+                message: STUDENT_NUMBER_IN_USE_MESSAGE,
+              });
+            } else if (
+              deriveStudentNumberFromEmail(owner.email) === input.studentNumber
+            ) {
+              throw new APIError("BAD_REQUEST", {
+                message:
+                  "This student number is already claimed — contact the SBO office.",
+              });
+            }
+          }
+
+          const result = await signUpEmail()({
+            ...ctx,
+            body: { name: input.name, email, password: input.password },
+            asResponse: false,
+            returnHeaders: true,
+          });
+          const user = result.response.user;
+          await adapter.updateUser(user.id, { isOutsideOrg: false });
+          await place({ ...input, userId: user.id });
+          for (const cookie of result.headers.getSetCookie()) {
+            ctx.responseHeaders?.append("set-cookie", cookie);
+          }
+          return ctx.json({ ...result.response, user: { ...user, isOutsideOrg: false } });
         },
       ),
     },

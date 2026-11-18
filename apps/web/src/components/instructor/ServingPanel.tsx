@@ -1,4 +1,5 @@
 import { PRE_ENROLLMENT_STEP_CODES, STEP_NAMES } from "$lib/domain/constants";
+
 import { initials, relativeTime } from "$lib/officer/format";
 import type { QueueEntry } from "$lib/instructor/types";
 
@@ -20,6 +21,7 @@ export default function ServingPanel({
 }) {
   const isServing = entry !== null;
   const iMyLock = isServing && entry!.servedById === myAdviserId;
+
   const verified = entry ? entry.verifiedSteps >= 5 : false;
   const checks = entry ? Math.min(5, Math.max(0, entry.verifiedSteps)) : 0;
   const missingCount = entry ? 5 - checks : 0;
@@ -36,6 +38,7 @@ export default function ServingPanel({
       aria-label={isServing ? "Now serving" : "No student being served"}
       className="flex h-full flex-col rounded-2xl border border-border bg-surface-raised p-5 shadow-sm"
     >
+
       {isServing && entry ? (
         <>
           <p

@@ -14,6 +14,8 @@ const apiState = vi.hoisted(() => ({
   invalidate: vi.fn(),
 }));
 
+
+
 const slotState = vi.hoisted(() => ({
   onqueue: null as null | ((run: (() => Promise<void>) | null) => void),
 }));
@@ -69,14 +71,14 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-function renderSheet(notify = vi.fn()) {
+function renderSheet(notify = vi.fn(), source = step) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
       <EvidenceSheet
-        step={step as never}
+        step={source as never}
         slotLabel="Upload photo"
         notify={notify}
       />
@@ -110,6 +112,17 @@ describe("EvidenceSheet submit-time uploads", () => {
 
     await act(async () => upload.resolve());
     await waitFor(() => expect(apiState.submit).toHaveBeenCalled());
+    expect(apiState.submit.mock.calls[0]![0]).toEqual({ stepCode: "MUGSHOT" });
+  });
+
+  it("submits existing proof without reusing the sheet's older edit timestamp", async () => {
+    renderSheet(vi.fn(), {
+      ...step,
+      evidence: [{ id: "proof-1", kind: "MUGSHOT", expired: false }] as never,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Submit for review" }));
+
+    await waitFor(() => expect(apiState.submit).toHaveBeenCalledTimes(1));
     expect(apiState.submit.mock.calls[0]![0]).toEqual({ stepCode: "MUGSHOT" });
   });
 

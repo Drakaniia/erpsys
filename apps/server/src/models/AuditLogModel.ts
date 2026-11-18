@@ -1,7 +1,7 @@
 import { COLLECTIONS, getDbSync } from "../lib/db/db.js";
 import { genId } from "../lib/db/ids.js";
 
-export type AuditLogRow = {
+type AuditLogRow = {
   _id: string;
   actorId: string;
   actorName: string;
@@ -11,14 +11,16 @@ export type AuditLogRow = {
   path: string;
   status: number;
   ip: string;
-  at: Date;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export class AuditLogModel {
-  static async insert(row: Omit<AuditLogRow, "_id" | "at">): Promise<void> {
+  static async insert(row: Omit<AuditLogRow, "_id" | "createdAt" | "updatedAt">): Promise<void> {
+    const at = new Date();
     await getDbSync()
       .collection(COLLECTIONS.auditLog)
-      .insertOne({ _id: genId("audit"), ...row, at: new Date() } as never);
+      .insertOne({ _id: genId("audit"), kind: "http", ...row, createdAt: at, updatedAt: at } as never);
   }
 
   static async search(
@@ -27,8 +29,8 @@ export class AuditLogModel {
   ): Promise<AuditLogRow[]> {
     return getDbSync()
       .collection<AuditLogRow>(COLLECTIONS.auditLog)
-      .find(filter as never)
-      .sort({ at: -1 })
+      .find({ ...filter, kind: { $ne: "action" } } as never)
+      .sort({ createdAt: -1 })
       .skip((paging.page - 1) * paging.pageSize)
       .limit(paging.pageSize)
       .toArray();
@@ -37,6 +39,6 @@ export class AuditLogModel {
   static async count(filter: Record<string, unknown>): Promise<number> {
     return getDbSync()
       .collection<AuditLogRow>(COLLECTIONS.auditLog)
-      .countDocuments(filter as never);
+      .countDocuments({ ...filter, kind: { $ne: "action" } } as never);
   }
 }
