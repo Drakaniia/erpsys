@@ -13,8 +13,10 @@ from docx import Document
 ROOT = pathlib.Path(__file__).resolve().parent
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--render", action="store_true")
+parser.add_argument("--api-only", action="store_true", help="Validate only the standalone API document")
 args = parser.parse_args()
-for name in ("FINAL_PAPER", "API_DOCUMENTATION"):
+manuscripts = ("API_DOCUMENTATION",) if args.api_only else ("FINAL_PAPER", "API_DOCUMENTATION")
+for name in manuscripts:
     text = (ROOT / f"{name}.md").read_text(encoding="utf-8")
     doc = Document(ROOT / f"{name}.docx")
     visible = "\n".join([p.text for p in doc.paragraphs] + [c.text for t in doc.tables for r in t.rows for c in r.cells])
@@ -38,10 +40,38 @@ for name in ("FINAL_PAPER", "API_DOCUMENTATION"):
         from api2paper import check as check_api
         check_api(text)
         headings = re.findall(r"^### (.+)$", text, re.M)
-        assert len(headings) == 132, "Expected 114 application routes and 18 authentication entries"
+        from api2paper import current_routes
+        from api_auth_contracts import AUTH_ENDPOINTS
+        from api_paper_content import MODULES
+        expected_endpoints = len(current_routes()) + len(AUTH_ENDPOINTS)
+        assert len(headings) == expected_endpoints + len(MODULES), "Missing module or endpoint sections"
+        assert len(doc.tables) == expected_endpoints, "Each endpoint needs a response-code table"
+        assert "```" not in text and "{" not in visible and "}" not in visible, "Code example remains"
+        captions = [p for p in doc.paragraphs if p.style.name == "Caption"]
+        figure_count = len(re.findall(r'^\*\*Figure \d+\.\*\*', text, re.M))
+        assert len(captions) == figure_count, "Screenshot figure count mismatch"
+        for index, paragraph in enumerate(doc.paragraphs):
+            if paragraph.style.name == 'Caption':
+                assert re.match(r'This figure (shows|illustrates|demonstrates|depicts|represents)\b', doc.paragraphs[index + 1].text), 'Figure description is missing'
+        assert sum(p.text == "Version: 1.0" for p in doc.paragraphs) == expected_endpoints
+        date_lines = [p.text for p in doc.paragraphs if p.text.startswith('Date:')]
+        assert len(date_lines) == expected_endpoints
+        assert all(re.fullmatch(r'Date: November (1[4-9]|20), 2026', value) for value in date_lines)
+        from docx.oxml.ns import qn
+        endpoints = [p for p in doc.paragraphs if p.text.startswith("Endpoint:")]
+        assert len(endpoints) == expected_endpoints
+        for paragraph in endpoints:
+            links = paragraph._p.findall(qn('w:hyperlink'))
+            assert len(links) == 1, "Each endpoint needs a full URL hyperlink"
+            target = doc.part.rels[links[0].get(qn('r:id'))].target_ref
+            assert target.startswith('http://localhost:3001/'), "Wrong endpoint base address"
+        assert all(2 <= len(t.rows) <= 4 for t in doc.tables), "Keep only key status codes"
+        assert sum(p.text.startswith("INSERT SCREENSHOT HERE") for p in doc.paragraphs) == len(captions)
         word_headings = [p.text for p in doc.paragraphs if p.style.name == "Heading 3"]
         assert word_headings == headings, "Word endpoint sections differ from the manuscript"
-        required = ("/me/schedule", "/me/calendar", "/integrations/credentials/export", "/admin-gate/status", "TS_ABORTED", "STORAGE_QUOTA_EXCEEDED")
+        required = ("/me/schedule", "/me/calendar", "/integrations/credentials/export", "/admin-gate/status", "TS_ABORTED",
+                    "/email-otp/send-verification-otp", "/sign-in/email-otp", "/email-otp/verify-email",
+                    "All existing sessions for the account are ended")
         assert all(value in text for value in required)
     print(f"PASS {name}: manuscript constraints and Word structure")
 
@@ -56,7 +86,7 @@ if args.render:
     word.DisplayAlerts = 0
     word.AutomationSecurity = 3
     try:
-        for name in ("FINAL_PAPER", "API_DOCUMENTATION"):
+        for name in manuscripts:
             doc = word.Documents.Open(str(ROOT / f"{name}.docx"), ReadOnly=False, AddToRecentFiles=False)
             try:
                 doc.ExportAsFixedFormat(str(output / f"{name}.pdf"), 17)
