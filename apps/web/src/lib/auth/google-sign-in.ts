@@ -1,3 +1,11 @@
+import { isInternalPath } from "./completion-gate";
+
+export function googleSignInCallback(dest?: string | null): string {
+  const params = new URLSearchParams({ provider: "google" });
+  if (isInternalPath(dest)) params.set("dest", dest!);
+  return `/loading?${params}`;
+}
+
 /**
  * What "Sign in with Google" should actually do, given whatever session
  * the browser already holds.

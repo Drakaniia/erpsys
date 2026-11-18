@@ -21,8 +21,8 @@ Type=simple
 User=erpsys
 Group=erpsys
 
-# `node dist/index.js` resolves against this directory (tsc outDir). It also
-# matters for lib/env.ts:4, which dotenv-loads `../../.env` relative to cwd,
+# `node dist/index.js` resolves against this directory (tsc outDir).
+# lib/platform/env.ts resolves the repository .env from its module location,
 # i.e. /srv/erpsys/.env. That file must NOT exist in production — see
 # docs/ops/deployment.md §3. systemd's EnvironmentFile wins anyway, because
 # dotenv does not overwrite variables that are already set.
