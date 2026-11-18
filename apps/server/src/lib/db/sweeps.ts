@@ -1,5 +1,5 @@
 import { AVAILABILITY_IDLE_MS } from "../../config/availability.js";
-import { sweepPresence } from "./editing-presence.js";
+
 import { COLLECTIONS, getDb } from "./db.js";
 import { genId } from "./ids.js";
 
@@ -8,7 +8,7 @@ const STALE_SERVING_MS = 90 * 60 * 1000;
 export async function sweep(): Promise<void> {
   const db = await getDb();
   const now = new Date();
-  await sweepPresence(db);
+
 
   const idleCutoff = new Date(now.getTime() - AVAILABILITY_IDLE_MS);
   const idle = {

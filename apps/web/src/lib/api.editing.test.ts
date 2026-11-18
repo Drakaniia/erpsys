@@ -17,10 +17,4 @@ describe("editing timestamp transport", () => {
     expect(JSON.parse(fetcher.mock.calls[2][1].body)).toMatchObject({ ts: 10 });
     expect(timestampOf(JSON.parse(JSON.stringify(old.data[0])))).toBe(10);
   });
-  it("never attaches a business timestamp to presence heartbeats", async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { editors: [] }, ts: 50 })));
-    vi.stubGlobal("fetch", fetcher);
-    await api.editingPresence.join.call({ resource: "user", recordId: "entry-test", editorId: "tab" });
-    expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({});
-  });
 });

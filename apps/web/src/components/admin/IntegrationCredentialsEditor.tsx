@@ -1,6 +1,5 @@
 import { useId, useState } from "react";
-import { useEditingPresence } from "$lib/editing-presence";
-import EditorPresence from "../ui/EditorPresence";
+
 import { queryClient } from "$lib/api";
 import { notify } from "$lib/notifications";
 import {
@@ -85,7 +84,7 @@ export default function IntegrationCredentialsEditor({
 
   const values = valuesFromDrafts();
   const dirty = Object.keys(values).length > 0;
-  const presence = useEditingPresence("integration", dirty ? row.key : null, row);
+
   const payload = { key: row.key, version: row.version, values };
   const fingerprint = JSON.stringify(payload);
   const validated = approved !== null && approved === fingerprint;
@@ -165,7 +164,7 @@ export default function IntegrationCredentialsEditor({
 
   return (
     <div className="flex flex-col gap-4 pt-3">
-      {dirty && <EditorPresence presence={presence} />}
+
       {unreadable && (
         <p role="status" className="border-l-2 border-warning pl-2.5 text-xs text-warning">
           Stored credentials cannot be read — the encryption key changed.

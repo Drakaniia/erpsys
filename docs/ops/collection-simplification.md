@@ -6,7 +6,8 @@
 - `integration` holds one document per integration key. `values` remain encrypted server-side. `version`, `updatedAt`, and `updatedById` track credential changes; `enabled`, `enabledAt`, and `enabledById` track switches independently. Resetting credentials must not reset a switch.
 - `academic_year.profilingForm` owns the year's form configuration. `null` means explicitly unlinked.
 - Notification content remains durable in `notification`. Read IDs use account-scoped `localStorage`, bounded to the most recent 1,000 marked IDs. Read status no longer syncs across devices. Clearing browser storage resets local markers. Existing database read markers remain honored; no new ones are written.
-- Authentication, step-up challenges, quotas, shared editing presence, queue ownership, enrollment records, and schedules remain server-owned. Browser storage is not an authorization boundary.
+- Authentication, step-up challenges, quotas, queue ownership, enrollment records, and schedules remain server-owned. Browser storage is not an authorization boundary.
+- Editor tracking has been removed. Save-conflict checks remain in the database wrapper; forms retain their original edit timestamps. An existing legacy editor-tracking collection can be dropped after the updated server and web app are deployed.
 
 ## Migration
 

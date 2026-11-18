@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useEditingPresence } from "$lib/editing-presence";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import { api, queryClient } from "$lib/api";
 import { useStorageUpload } from "$lib/storage/use-storage-upload";
@@ -35,7 +35,7 @@ export function useDetailSheetState(
     }),
   );
 
-  const presence = useEditingPresence("submission", verificationId, detailQuery.data);
+  const presence = useEditTimestamp("submission", verificationId, detailQuery.data);
   const verifyMutation = useMutation(api.officer.verifyStep.mutationOptions());
   const replyMutation = useMutation(api.officer.replyStep.mutationOptions());
   const revokeMutation = useMutation(api.officer.revokeStamp.mutationOptions());
@@ -211,7 +211,7 @@ export function useDetailSheetState(
 
   return {
     detailQuery,
-    presence,
+
     stampQuery,
     verifyMutation,
     replyMutation,

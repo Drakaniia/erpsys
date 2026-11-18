@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useEditingPresence } from "$lib/editing-presence";
-import EditorPresence from "../ui/EditorPresence";
+
 import { STUDENT_NUMBER_PATTERN } from "$lib/domain/constants";
 
 export default function StudentNumberPrompt({
@@ -14,7 +13,7 @@ export default function StudentNumberPrompt({
   onsave: (value: string) => void;
   ondismiss: () => void;
 }) {
-  const presence = useEditingPresence("student-profile", "me");
+
   const [value, setValue] = useState("");
   const [touched, setTouched] = useState(false);
 
@@ -31,7 +30,7 @@ export default function StudentNumberPrompt({
 
   return (
     <div className="rounded-2xl border border-border bg-surface-raised p-4">
-      <EditorPresence presence={presence} />
+
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[15px] font-semibold text-ink">

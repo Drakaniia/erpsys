@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useEditingPresence } from "$lib/editing-presence";
-import EditorPresence from "../ui/EditorPresence";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { SCHEDULE_SLOT_MINUTES, WEEKDAY_LABELS } from "$lib/domain/constants";
 import type { WindowKind } from "$lib/domain/types";
 import { notify } from "$lib/notifications";
@@ -103,7 +102,7 @@ export default function ScheduleDialog({
 }) {
   const schedule = useSchedule(department.id, open);
   const save = useSaveSchedule();
-  const presence = useEditingPresence("schedule", open ? `me~${department.id}` : null, schedule.data);
+  const presence = useEditTimestamp("schedule", open ? `me~${department.id}` : null, schedule.data);
   const initialized = useRef(false);
   const [rows, setRows] = useState<ScheduleRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -171,7 +170,6 @@ export default function ScheduleDialog({
       }
     >
       <div className="max-h-[60dvh] space-y-3 overflow-y-auto px-5">
-        <EditorPresence presence={presence} />
         <p className="text-sm text-muted">
           Students see these hours on the queue card. They never open or close
           the queue — the “Accepting students” switch still does that.

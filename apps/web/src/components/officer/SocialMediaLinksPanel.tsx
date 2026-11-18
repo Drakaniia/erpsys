@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useEditingPresence } from "$lib/editing-presence";
-import EditorPresence from "../ui/EditorPresence";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import type { SocialMediaLinkData } from "$lib/officer/types";
 import ConfirmDialog from "../ConfirmDialog";
 import EmptyState from "../ui/EmptyState";
@@ -29,7 +28,7 @@ export default function SocialMediaLinksPanel({
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
   const items = data ?? [];
-  const presence = useEditingPresence("social-link", editingId !== "new" ? editingId : null, items.find((item) => item.id === editingId));
+  const presence = useEditTimestamp("social-link", editingId !== "new" ? editingId : null, items.find((item) => item.id === editingId));
 
   function startAdd() {
     setNameInput("");
@@ -95,7 +94,7 @@ export default function SocialMediaLinksPanel({
 
   return (
     <div>
-      {editingId && editingId !== "new" && <EditorPresence presence={presence} />}
+
       {isLoading && data === undefined ? (
         <SocialLinksSkeleton />
       ) : items.length === 0 && editingId !== "new" ? (

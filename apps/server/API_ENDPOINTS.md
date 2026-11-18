@@ -24,18 +24,7 @@ Every `/api/v1` request is one transaction under basic timestamp ordering (`src/
 - GETs by instructor, officer and admin surfaces stamp `readTs`; student-surface GETs do not.
 - Never guarded: Better Auth state (`session`, `account`, `verification`), `audit_log`, `admin_action_log`, `chat_usage`, `storage_usage`, `admin_step_up`, and everything outside `/api/v1`.
 
-## Editor presence (`/api/v1/editing-presence`)
-
-Presence is advisory, not a record lock. `editing_presence` stores one document per `(resource, recordId)` with an `editors` array of `{ userId, editorId, name, lastSeenAt, expiresAt }`. Each tab renews every 20 seconds; leases expire after 60 seconds. Reads filter expired entries immediately; the minute sweep removes expired members and empty documents. Atomic revision comparisons preserve concurrent editors and independent tabs.
-
-- `PUT /:resource/:recordId/:editorId`: join/renew with an empty body. Requires session and resource write access; identity and dates are server supplied.
-- `DELETE /:resource/:recordId/:editorId`: remove only the signed-in user's matching tab.
-- `GET /:resource/:recordId`: read active editors with the same resource authorization.
-- `GET /`: admin-only paginated overview (`page`, `pageSize`, capped at 100).
-- Record responses contain `{ data: { resource, recordId, editors } }`; overview returns `{ data, page, pageSize, total }`.
-- Resource allowlist: `academic-year`, `department`, `requirement`, `adviser`, `user`, `stamp`, `chatbot-knowledge`, `profiling-form`, `social-link`, `schedule`, `student-profile`, `student-enrollment`, `submission`, `queue-entry`, `integration`. Credentials and authentication internals are never included.
-- `chatbot-knowledge` and `profiling-form` accept `default`; profiling presence is scoped to the active academic year. `schedule` accepts `me~departmentId` and is scoped to user, department and active year. Profile/enrollment accept `me`; enrollment is scoped to the active year. Submission accepts an existing verification ID or `me~STEP_CODE`. Returned record IDs are canonical storage IDs.
-- Presence operations run outside business timestamp ordering, never stamp business reads or writes, and are excluded from audit logging. They do not advance editing forms' frozen timestamps. Business conflicts still return `409` / `TS_ABORTED`; failed saves keep drafts rather than automatically refreshing over them.
+Editing forms retain the timestamp of their original read across background refetches. There is no editor-tracking collection, heartbeat, or presence endpoint. Save conflicts still return `409` / `TS_ABORTED`; rejected saves leave drafts intact.
 
 ## System (`/api`, `/`)
 

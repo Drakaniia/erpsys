@@ -8,10 +8,6 @@ const ix = (
 ): IndexDescription => ({ name, key, ...options });
 
 const INDEXES: [CollectionName, IndexDescription[]][] = [
-  [COLLECTIONS.editingPresence, [
-    ix("uq_editing_presence_record", { resource: 1, recordId: 1 }, { unique: true }),
-    ix("idx_editing_presence_expiry", { "editors.expiresAt": 1 }),
-  ]],
   [COLLECTIONS.enrollmentQueue, [
     ix("uq_enrollment_queue_student_year", { studentProfileId: 1, academicYearId: 1 }, { unique: true }),
     ix("uq_enrollment_queue_department_serving", { departmentId: 1, academicYearId: 1 }, { unique: true, partialFilterExpression: { status: "IN_PROGRESS" } }),

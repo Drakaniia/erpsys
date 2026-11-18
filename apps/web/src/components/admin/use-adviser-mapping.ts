@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useEditingPresence } from "$lib/editing-presence";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, queryClient } from "$lib/api";
 import { normalizeYearLevels, type YearLevel } from "$lib/domain/constants";
@@ -44,7 +44,7 @@ export function useAdviserMapping({
   }
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const presence = useEditingPresence("adviser", editingId, advisers.find((adviser) => adviser.id === editingId));
+  const presence = useEditTimestamp("adviser", editingId, advisers.find((adviser) => adviser.id === editingId));
   const [selectedLevels, setSelectedLevels] = useState<
     Map<string, YearLevel[]>
   >(() => new Map());
@@ -133,7 +133,7 @@ export function useAdviserMapping({
       departmentsQuery.refetch();
     },
     editingId,
-    presence,
+
     selectedLevels,
     openEditor,
     setLevels,

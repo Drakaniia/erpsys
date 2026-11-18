@@ -3,7 +3,7 @@ import { env } from "../platform/env.js";
 import { guardDb } from "./timestamp-ordering.js";
 
 export const COLLECTIONS = {
-  editingPresence: "editing_presence",
+
   user: "user",
   session: "session",
   account: "account",

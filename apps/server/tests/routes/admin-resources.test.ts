@@ -118,6 +118,21 @@ const call = (path: string, init?: RequestInit) =>
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
 
+describe("removed editor tracking", () => {
+  it("does not expose presence endpoints or register a tracking collection", async () => {
+    for (const [method, path] of [
+      ["GET", "/editing-presence"],
+      ["GET", "/editing-presence/department/dept1"],
+      ["PUT", "/editing-presence/department/dept1/tab"],
+      ["DELETE", "/editing-presence/department/dept1/tab"],
+    ]) {
+      expect((await call(path, { method })).status).toBe(404);
+    }
+    expect(Object.values(COLLECTIONS)).not.toContain("editing_presence");
+    expect(context.store.editing_presence).toBeUndefined();
+  });
+});
+
 describe("academic years", () => {
   it("blocks activation while the current year still has an open queue", async () => {
     context.store[COLLECTIONS.enrollmentQueue].push({

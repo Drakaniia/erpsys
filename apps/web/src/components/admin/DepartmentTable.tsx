@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { useEditingPresence } from "$lib/editing-presence";
-import EditorPresence from "../ui/EditorPresence";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ConfirmDialog from "../ConfirmDialog";
 import YearLevelModal from "../YearLevelModal";
@@ -95,8 +94,8 @@ export default function DepartmentTable({
 
   // ---- Inline edit ----
   const [editingId, setEditingId] = useState<string | null>(null);
-  const presence = useEditingPresence("department", editingId, departments.find((d) => d.id === editingId));
-  const levelsPresence = useEditingPresence("department", editingLevelsFor?.id, editingLevelsFor);
+  const presence = useEditTimestamp("department", editingId, departments.find((d) => d.id === editingId));
+  const levelsPresence = useEditTimestamp("department", editingLevelsFor?.id, editingLevelsFor);
   const [editName, setEditName] = useState("");
   const [editError, setEditError] = useState("");
 
@@ -171,8 +170,7 @@ export default function DepartmentTable({
 
   return (
     <div className="flex flex-col gap-4">
-      {editingId && <EditorPresence presence={presence} />}
-      {editingLevelsFor && <EditorPresence presence={levelsPresence} />}
+
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted">
           Students see this list at step 6. Deactivated departments stay hidden

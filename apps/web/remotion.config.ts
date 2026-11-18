@@ -24,7 +24,7 @@ Config.overrideWebpackConfig((base) => {
     './queue-model$': file('film/models.ts'),
     './admin-page/use-admin-console$': file('film/models.ts'),
     '$lib/ui/use-presence$': file('film/presence.ts'),
-    '$lib/editing-presence$': file('film/presence.ts'),
+    '$lib/edit-timestamp$': file('film/presence.ts'),
     '$lib/officer/format$': file('film/format.ts'),
     '$lib': file('src/lib'), '@': file('src'),
   }}};

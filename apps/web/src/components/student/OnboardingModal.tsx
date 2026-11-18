@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useEditingPresence } from "$lib/editing-presence";
-import EditorPresence from "../ui/EditorPresence";
+import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   STUDENT_NUMBER_PATTERN,
@@ -30,7 +29,7 @@ export default function OnboardingModal({
   onclose?: () => void;
 }) {
   const hardGate = mode === "gate";
-  const presence = useEditingPresence("student-enrollment", data.profile ? "me" : null, data);
+  const presence = useEditTimestamp("student-enrollment", data.profile ? "me" : null, data);
   const optionsQuery = useQuery(
     api.options.getSignupOptions.queryOptions({
       staleTime: 5 * 60 * 1000,
@@ -308,7 +307,7 @@ export default function OnboardingModal({
             </p>
           ) : null}
           <form className="mt-5 space-y-4" onSubmit={handleSubmit} noValidate>
-            <EditorPresence presence={presence} />
+
             {showNumberField ? (
               <div className="space-y-1.5">
                 <label
