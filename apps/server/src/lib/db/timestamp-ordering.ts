@@ -68,12 +68,12 @@ export function isIssuedTs(value: unknown): value is number {
  * read; otherwise T is server-anchored with a fresh TS. Writes always stamp their
  * reads; GETs stamp only once `stampWriterReads` marks the caller as a writer.
  */
-export function beginTransaction(
+export function beginTransaction<T>(
   clientTs: number | undefined,
   method: string,
-  fn: () => void,
-): void {
-  store.run(
+  fn: () => T,
+): T {
+  return store.run(
     {
       ts: clientTs ?? nextTs(),
       anchor: clientTs === undefined ? "server" : "client",

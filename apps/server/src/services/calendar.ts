@@ -1,5 +1,6 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { ApiError } from "../config/errors.js";
+import { beginTransaction, restartAborted } from "../lib/db/timestamp-ordering.js";
 import {
   SCHEDULE_TZ,
   clock,
@@ -247,11 +248,24 @@ export async function syncCalendar(userId: string): Promise<SyncState> {
   }
 }
 
+/**
+ * Concurrency: timestamp ordering — server-anchored Calendar follow-up.
+ * Rule: schedule writes keep their client TS; syncing starts a fresh T after they commit.
+ * Abort: restart up to 3× before any Calendar write; never reuse the schedule's old TS.
+ */
 export async function syncAfterScheduleChange(
   userId: string,
 ): Promise<SyncState> {
-  await CalendarConnectionModel.markDirty(userId, new Date());
-  return syncCalendar(userId);
+  return beginTransaction(undefined, "POST", async () => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await CalendarConnectionModel.markDirty(userId, new Date());
+        return await syncCalendar(userId);
+      } catch (error) {
+        if (!restartAborted(error, attempt)) throw error;
+      }
+    }
+  });
 }
 
 export async function sweepCalendars(now: Date = new Date()): Promise<void> {
