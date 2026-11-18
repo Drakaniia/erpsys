@@ -76,6 +76,7 @@ GROUPS = {
     "audit-logs": (20, "Request Audit"),
     "chat": (21, "Enrollment Assistant Stream"),
     "system": (22, "Application Health"),
+    "editing-presence": (23, "Advisory Editor Presence"),
 }
 HEADER = """# ERPSYS — API Documentation
 
@@ -118,7 +119,7 @@ Authentication responses, basic health, binary files, redirects, and assistant s
 
 The optional data object is not present on every error. Server error names are not generally serialized as top-level codes. Production often replaces detailed business messages with generic status text; examples of conditions below do not promise exact production wording. Storage-quota responses and authentication errors have explicitly different shapes.
 
-Every versioned request has a transaction timestamp. A write may include the ts returned with the data being edited; the middleware consumes it before business-body validation. It must be a positive safe integer no later than the server's timestamp ceiling. Omit it to start a fresh server-anchored operation. A stale read or write can return HTTP 409 with data.code TS_ABORTED. Refresh the affected records before retrying; a batch must not be assumed rolled back. Eligible server-started requests restart up to three times only before writing. Ordering is designed for one application process, not a multi-server transaction service.
+Versioned business requests use transaction timestamps. A write may include the ts returned with the data being edited; the middleware consumes it before business-body validation. It must be a positive safe integer issued by the running server. Omit it to start a fresh server-anchored operation. A stale read or write can return HTTP 409 with data.code TS_ABORTED. Keep unsaved drafts and reload the affected records before retrying; a batch must not be assumed rolled back. Eligible server-started requests restart up to three times only before writing. Ordering is designed for one application process, not a multi-server transaction service. Advisory editing-presence operations run outside business timestamp ordering and do not advance business read/write stamps; presence is not a record lock.
 
 Shared resource failures include 400 for invalid request input/timestamp; 401 for no session; 403 for permission failure; 404 for missing resources; 409 for conflicting state; 412 for unmet prerequisites; 413 for body/file limits; 429 for request limits; and 500/502/503 for internal/provider/service failures as applicable. Successful authorization does not bypass business-state checks.
 
