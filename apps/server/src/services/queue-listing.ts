@@ -87,7 +87,7 @@ export async function myQueues(adviserId: string) {
       EnrollmentQueueModel.countInLine({
         departmentId: String(dept._id),
         academicYearId: yearId,
-        status: { $in: ["WAITING", "IN_PROGRESS"] },
+        status: "WAITING",
       }),
     ),
   );

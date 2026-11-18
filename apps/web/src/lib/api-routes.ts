@@ -7,9 +7,11 @@ export type ClientRoute = {
   path: string;
   update?: { method: ClientRoute["method"]; path: string };
   list?: boolean;
+  serverTimestamp?: boolean;
 };
 
 export const ROUTES = {
+
   me: {
     // The aggregate launch read — one round trip for the landing surface.
     getLaunch: { method: "GET", path: "/api/v1/me/launch" },
@@ -194,10 +196,12 @@ export const ROUTES = {
     respondDepartmentTransfer: {
       method: "PATCH",
       path: "/api/v1/transfers/:id",
+      serverTimestamp: true,
     },
     cancelDepartmentTransfer: {
       method: "DELETE",
       path: "/api/v1/transfers/:id",
+      serverTimestamp: true,
     },
     getMyQueues: { method: "GET", path: "/api/v1/queues" },
     getEnrolledByDept: {

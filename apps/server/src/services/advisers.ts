@@ -47,13 +47,13 @@ export function assertLevelsOffered(
 }
 
 async function clashHolderName(
+  holders: Awaited<ReturnType<typeof AdviserDepartmentModel.listForAssignment>>,
   departmentId: string,
   levels: YearLevel[],
   adviserId: string,
 ): Promise<string | null> {
-  const clash = (
-    await AdviserDepartmentModel.listOtherHolders(departmentId, adviserId)
-  ).find((o) => yearLevelsOverlap(o.yearLevels ?? [], levels));
+  const clash = holders.find((holder) => holder.departmentId === departmentId &&
+    holder.adviserId !== adviserId && yearLevelsOverlap(holder.yearLevels ?? [], levels));
   if (!clash) return null;
   const [user] = await UserModel.findByIds([clash.adviserId]);
   return user?.name?.trim() || "An instructor";
@@ -62,19 +62,36 @@ async function clashHolderName(
 async function writeAssignments(
   adviserId: string,
   assignments: Assignment[],
+  previous: Awaited<ReturnType<typeof AdviserDepartmentModel.listForAdviser>>,
 ): Promise<void> {
   const keep = assignments.map((a) => a.departmentId);
-  await AdviserAvailabilityModel.closeOpenForAdviser(adviserId, keep);
-  await EnrollmentQueueModel.releaseServingExcept(adviserId, keep);
-  await AdviserDepartmentModel.deleteForAdviser(adviserId);
-  await AdviserDepartmentModel.insertMany(
-    assignments.map((assignment) => ({
-      _id: genId("adviser-dept"),
-      adviserId,
-      departmentId: assignment.departmentId,
-      yearLevels: assignment.yearLevels,
-    })),
-  );
+  const removed = previous.filter((link) => !keep.includes(link.departmentId));
+  const unchanged = previous.filter((link) => assignments.some((next) =>
+    next.departmentId === link.departmentId &&
+    JSON.stringify(normalizeYearLevels(link.yearLevels ?? [])) === JSON.stringify(next.yearLevels),
+  ));
+  if (removed.length > 0) await AdviserAvailabilityModel.closeOpenForAdviser(adviserId, keep);
+  if (removed.length > 0 || unchanged.length !== previous.length) {
+    await EnrollmentQueueModel.releaseServingExcept(adviserId, unchanged.map((link) => link.departmentId));
+  }
+  if (assignments.length === 0 && previous.length > 0) {
+    await AdviserDepartmentModel.deleteForAdviser(adviserId);
+    return;
+  }
+  for (const link of previous) {
+    const next = assignments.find((a) => a.departmentId === link.departmentId);
+    if (!next) {
+      await AdviserDepartmentModel.deleteOne(adviserId, link.departmentId);
+    } else if (JSON.stringify(normalizeYearLevels(link.yearLevels ?? [])) !== JSON.stringify(next.yearLevels)) {
+      await AdviserDepartmentModel.setLevels(adviserId, link.departmentId, next.yearLevels);
+    }
+  }
+  for (const assignment of assignments) {
+    if (previous.some((link) => link.departmentId === assignment.departmentId)) continue;
+    await AdviserDepartmentModel.insert({
+      _id: genId("adviser-dept"), adviserId, ...assignment,
+    });
+  }
 }
 
 export async function replaceAssignments(
@@ -104,13 +121,18 @@ export async function replaceAssignments(
     yearLevels: normalizeYearLevels(yearLevels),
   }));
 
-  const departments = await departmentsByIds(unique.map((u) => u.departmentId));
+  const [departments, holders] = await Promise.all([
+    departmentsByIds(unique.map((u) => u.departmentId)),
+    AdviserDepartmentModel.listForAssignment(adviserId, unique.map((u) => u.departmentId)),
+  ]);
+  const previous = holders.filter((holder) => holder.adviserId === adviserId);
   const departmentOf = (id: string) =>
     departments.find((d) => String(d._id) === id);
   for (const assignment of unique) {
     const department = departmentOf(assignment.departmentId)!;
     assertLevelsOffered(department, assignment.yearLevels);
     const holder = await clashHolderName(
+      holders,
       assignment.departmentId,
       assignment.yearLevels,
       adviserId,
@@ -122,7 +144,7 @@ export async function replaceAssignments(
     }
   }
 
-  await writeAssignments(adviserId, unique);
+  await writeAssignments(adviserId, unique, previous);
   const removed = await AvailabilityWindowModel.deleteForAdviser(
     adviserId,
     unique.map((a) => a.departmentId),
@@ -145,7 +167,11 @@ export async function assignSelf(
 ): Promise<{ departmentIds: string[]; yearLevels: YearLevel[] }> {
   const departmentIds = [...new Set(input.departmentIds)];
   const requested = normalizeYearLevels(input.yearLevels);
-  const departments = await departmentsByIds(departmentIds);
+  const [departments, holders] = await Promise.all([
+    departmentsByIds(departmentIds),
+    AdviserDepartmentModel.listForAssignment(adviserId, departmentIds),
+  ]);
+  const previous = holders.filter((holder) => holder.adviserId === adviserId);
 
   if (departments.some((dept) => !dept.isActive)) {
     throw new ApiError("CONFLICT", {
@@ -156,7 +182,7 @@ export async function assignSelf(
     assertLevelsOffered(department, requested);
   }
   for (const departmentId of departmentIds) {
-    const holder = await clashHolderName(departmentId, requested, adviserId);
+    const holder = await clashHolderName(holders, departmentId, requested, adviserId);
     if (!holder) continue;
     const department = departments.find((d) => String(d._id) === departmentId)!;
     const scope =
@@ -174,6 +200,7 @@ export async function assignSelf(
       departmentId,
       yearLevels: requested,
     })),
+    previous,
   );
   return {
     departmentIds,

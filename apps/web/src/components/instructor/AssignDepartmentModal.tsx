@@ -33,7 +33,7 @@ export default function AssignDepartmentModal({
   onclose,
 }: {
   open: boolean;
-  mode?: "assign" | "edit";
+  mode?: "assign" | "edit" | "transfer";
   myAdviserId?: string | null;
   department: AssignTarget | null;
   busy?: boolean;
@@ -53,9 +53,8 @@ export default function AssignDepartmentModal({
     department && normalizeYearLevels(department.yearLevels).length > 0
       ? normalizeYearLevels(department.yearLevels)
       : [...YEAR_LEVELS];
-  const taken = department
-    ? takenYearLevels(department.owners, myAdviserId)
-    : [];
+  const held = department ? takenYearLevels(department.owners, myAdviserId) : [];
+  const taken = mode === "transfer" ? options.filter((level) => !held.includes(level)) : held;
 
   useEffect(() => {
     if (!open || !department) {
@@ -65,7 +64,7 @@ export default function AssignDepartmentModal({
     const key = `${mode}:${department.id}`;
     if (seededFor.current === key) return;
     seededFor.current = key;
-    if (mode === "assign") {
+    if (mode !== "edit") {
       setSelected([]);
       return;
     }
@@ -83,11 +82,11 @@ export default function AssignDepartmentModal({
     const panel = panelRef.current;
     if (!panel) return;
     const trap = dialogTrap(panel, {
-      onEscape: onclose,
+      onEscape: () => { if (!busy) onclose(); },
       initialFocus: "panel",
     });
     return () => trap.destroy();
-  }, [open, department, onclose]);
+  }, [open, department, busy, onclose]);
 
   if (!presence.mounted || !department) return null;
 
@@ -117,13 +116,18 @@ export default function AssignDepartmentModal({
           id="assign-level-title"
           className="text-base font-semibold tracking-[-0.01em] text-ink"
         >
-          {mode === "edit" ? "Edit" : "Assign"} {department.code}
+          {mode === "edit" ? "Edit" : mode === "transfer" ? "Request transfer for" : "Assign"} {department.code}
         </h2>
         <p id="assign-level-range" className="mt-1 text-sm text-muted">
           {department.name}
           {selected.length > 0
             ? ` — ${departmentLevelRangeLabel(selected)}`
             : ""}
+        </p>
+        <p className="mt-2 text-xs text-muted">
+          {mode === "transfer"
+            ? "Choose levels held by one instructor. They can accept or decline; unanswered requests transfer automatically."
+            : "Switching departments closes your previous queue. Changing levels returns any student you are serving to the line."}
         </p>
         <div className="mt-4">
           <YearLevelChips
@@ -148,10 +152,11 @@ export default function AssignDepartmentModal({
           <button
             type="button"
             onClick={() => onsubmit(selected)}
-            disabled={busy || selected.length === 0}
+            disabled={busy || selected.length === 0 || (mode === "edit" &&
+              JSON.stringify(normalizeYearLevels(selected)) === JSON.stringify(resolveAssignScope(department.myYearLevels, options)))}
             className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
           >
-            {busy ? "Saving…" : mode === "edit" ? "Save" : "Assign"}
+            {busy ? "Saving…" : mode === "edit" ? "Save" : mode === "transfer" ? "Request transfer" : "Assign"}
           </button>
         </div>
       </div>

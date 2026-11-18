@@ -87,17 +87,12 @@ export async function runTransfer(opts: {
   ownerNoticeBody?: string;
 }): Promise<string | null> {
   const requested = normalizeYearLevels(opts.yearLevels ?? []);
-  const owner =
-    (
-      await AdviserDepartmentModel.listOtherHolders(
-        opts.departmentId,
-        opts.adviserId,
-      )
-    ).find(
-      (holder) =>
-        requested.length === 0 ||
-        yearLevelsOverlap(holder.yearLevels ?? [], requested),
-    ) ?? null;
+  const holders = (await AdviserDepartmentModel.listOtherHolders(opts.departmentId, opts.adviserId))
+    .filter((holder) => yearLevelsOverlap(holder.yearLevels ?? [], requested));
+  if (holders.length > 1) {
+    throw new ApiError("CONFLICT", { message: "Request year levels from one instructor at a time." });
+  }
+  const owner = holders[0] ?? null;
 
   await AdviserDepartmentModel.deleteOthers(opts.adviserId, opts.departmentId);
   await AdviserAvailabilityModel.closeOpenForAdviser(opts.adviserId, [
@@ -124,6 +119,7 @@ export async function runTransfer(opts: {
         owner.adviserId,
       );
     } else {
+      await EnrollmentQueueModel.releaseServingBy(opts.departmentId, owner.adviserId);
       await AdviserDepartmentModel.setLevels(
         owner.adviserId,
         opts.departmentId,
@@ -150,6 +146,7 @@ export async function runTransfer(opts: {
     opts.departmentId,
   );
   if (mine) {
+    await EnrollmentQueueModel.releaseServingBy(opts.departmentId, opts.adviserId);
     await AdviserDepartmentModel.setLevels(
       opts.adviserId,
       opts.departmentId,
@@ -212,8 +209,12 @@ export async function resolveExpiredTransfers(
 ): Promise<number> {
   const expired = await DepartmentTransferModel.listExpired(now);
   for (const row of expired) {
-    const deptName = await deptNameOrThrow(row.departmentId).catch(() => null);
-    if (!deptName) {
+    const latest = await DepartmentTransferModel.findById(String(row._id));
+    if (latest?.status !== "PENDING") continue;
+    const department = await DepartmentModel.findById(row.departmentId);
+    const deptName = department?.name;
+    const offered = (row.yearLevels ?? []).every((level) => departmentAcceptsLevel(department?.yearLevels ?? [], level));
+    if (!deptName || !department?.isActive || !offered) {
       await DepartmentTransferModel.update(row._id, {
         status: "EXPIRED",
         resolvedAt: now,
@@ -229,11 +230,12 @@ export async function resolveExpiredTransfers(
       ownerLink !== null &&
       yearLevelsOverlap(ownerLink.yearLevels ?? [], requested);
     const requesterAlreadyOwns =
-      requesterLink !== null &&
-      requested.every((level) =>
-        departmentAcceptsLevel(requesterLink.yearLevels ?? [], level),
-      );
-    if (!stillOwner || requesterAlreadyOwns) {
+      requesterLink !== null && (requested.length === 0
+        ? normalizeYearLevels(requesterLink.yearLevels ?? []).length === 0
+        : requested.every((level) => departmentAcceptsLevel(requesterLink.yearLevels ?? [], level)));
+    const holders = await AdviserDepartmentModel.listOtherHolders(row.departmentId, row.requesterId);
+    const conflictingOwners = holders.filter((holder) => yearLevelsOverlap(holder.yearLevels ?? [], requested));
+    if (!stillOwner || requesterAlreadyOwns || conflictingOwners.length !== 1 || conflictingOwners[0].adviserId !== row.ownerId) {
       await DepartmentTransferModel.update(row._id, {
         status: "EXPIRED",
         resolvedAt: now,

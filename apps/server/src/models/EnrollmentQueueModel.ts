@@ -70,10 +70,14 @@ export class EnrollmentQueueModel {
     id: string,
     from: string,
     patch: Record<string, unknown>,
+    servedById?: string,
   ): Promise<boolean> {
     const result = await getDbSync()
       .collection(COLLECTIONS.enrollmentQueue)
-      .updateOne({ _id: id, status: from } as never, { $set: patch } as never);
+      .updateOne(
+        { _id: id, status: from, ...(servedById !== undefined ? { servedById } : {}) } as never,
+        { $set: patch } as never,
+      );
     return (result.matchedCount ?? 0) > 0;
   }
 
@@ -249,12 +253,14 @@ export class EnrollmentQueueModel {
   static async releaseServingBy(
     departmentId: string,
     adviserId: string,
+    academicYearId?: string,
   ): Promise<void> {
     await getDbSync()
       .collection(COLLECTIONS.enrollmentQueue)
       .updateMany(
         {
           departmentId,
+          ...(academicYearId !== undefined ? { academicYearId } : {}),
           status: "IN_PROGRESS",
           servedById: adviserId,
         } as never,

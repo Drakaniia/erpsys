@@ -19,8 +19,10 @@ import AssignDepartmentModal from "./AssignDepartmentModal";
 
 export default function DepartmentManager({
   ontoast,
+  onassigned,
 }: {
   ontoast: (message: string, kind?: "success" | "error") => void;
+  onassigned?: (departmentId: string) => void;
 }) {
   const listQuery = useQuery(
     api.instructor.listDepartments.queryOptions({
@@ -56,8 +58,58 @@ export default function DepartmentManager({
     return pendingRequests.find((r) => r.departmentId === item.id) ?? null;
   }
 
+  const requestMutation = useMutation(api.instructor.requestDepartmentTransfer.mutationOptions());
   const assignMutation = useMutation(
-    api.instructor.setMyDepartments.mutationOptions(),
+    api.instructor.setMyDepartments.mutationOptions({
+      onSuccess: async (saved: { departmentIds: string[]; yearLevels: YearLevel[] }) => {
+        const directoryKey = ["instructor", "listDepartments"];
+        const queueKey = api.instructor.getMyQueues.queryKey();
+        await Promise.all([
+          queryClient.cancelQueries({ queryKey: directoryKey }),
+          queryClient.cancelQueries({ queryKey: queueKey }),
+        ]);
+        queryClient.setQueriesData<{ data: DepartmentManageItem[] }>({ queryKey: directoryKey }, (current) => current && ({
+          ...current,
+          data: current.data.map((department) => {
+            const assigned = saved.departmentIds.includes(department.id);
+            const owners = (department.owners ?? []).filter((owner: { adviserId: string }) => owner.adviserId !== myId);
+            if (assigned) owners.push({ adviserId: myId, name: sessionQuery.data?.user.name ?? "You", yearLevels: saved.yearLevels });
+            return {
+              ...department, assigned, myYearLevels: assigned ? saved.yearLevels : [], owners,
+              assignedToId: owners[0]?.adviserId ?? null, assignedToName: owners[0]?.name ?? null,
+            };
+          }),
+        }));
+        queryClient.setQueryData<{ departments: DepartmentManageItem[] }>(queueKey, (current) => current && ({
+          ...current, departments: saved.departmentIds.map((id) => {
+              const department = current.departments.find((item) => item.id === id);
+              if (!department) {
+                const target = departments.find((item) => item.id === id);
+                return {
+                  id, name: target?.name ?? "Department", code: target?.code ?? "",
+                  yearLevels: target?.yearLevels ?? [], myYearLevels: saved.yearLevels,
+                  myOpen: false, isOpen: false, openBy: null, autoClosedAt: null,
+                  entries: [], servingEntry: null, waitingCount: 0, queueLoading: true,
+                };
+              }
+              const changed = JSON.stringify(department.myYearLevels) !== JSON.stringify(saved.yearLevels);
+              const released = changed && department.servingEntry?.servedById === myId;
+              return {
+                ...department, myYearLevels: saved.yearLevels,
+                servingEntry: released ? null : department.servingEntry,
+                waitingCount: department.waitingCount + (released ? 1 : 0),
+                entries: department.entries.map((entry: { entryId: string; yearLevel: YearLevel | null }) => ({
+                  ...entry,
+                  locked: entry.yearLevel === null || (saved.yearLevels.length > 0 && !saved.yearLevels.includes(entry.yearLevel)),
+                  ...(released && entry.entryId === department.servingEntry.entryId
+                    ? { status: "WAITING", servedById: null, servedAt: null } : {}),
+                })),
+              };
+            }),
+        }));
+        invalidate();
+      },
+    }),
   );
   const cancelRequestMutation = useMutation(
     api.instructor.cancelDepartmentTransfer.mutationOptions(),
@@ -75,14 +127,14 @@ export default function DepartmentManager({
     api.instructor.setDepartmentYearLevels.mutationOptions(),
   );
 
-  function invalidate() {
+  function invalidate(transfers = false) {
     queryClient.invalidateQueries({
-      queryKey: api.instructor.listDepartments.queryKey(),
+      queryKey: ["instructor", "listDepartments"],
     });
     queryClient.invalidateQueries({
       queryKey: api.instructor.getMyQueues.queryKey(),
     });
-    queryClient.invalidateQueries({
+    if (transfers) queryClient.invalidateQueries({
       queryKey: api.instructor.listMyTransferRequests.queryKey(),
     });
   }
@@ -94,7 +146,7 @@ export default function DepartmentManager({
   const [assigningFor, setAssigningFor] = useState<DepartmentManageItem | null>(
     null,
   );
-  const [assignMode, setAssignMode] = useState<"assign" | "edit">("assign");
+  const [assignMode, setAssignMode] = useState<"assign" | "edit" | "transfer">("assign");
   const [editingLevelsFor, setEditingLevelsFor] =
     useState<DepartmentManageItem | null>(null);
   const [deletingDept, setDeletingDept] = useState<DepartmentManageItem | null>(
@@ -103,24 +155,30 @@ export default function DepartmentManager({
   const [editingId, setEditingId] = useState<string | null>(null);
   const presence = useEditTimestamp("department", editingId, listQuery.data?.data?.find((d: { id: string }) => d.id === editingId));
   const levelsPresence = useEditTimestamp("department", editingLevelsFor?.id, editingLevelsFor);
-  const mappingPresence = useEditTimestamp("department", assigningFor?.id, assigningFor);
+
+  const [assignmentConfirm, setAssignmentConfirm] = useState<
+    | { kind: "unassign"; department: DepartmentManageItem }
+    | { kind: "switch"; department: DepartmentManageItem; yearLevels: YearLevel[] }
+    | null
+  >(null);
   const [editName, setEditName] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
 
   async function toggleAssigned(item: DepartmentManageItem) {
+    if (assignMutation.isPending) return;
+
     try {
       await assignMutation.mutateAsync({
         departmentIds: item.assigned ? [] : [item.id],
-        ts: mappingPresence.ts,
       });
       ontoast(
         item.assigned
           ? `Unassigned ${item.code} — you're not serving it`
           : `Now serving ${item.code} — ${item.name}`,
       );
-      invalidate();
+      setAssignmentConfirm(null);
     } catch (e) {
       ontoast(
         e instanceof Error ? e.message : "Could not update assignment",
@@ -129,19 +187,29 @@ export default function DepartmentManager({
     }
   }
 
-  async function submitAssignment(yearLevels: YearLevel[]) {
+  async function submitAssignment(yearLevels: YearLevel[], confirmed = false) {
     const target = assigningFor;
-    if (!target) return;
+    if (!target || assignMutation.isPending || requestMutation.isPending) return;
+    if (!confirmed && assignMode !== "transfer" && departments.some((d) => d.assigned && d.id !== target.id)) {
+      setAssignmentConfirm({ kind: "switch", department: target, yearLevels });
+      return;
+    }
     try {
+      if (assignMode === "transfer") {
+        await requestMutation.mutateAsync({ departmentId: target.id, yearLevels });
+        ontoast(`Transfer requested for ${target.code}. Your current assignment stays until approval.`);
+        setAssigningFor(null);
+        invalidate(true);
+        return;
+      }
       await assignMutation.mutateAsync({
         departmentIds: [target.id],
         yearLevels,
       });
-      ontoast(
-        `Now serving ${target.code} — ${departmentLevelRangeLabel(yearLevels)}`,
-      );
+      ontoast(`Assigned ${target.code} — ${departmentLevelRangeLabel(yearLevels)}. Open its queue to accept students.`);
       setAssigningFor(null);
-      invalidate();
+      setAssignmentConfirm(null);
+      onassigned?.(target.id);
     } catch (e) {
       ontoast(
         e instanceof Error ? e.message : "Could not update assignment",
@@ -156,7 +224,7 @@ export default function DepartmentManager({
     try {
       await cancelRequestMutation.mutateAsync({ requestId: pending.id });
       ontoast(`Cancelled the ${item.code} transfer request`);
-      invalidate();
+      invalidate(true);
     } catch (e) {
       ontoast(
         e instanceof Error ? e.message : "Could not cancel the request",
@@ -250,6 +318,7 @@ export default function DepartmentManager({
 
   return (
     <div className="flex flex-col gap-4">
+
       <p className="text-sm leading-relaxed text-muted">
         Your queue lives in the department tab on the left — assigning a new one
         replaces your current (one department at a time). Use Manage to switch
@@ -283,14 +352,14 @@ export default function DepartmentManager({
             </div>
           ))}
         </div>
-      ) : departments.length === 0 ? (
+      ) : !listQuery.isError && departments.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface-raised px-6 py-14 text-center">
           <p className="text-sm font-medium text-ink">No departments yet</p>
           <p className="max-w-sm text-xs text-muted">
             Create the first department below — it becomes the one you serve.
           </p>
         </div>
-      ) : (
+      ) : !listQuery.isError ? (
         <div className="rounded-xl border border-border bg-surface-raised">
           <ul className="divide-y divide-border">
             {departments.map((item) => {
@@ -320,7 +389,7 @@ export default function DepartmentManager({
                       <div className="flex gap-2">
                         <button
                           onClick={handleUpdate}
-                          disabled={updateMutation.isPending}
+                          disabled={updateMutation.isPending || !editName.trim() || editName.trim() === item.name}
                           className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
                         >
                           Save
@@ -338,7 +407,7 @@ export default function DepartmentManager({
               }
               return (
                 <li key={item.id} className="px-4 py-3">
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex min-w-0 flex-col gap-0.5">
                       <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <span className="rounded-full border border-primary/40 px-2.5 py-0.5 text-[11px] font-medium tracking-[0.02em] text-primary">
@@ -387,7 +456,7 @@ export default function DepartmentManager({
                         </p>
                       )}
                     </div>
-                    <div className="flex shrink-0 items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-1">
                       {pending ? (
                         <button
                           onClick={() => cancelRequest(item)}
@@ -401,12 +470,12 @@ export default function DepartmentManager({
                           <button
                             onClick={() =>
                               item.assigned
-                                ? void toggleAssigned(item)
+                                ? setAssignmentConfirm({ kind: "unassign", department: item })
                                 : (setAssignMode("assign"),
                                   setAssigningFor(item))
                             }
                             disabled={
-                              !item.isActive ||
+                              (!item.isActive && !item.assigned) ||
                               assignMutation.isPending ||
                               cancelRequestMutation.isPending
                             }
@@ -438,6 +507,12 @@ export default function DepartmentManager({
                           )}
                         </>
                       )}
+                      {!pending && item.isActive && item.owners.some((owner: { adviserId: string }) => owner.adviserId !== myId) && (
+                        <button type="button" disabled={requestMutation.isPending}
+                          onClick={() => { setAssignMode("transfer"); setAssigningFor(item); }}
+                          className="rounded-md px-2 py-1 text-xs font-medium text-primary">Request transfer</button>
+                      )}
+                      {(item.assigned || (sessionQuery.data?.user as { role?: string } | undefined)?.role === "ADMIN") && <>
                       <button
                         onClick={() => (
                           setEditingId(item.id),
@@ -462,6 +537,7 @@ export default function DepartmentManager({
                       >
                         Delete
                       </button>
+                      </>}
                     </div>
                   </div>
                 </li>
@@ -469,7 +545,7 @@ export default function DepartmentManager({
             })}
           </ul>
         </div>
-      )}
+      ) : null}
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-raised px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           <input
@@ -482,7 +558,7 @@ export default function DepartmentManager({
           />
           <button
             onClick={handleCreate}
-            disabled={createDeptMutation.isPending}
+            disabled={createDeptMutation.isPending || !newName.trim()}
             className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
           >
             Create department
@@ -491,13 +567,28 @@ export default function DepartmentManager({
         {createError && <p className="text-xs text-error">{createError}</p>}
       </div>
       <AssignDepartmentModal
-        open={assigningFor !== null}
+        open={assigningFor !== null && assignmentConfirm === null}
         mode={assignMode}
         myAdviserId={myId}
         department={assigningFor}
-        busy={assignMutation.isPending}
+        busy={assignMutation.isPending || requestMutation.isPending}
         onsubmit={submitAssignment}
-        onclose={() => setAssigningFor(null)}
+        onclose={() => { if (!assignMutation.isPending && !requestMutation.isPending) setAssigningFor(null); }}
+      />
+      <ConfirmDialog
+        open={assignmentConfirm !== null}
+        title={assignmentConfirm?.kind === "switch"
+          ? `Switch to ${assignmentConfirm.department.code}?`
+          : `Unassign ${assignmentConfirm?.department.code ?? "department"}?`}
+        body="Your queue closes and any student you are serving returns to the line."
+        confirmLabel={assignmentConfirm?.kind === "switch" ? "Switch department" : "Unassign"}
+        warning
+        busy={assignMutation.isPending}
+        onconfirm={() => {
+          if (assignmentConfirm?.kind === "unassign") void toggleAssigned(assignmentConfirm.department);
+          else if (assignmentConfirm?.kind === "switch") void submitAssignment(assignmentConfirm.yearLevels, true);
+        }}
+        onclose={() => { if (!assignMutation.isPending) setAssignmentConfirm(null); }}
       />
       <YearLevelModal
         open={editingLevelsFor !== null}

@@ -275,6 +275,23 @@ describe("department writes", () => {
     expect(context.store[COLLECTIONS.adviserDepartment]).toHaveLength(1);
   });
 
+  it("returns a serving student when the instructor changes assigned levels", async () => {
+    holder.session = ADVISER;
+    context.store[COLLECTIONS.department][0].yearLevels = ["FIRST", "SECOND"];
+    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], { status: "IN_PROGRESS", servedById: "adv1" });
+    const response = await call("/me/departments", "PUT", { departmentIds: ["dept-1"], yearLevels: ["SECOND"] });
+    expect(response.status).toBe(200);
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "WAITING", servedById: null });
+    expect(context.store[COLLECTIONS.adviserDepartment].find((row) => row.adviserId === "adv1")?._id).toBe("link-1");
+  });
+
+  it("does not rename a department before rejecting an unauthorized status change", async () => {
+    holder.session = ADVISER;
+    const response = await call("/departments/dept-1", "PATCH", { name: "Changed Name", isActive: false });
+    expect(response.status).toBe(403);
+    expect(context.store[COLLECTIONS.department][0].name).toBe("College of Technologies");
+  });
+
   it("claims a department for the adviser and refuses a clash", async () => {
     holder.session = ADVISER;
     const claimed = await call("/me/departments", "PUT", {

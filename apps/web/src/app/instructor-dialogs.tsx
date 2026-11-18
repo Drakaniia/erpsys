@@ -1,4 +1,5 @@
 import ConfirmDialog from "../components/ConfirmDialog";
+
 import ConfirmEnrollmentDialog from "../components/instructor/ConfirmEnrollmentDialog";
 import InstructorGuideDialog from "../components/instructor/InstructorGuideDialog";
 import RevertConfirmDialog from "../components/instructor/RevertConfirmDialog";
@@ -28,18 +29,18 @@ export default function InstructorDialogs({
 }) {
   return (
     <>
+
       <ConfirmEnrollmentDialog
         open={s.queue.showValidateDialog}
-        entry={s.queue.servingEntry}
+        entry={s.queue.serveEntry}
         departmentName={s.queue.activeDept?.name ?? ""}
         semesterLabel={s.queue.semesterLabel}
         yearLabel={s.queue.yearBare}
-        busy={s.enrolled.enrollMutation.isPending}
+        busy={s.enrolled.enrollMutation.isPending || s.queue.servingBusy || s.queue.availabilityMutation.isPending}
         onconfirm={s.confirmServe}
         onreturntoqueue={() => s.queue.closeValidateDialog()}
-        onmovetoend={() => {
-          s.queue.closeValidateDialog();
-          void s.queue.moveServingToEnd();
+        onmovetoend={async () => {
+          if (await s.queue.moveServingToEnd()) s.queue.closeValidateDialog();
         }}
       />
       <ConfirmDialog

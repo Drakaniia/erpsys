@@ -158,11 +158,16 @@ export function useInstructorState() {
     api.instructor.respondDepartmentTransfer.mutationOptions(),
   );
   async function respondTransfer(requestId: string, accept: boolean) {
+    if (respondTransferMutation.isPending) return;
     try {
       const res = await respondTransferMutation.mutateAsync({
         requestId,
         accept,
       });
+      await queryClient.cancelQueries({ queryKey: api.instructor.listMyTransferRequests.queryKey() });
+      queryClient.setQueryData(api.instructor.listMyTransferRequests.queryKey(), (current: typeof transferRequestsQuery.data) => current && ({
+        ...current, incoming: current.incoming.filter((request: { id: string }) => request.id !== requestId),
+      }));
       toast(
         accept
           ? res.transferredFromName
@@ -200,8 +205,10 @@ export function useInstructorState() {
   );
 
   async function confirmServe() {
-    await enrolled.confirmServe(queue.serveEntry, queue.activeDept);
-    queue.closeValidateDialog();
+    if (queue.servingBusy || queue.availabilityMutation.isPending) return;
+    if (await enrolled.confirmServe(queue.serveEntry, queue.activeDept)) {
+      queue.closeValidateDialog();
+    }
   }
 
   async function confirmRevert(reason: string) {

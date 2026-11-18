@@ -52,20 +52,22 @@ export function useRemoveFlow({
   }
 
   function cancelRemove() {
+    if (removingId) return;
     setRemoveConfirmOpen(false);
-    requestAnimationFrame(() => setRemoveCandidate(null));
+    setRemoveCandidate(null);
   }
 
   async function executeRemove() {
     const candidate = removeCandidate;
-    if (!candidate) return;
+    if (!candidate || removingId) return;
     if (!hasActiveDept) return;
     setRemovingId(candidate.entryId);
-    setRemoveConfirmOpen(false);
     try {
       const res = await runRemove(candidate.entryId);
       invalidateQueues();
       noteActivity();
+      setRemoveConfirmOpen(false);
+      setRemoveCandidate(null);
       const name = candidate.name;
       if (!res.removed) {
         notify.error(
@@ -93,7 +95,6 @@ export function useRemoveFlow({
       notify.error(msg);
     } finally {
       setRemovingId(null);
-      setTimeout(() => setRemoveCandidate(null), 300);
     }
   }
 

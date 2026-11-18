@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COLLECTIONS } from "../../src/lib/db/db.js";
 import { errorHandler } from "../../src/middleware/errorHandler.js";
 import { v1Router } from "../../src/routes/index.js";
+import { EnrollmentQueueModel } from "../../src/models/EnrollmentQueueModel.js";
 import { fakeDb, type Row } from "../helpers/fakeDb.js";
 
 const holder = vi.hoisted(() => ({
@@ -334,6 +335,40 @@ describe("officer serving", () => {
     expect((await response.json()).error).toBe(
       "Not next in line — strict FIFO.",
     );
+  });
+
+  it("cannot release or move a serving student after another adviser takes ownership", async () => {
+    pushWaiting("entry-1", "2025-07-01T00:00:00Z");
+    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], { status: "IN_PROGRESS", servedById: "adv1" });
+    const transition = EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
+    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(async (...args) => {
+      context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
+      return transition(...args);
+    });
+    const response = await call("/queues/serving", { method: "DELETE", body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }) });
+    expect(response.status).toBe(409);
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "IN_PROGRESS", servedById: "adv2" });
+  });
+
+  it("refuses a waiting student whose department changed", async () => {
+    pushWaiting("entry-1", "2025-07-01T00:00:00Z");
+    context.store[COLLECTIONS.studentEnrollment][0].departmentId = "other-department";
+    const response = await call("/queues/serving", { method: "POST", body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }) });
+    expect(response.status).toBe(409);
+    expect(context.store[COLLECTIONS.enrollmentQueue][0].status).toBe("WAITING");
+  });
+
+  it("does not move a student after a different adviser takes the serving lock", async () => {
+    pushWaiting("entry-1", "2025-07-01T00:00:00Z");
+    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], { status: "IN_PROGRESS", servedById: "adv1" });
+    const transition = EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
+    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(async (...args) => {
+      context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
+      return transition(...args);
+    });
+    const response = await call("/queues/serving/position", { method: "POST", body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }) });
+    expect(response.status).toBe(409);
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "IN_PROGRESS", servedById: "adv2" });
   });
 
   it("releases the serving slot without enrolling", async () => {

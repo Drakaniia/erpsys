@@ -371,7 +371,14 @@ export function InstructorPage() {
           </div>
         )}
 
-        {s.reportsSelected ? (
+        {s.queue.queueQuery.isPending ? (
+          <p role="status" className="py-8 text-sm text-muted">Loading instructor queues…</p>
+        ) : s.queue.queueQuery.isError ? (
+          <div role="alert" className="py-8 text-sm text-error">
+            Could not load instructor queues.
+            <button type="button" className="ml-3 underline" onClick={() => void s.queue.refreshQueues()}>Retry</button>
+          </div>
+        ) : s.reportsSelected ? (
           !s.queue.hasActiveYear ? (
             <EmptyState
               icon="user"
@@ -394,7 +401,7 @@ export function InstructorPage() {
             />
           </div>
         ) : s.activeDeptId === "manage" ? (
-          <DepartmentManager ontoast={s.toast} />
+          <DepartmentManager ontoast={s.toast} onassigned={s.selectTab} />
         ) : !s.queue.hasActiveYear ? (
           <EmptyState
             icon="user"
@@ -402,11 +409,13 @@ export function InstructorPage() {
           />
         ) : !s.queue.activeDept ? (
           <EmptyState icon="user" title="Select a department." />
+        ) : s.queue.activeDept.queueLoading ? (
+          <p role="status" className="py-8 text-sm text-muted">Assignment saved. Loading department queue…</p>
         ) : (
           <div className="space-y-4">
-            <DeptTabHeader
+            <DeptTabHeader key={s.queue.activeDept.id}
               department={s.queue.activeDept}
-              busy={s.queue.availabilityMutation.isPending}
+              busy={s.queue.availabilityMutation.isPending || s.queue.beginServingMutation.isPending || s.queue.servingBusy || s.enrolled.enrollMutation.isPending}
               refreshing={s.queue.manualRefreshing}
               hasActiveYear={s.queue.hasActiveYear}
               onrefresh={s.queue.refreshQueues}
@@ -465,7 +474,7 @@ export function InstructorPage() {
                       myAdviserId={myAdviserId}
                       busy={
                         s.enrolled.enrollMutation.isPending ||
-                        s.queue.servingBusy
+                        s.queue.servingBusy || s.queue.availabilityMutation.isPending
                       }
                       onvalidate={() => s.queue.openValidateDialog()}
                       onreturntoqueue={() => void s.queue.returnToQueue()}
@@ -475,14 +484,14 @@ export function InstructorPage() {
                   <div className="w-full lg:w-3/5">
                     <QueueListPanel
                       key={s.queue.activeDept.id}
-                      entries={s.queue.activeDept.entries}
+                      entries={s.queue.waitingEntries}
                       selectedId={s.queue.selectedId}
                       serveId={
                         s.queue.canServeFirst
                           ? (s.queue.spotlight?.entryId ?? null)
                           : null
                       }
-                      busy={s.queue.beginServingMutation?.isPending ?? false}
+                      busy={s.queue.beginServingMutation.isPending || s.queue.removeMutation.isPending || s.queue.availabilityMutation.isPending}
                       deptOpen={s.queue.activeDept.myOpen}
                       removingId={s.queue.removingId}
                       onserve={(entry) => void s.queue.openServe(entry)}
@@ -496,6 +505,8 @@ export function InstructorPage() {
                 entries={enrolledEntries}
                 total={enrolledTotal}
                 loading={s.enrolled.enrolledQuery.isFetching}
+                error={s.enrolled.enrolledQuery.isError}
+                onretry={() => void s.enrolled.enrolledQuery.refetch()}
                 range={s.enrolledRange}
                 q={s.enrolledQ}
                 hasNextPage={s.enrolled.hasMore}

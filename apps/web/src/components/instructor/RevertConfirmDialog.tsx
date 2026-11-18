@@ -55,9 +55,9 @@ export default function RevertConfirmDialog({
     if (!open) return;
     const panel = panelRef.current;
     if (!panel) return;
-    const trap = dialogTrap(panel, { onEscape: onclose });
+    const trap = dialogTrap(panel, { onEscape: () => { if (!busy) onclose(); } });
     return () => trap.destroy();
-  }, [open, onclose]);
+  }, [open, busy, onclose]);
 
   if (!presence.mounted) return null;
 
@@ -73,10 +73,7 @@ export default function RevertConfirmDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="revert-dialog-title"
-      onClick={onclose}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onclose();
-      }}
+      onClick={() => { if (!busy) onclose(); }}
     >
       <div
         ref={panelRef}
