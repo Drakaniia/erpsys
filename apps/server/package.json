@@ -2,6 +2,7 @@
   "name": "@erpsys/server",
   "private": true,
   "type": "module",
+  "engines": { "node": "24.x" },
   "scripts": {
     "admin:reset-2fa": "tsx src/scripts/reset-admin-2fa.ts",
     "build": "tsc",

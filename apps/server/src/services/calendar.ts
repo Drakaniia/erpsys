@@ -1,6 +1,6 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { ApiError } from "../config/errors.js";
-import { beginTransaction, restartAborted } from "../lib/db/timestamp-ordering.js";
+import { beginSharedTransaction, restartSharedAborted } from "../lib/db/timestamp-ordering.js";
 import {
   SCHEDULE_TZ,
   clock,
@@ -256,13 +256,13 @@ export async function syncCalendar(userId: string): Promise<SyncState> {
 export async function syncAfterScheduleChange(
   userId: string,
 ): Promise<SyncState> {
-  return beginTransaction(undefined, "POST", async () => {
+  return beginSharedTransaction(undefined, "POST", async () => {
     for (let attempt = 0; ; attempt++) {
       try {
         await CalendarConnectionModel.markDirty(userId, new Date());
         return await syncCalendar(userId);
       } catch (error) {
-        if (!restartAborted(error, attempt)) throw error;
+        if (!await restartSharedAborted(error, attempt)) throw error;
       }
     }
   });

@@ -17,9 +17,9 @@ export const STEP_UP_REQUIRED = "STEP_UP_REQUIRED";
 
 type StepName = "pin" | "password" | "code" | "totp";
 
-const pinPerUser = createRateLimitBudget({ windowMs: 15 * 60_000, max: 8 });
-const pinGlobal = createRateLimitBudget({ windowMs: 15 * 60_000, max: 60 });
-const passwordPerUser = createRateLimitBudget({ windowMs: 15 * 60_000, max: 8 });
+const pinPerUser = createRateLimitBudget({ name: "admin-pin-user", windowMs: 15 * 60_000, max: 8 });
+const pinGlobal = createRateLimitBudget({ name: "admin-pin-global", windowMs: 15 * 60_000, max: 60 });
+const passwordPerUser = createRateLimitBudget({ name: "admin-password", windowMs: 15 * 60_000, max: 8 });
 
 const digest = (value: string) => createHash("sha256").update(value).digest();
 const same = (a: string, b: string) => timingSafeEqual(digest(a), digest(b));
@@ -57,7 +57,7 @@ export async function submitPin(userId: string, pin: string, now = new Date()): 
       message: "The administrator PIN is not configured.",
     });
   }
-  if (!pinPerUser.check(userId).allowed || !pinGlobal.check("all").allowed) {
+  if (!(await pinPerUser.checkAsync(userId)).allowed || !(await pinGlobal.checkAsync("all")).allowed) {
     throw new ApiError("TOO_MANY_REQUESTS", {
       message: "Too many PIN attempts. Wait a few minutes and try again.",
     });
@@ -70,7 +70,7 @@ export async function submitPin(userId: string, pin: string, now = new Date()): 
 export async function beforePassword(userId: string, now = new Date()): Promise<void> {
   const row = await AdminStepUpModel.find(userId);
   if (!fresh(row?.pinAt, now)) throw order("pin", "Enter the PIN first.");
-  if (!passwordPerUser.check(userId).allowed) {
+  if (!(await passwordPerUser.checkAsync(userId)).allowed) {
     throw new ApiError("TOO_MANY_REQUESTS", {
       message: "Too many password attempts. Wait a few minutes and try again.",
     });
