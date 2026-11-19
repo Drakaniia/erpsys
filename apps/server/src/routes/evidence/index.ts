@@ -9,7 +9,6 @@ import {
 } from "../../config/steps.js";
 import { getDbSync } from "../../lib/db/db.js";
 import { genId } from "../../lib/db/ids.js";
-import { background } from "../../lib/platform/background.js";
 import { deleteR2Object } from "../../lib/storage/client.js";
 import { configuredR2Client } from "../../lib/storage/configured-client.js";
 import { addStoredBytes, monthKey } from "../../lib/storage/quota.js";
@@ -162,15 +161,13 @@ evidenceRouter.delete(
       okOne(res, { deleted: true });
       return;
     }
-    const deletion = (async () => {
+    void (async () => {
       const client = configuredR2Client();
       const parsed = parseR2FileKey(upload.fileKey);
       if (!client || !parsed) return;
       await deleteR2Object(client, parsed);
       await addStoredBytes(getDbSync(), monthKey(), -(upload.sizeBytes ?? 0));
-    })();
-    background(deletion);
-    void deletion.catch((error: unknown) =>
+    })().catch((error: unknown) =>
       console.error(
         `[evidence] R2 delete failed for upload ${id} — row already deleted`,
         error,

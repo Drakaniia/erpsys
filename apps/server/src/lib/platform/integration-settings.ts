@@ -78,6 +78,7 @@ const googleClient = () =>
   present(env.GOOGLE_CLIENT_ID) && present(env.GOOGLE_CLIENT_SECRET);
 
 export function integrationConfigured(key: IntegrationKey): boolean {
+  if (env.LOCAL_ONLY && key !== "betterAuth") return false;
   switch (key) {
     case "betterAuth":
       return present(env.BETTER_AUTH_SECRET) && present(env.BETTER_AUTH_URL);
@@ -143,7 +144,7 @@ export function invalidateIntegrationCache(): void {
 }
 
 export async function integrationEnabled(key: IntegrationKey): Promise<boolean> {
-  if (process.env.CLOUDFLARE_WORKER === "1") return (await loadFlags())[key];
+  if (env.LOCAL_ONLY) return key === "betterAuth";
   flagsPromise ??= loadFlags();
   return (await flagsPromise)[key];
 }
@@ -168,13 +169,13 @@ async function loadPayload(): Promise<PublicIntegrationPayload> {
     flags: Object.fromEntries(
       INTEGRATION_KEYS.map((key) => [key, states[key].enabled]),
     ) as Record<IntegrationKey, boolean>,
-    turnstileSiteKey: (siteKey ?? env.VITE_TURNSTILE_SITE_KEY).trim(),
+    turnstileSiteKey: env.LOCAL_ONLY ? "" : (siteKey ?? env.VITE_TURNSTILE_SITE_KEY).trim(),
     overridesLoaded: overridesLoaded(),
   };
 }
 
 export function publicIntegrationPayload(): Promise<PublicIntegrationPayload> {
-  if (process.env.CLOUDFLARE_WORKER === "1") return loadPayload();
+
   payloadPromise ??= loadPayload().catch((error) => {
     payloadPromise = null;
     throw error;
@@ -201,7 +202,7 @@ export async function allIntegrationStates(): Promise<Record<IntegrationKey, Int
       return [
         key,
         {
-          enabled: typeof row?.enabled === "boolean" && !integrationLocked(key) ? row.enabled : defaultEnabled(key),
+          enabled: env.LOCAL_ONLY ? key === "betterAuth" : typeof row?.enabled === "boolean" && !integrationLocked(key) ? row.enabled : defaultEnabled(key),
           updatedAt: row?.enabledAt ? new Date(row.enabledAt).toISOString() : null,
           updatedByName: row?.enabledById ? (names.get(String(row.enabledById)) ?? null) : null,
         },
@@ -216,6 +217,7 @@ export async function setIntegrationEnabled(args: {
   actorId: string;
 }): Promise<void> {
   if (integrationLocked(args.key)) throw lockedError(args.key);
+  if (env.LOCAL_ONLY && args.enabled) throw new ApiError("CONFLICT", { message: "Online integrations are disabled in local-only mode." });
   const at = new Date();
   await settings().updateOne(
     { key: args.key } as never,

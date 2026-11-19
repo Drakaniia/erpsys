@@ -2,17 +2,12 @@
   "name": "@erpsys/server",
   "private": true,
   "type": "module",
-  "engines": { "node": "24.x" },
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "admin:reset-2fa": "tsx src/scripts/reset-admin-2fa.ts",
     "build": "tsc",
-    "backfill:timestamps": "tsx src/scripts/backfill-timestamps.ts",
-    "db:simplify": "tsx src/scripts/simplify-collections.ts",
-    "cf:whoami": "wrangler whoami",
-    "cf:types": "wrangler types --strict-vars=false",
-    "cf:check": "pnpm cf:types && tsc -p tsconfig.worker.json",
-    "cf:deploy": "wrangler deploy",
-    "cf:dev": "wrangler dev",
     "check": "tsc --noEmit && tsc -p tsconfig.test.json",
     "dev": "tsx watch src/index.ts",
     "preview": "node dist/scripts/preview.js",
@@ -34,7 +29,6 @@
     "@types/express": "latest",
     "@types/node": "latest",
     "tsx": "latest",
-    "typescript": "latest",
-    "wrangler": "4.149.0"
+    "typescript": "latest"
   }
 }

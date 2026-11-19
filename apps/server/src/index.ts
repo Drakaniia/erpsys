@@ -28,7 +28,7 @@ assertProductionEnv();
 const { buildApp } = await import("./app.js");
 const app = buildApp();
 
-const server = app.listen(env.PORT, () => {
+const server = app.listen(env.PORT, "127.0.0.1", () => {
   console.log(`[server] listening on :${env.PORT}`);
   startSweeps();
   startSweeps(sweepCalendars, "calendar-sweep");

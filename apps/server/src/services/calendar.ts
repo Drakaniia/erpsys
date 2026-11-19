@@ -396,7 +396,7 @@ export async function disconnectCalendar(
 ): Promise<void> {
   const conn = await CalendarConnectionModel.findByUser(userId);
   if (!conn) return;
-  if (conn.refreshTokenEnc) {
+  if (!env.LOCAL_ONLY && conn.refreshTokenEnc) {
     try {
       const refresh = openToken(conn.refreshTokenEnc);
       if (conn.googleCalendarId) {

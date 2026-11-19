@@ -328,6 +328,7 @@ export async function probeCredentials(
   key: IntegrationKey,
   values: Record<string, string>,
 ): Promise<ProbeResult> {
+  if (env.LOCAL_ONLY && key !== "betterAuth") return failed(key, "Online integrations are disabled in local-only mode.");
   switch (key) {
     case "betterAuth":
       return { ok: true };
