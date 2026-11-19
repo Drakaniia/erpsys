@@ -46,8 +46,8 @@
   "private": true,
   "scripts": {
     "build": "vite build",
-    "cf:prepare": "node ../../deploy/cloudflare/prepare-pages.mjs",
-    "cf:deploy": "pnpm build && pnpm cf:prepare && ../server/node_modules/.bin/wrangler pages deploy dist --project-name erpsys --branch main",
+
+
     "check": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
     "dev": "vite",
     "preview": "vite preview",

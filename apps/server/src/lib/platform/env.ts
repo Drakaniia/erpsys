@@ -1,12 +1,13 @@
 import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
 
-if (process.env.CLOUDFLARE_WORKER !== "1") {
+{
   dotenv.config({ path: fileURLToPath(new URL("../../../../../.env", import.meta.url)) });
   dotenv.config();
 }
 
 const BASE: Record<string, string | undefined> = { ...process.env };
+const LOCAL_ONLY = BASE.LOCAL_ONLY !== "false";
 let overrides: Record<string, string> = {};
 
 const get = (key: string, fallback = "") =>
@@ -28,11 +29,12 @@ export const effectiveValue = (key: string): string => get(key);
 const DEFAULT_DATABASE_URL = "mongodb://localhost:27017/erpsys";
 
 export const env = {
+  LOCAL_ONLY,
   DATABASE_URL: get("DATABASE_URL", DEFAULT_DATABASE_URL),
   BETTER_AUTH_SECRET: get("BETTER_AUTH_SECRET"),
-  BETTER_AUTH_URL: get("BETTER_AUTH_URL", "http://localhost:5173"),
-  PUBLIC_SITE_URL: (get("PUBLIC_SITE_URL") || get("BETTER_AUTH_URL", "http://localhost:5173")).replace(/\/+$/, ""),
-  WEB_ORIGIN: get("WEB_ORIGIN"),
+  BETTER_AUTH_URL: LOCAL_ONLY ? "http://localhost:5173" : get("BETTER_AUTH_URL", "http://localhost:5173"),
+  PUBLIC_SITE_URL: LOCAL_ONLY ? "http://localhost:5173" : (get("PUBLIC_SITE_URL") || get("BETTER_AUTH_URL", "http://localhost:5173")).replace(/\/+$/, ""),
+  WEB_ORIGIN: LOCAL_ONLY ? "http://localhost:5173" : get("WEB_ORIGIN"),
   SERVE_WEB: !off("SERVE_WEB"),
   QUEUE_SHARE_SECRET: get("QUEUE_SHARE_SECRET") || get("BETTER_AUTH_SECRET"),
   get GOOGLE_CLIENT_ID() { return get("GOOGLE_CLIENT_ID"); },
@@ -67,7 +69,7 @@ export const env = {
   get TURNSTILE_HOSTNAMES() { return get("TURNSTILE_HOSTNAMES", "localhost,127.0.0.1"); },
   get VITE_TURNSTILE_SITE_KEY() { return get("VITE_TURNSTILE_SITE_KEY"); },
   PORT: Number(get("PORT", "3001")),
-  NODE_ENV: get("NODE_ENV", "development"),
+  NODE_ENV: LOCAL_ONLY ? "development" : get("NODE_ENV", "development"),
 };
 
 export function isLocalOrigin(origin: string): boolean {

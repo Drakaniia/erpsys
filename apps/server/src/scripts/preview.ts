@@ -32,7 +32,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   if (!existsSync(new URL("../../../web/dist/index.html", import.meta.url))) {
     throw new Error("No built web app found. Run pnpm build from the repository root before pnpm preview.");
   }
-  Object.assign(process.env, previewEnvironment(process.env));
+  const local = process.env.LOCAL_ONLY !== "false";
+  Object.assign(process.env, previewEnvironment(local ? { ...process.env, BETTER_AUTH_URL: "http://localhost:5173", PUBLIC_SITE_URL: "http://localhost:5173" } : process.env));
   console.log(`[preview] Built app and API: ${process.env.BETTER_AUTH_URL} (local runtime, no watchers)`);
   await import("../index.js");
 }
