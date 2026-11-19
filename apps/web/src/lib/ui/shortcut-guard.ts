@@ -8,7 +8,9 @@ export function shortcutBlocked(e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement | null;
   if (
     t &&
-    (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))
+    (t.isContentEditable ||
+      /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) ||
+      t.closest("[data-console-onboarding-ui]"))
   ) {
     return true;
   }

@@ -135,6 +135,7 @@ export default function EnrolledTab({
             onChange={onSearchInput}
             placeholder="Search name or student #"
             aria-label="Search enrolled students"
+            data-onboarding-tip="enrolled-search"
             className="w-full rounded-xl border border-border bg-surface py-1.5 pl-8 pr-3 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>

@@ -111,29 +111,10 @@ export function useOfficerState(officerId: string) {
   });
   const mutations = useOfficerMutations(toast);
 
-  const [shortcutsOpen, setShortcutsOpenState] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
 
-  // Guide state (spec §3-§6)
-  const [guideOpen, setGuideOpenState] = useState(false);
-  const [guideStep, setGuideStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
-  const [guideDontShow, setGuideDontShow] = useState(true);
-
-  function setShortcutsOpen(v: boolean) {
-    setShortcutsOpenState(v);
-    if (v) setGuideOpenState(false);
-  }
-  function setGuideOpen(v: boolean) {
-    setGuideOpenState(v);
-    if (v) setShortcutsOpenState(false);
-  }
-
-  function openGuide(step: 1 | 2 | 3 | 4 | 5 | 6 = 1) {
-    setGuideStep(step);
-    setGuideOpenState(true);
-    setShortcutsOpenState(false);
-  }
 
   function reviewFromBell(item: {
     verificationId: string;
@@ -297,12 +278,7 @@ export function useOfficerState(officerId: string) {
     reorderLinksMutation: mutations.reorderLinksMutation,
     shortcutsOpen,
     setShortcutsOpen,
-    guideOpen,
-    setGuideOpen,
-    guideStep,
-    setGuideStep,
-    guideDontShow,
-    setGuideDontShow,
+
     selectedId,
     setSelectedId,
     detailId,
@@ -331,6 +307,6 @@ export function useOfficerState(officerId: string) {
       setNewCount(0);
       seen.current.ids = new Set(rawItems.map((i) => i.verificationId));
     },
-    openGuide,
+
   };
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { shortcutBlocked } from "$lib/ui/shortcut-guard";
 import { useNavigate } from "react-router";
 
@@ -12,7 +12,8 @@ import SocialMediaLinksPanel from "../components/officer/SocialMediaLinksPanel";
 import StepOverview from "../components/officer/StepOverview";
 import SubmissionList from "../components/officer/SubmissionList";
 import DetailSheet from "../components/officer/DetailSheet";
-import OfficerGuideDialog from "../components/officer/OfficerGuideDialog";
+import ConsoleOnboarding, { OnboardingHelp } from "../components/ui/ConsoleOnboarding";
+import { OFFICER_TIPS } from "$lib/officer/onboarding";
 import PageLoader from "../components/ui/PageLoader";
 import { authClient } from "$lib/auth-client";
 import { loginRouteForSessionLoss } from "$lib/auth/session-guard";
@@ -22,7 +23,6 @@ import { getOfficerShortcutAction } from "$lib/officer/shortcuts";
 import { OFFICER_TABS } from "$lib/officer/tabs";
 import { isSimsWarm, rememberSimsWarm } from "$lib/officer/sims";
 
-const GUIDE_KEY = "officer-guide-dismissed-v1";
 
 const shortcuts = [
   { action: "Step tabs (Assessment–Consent)", keys: ["1–5"] },
@@ -42,7 +42,7 @@ export function OfficerPage() {
   const user = sessionQuery.data?.user as
     | { id?: string; role?: string }
     | undefined;
-  const userRole = user?.role ?? "";
+
 
   useEffect(() => {
     if (sessionQuery.isPending) return;
@@ -68,62 +68,17 @@ export function OfficerPage() {
     rememberSimsWarm();
   }, [withSims]);
 
-  function handleGuideClose(persist: boolean) {
-    s.setGuideOpen(false);
-    if (persist) {
-      try {
-        localStorage.setItem(GUIDE_KEY, "1");
-      } catch {
-        /* storage unavailable */
-      }
-    }
-  }
-
-  const guideAutoChecked = useRef(false);
-  useEffect(() => {
-    if (guideAutoChecked.current) return;
-    if (sessionQuery.isPending) return;
-    if (userRole !== "SBO_OFFICER") {
-      guideAutoChecked.current = true;
-      return;
-    }
-    if (s.guideOpen) return;
-    if (s.detailId !== null) {
-      guideAutoChecked.current = true;
-      return;
-    }
-    let dismissed = false;
-    try {
-      dismissed = localStorage.getItem(GUIDE_KEY) === "1";
-    } catch {
-      /* storage unavailable */
-    }
-    guideAutoChecked.current = true;
-    if (dismissed) return;
-    const raf = requestAnimationFrame(() => s.setGuideOpen(true));
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionQuery.isPending, userRole, s.detailId]);
-
-  useEffect(() => {
-    function onOpenGuide() {
-      s.openGuide(1);
-    }
-    window.addEventListener("officer:open-guide", onOpenGuide);
-    return () => window.removeEventListener("officer:open-guide", onOpenGuide);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     function onKeydown(e: KeyboardEvent) {
       const typing = shortcutBlocked(e);
       const action = getOfficerShortcutAction(e.key, {
         isTyping: typing,
-        guideOpen: s.guideOpen,
+
         hasDetailSheet: s.detailId !== null,
       });
       if (!action) {
-        if (typing || s.guideOpen || s.detailId !== null) return;
+        if (typing || s.detailId !== null) return;
         const tab = OFFICER_TABS.find((t) => t.key === e.key);
         if (!tab) return;
         e.preventDefault();
@@ -149,7 +104,7 @@ export function OfficerPage() {
     window.addEventListener("keydown", onKeydown);
     return () => window.removeEventListener("keydown", onKeydown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s.guideOpen, s.detailId, s.shortcutsOpen]);
+  }, [s.detailId, s.shortcutsOpen]);
 
   if (sessionQuery.isPending || !sessionQuery.data) {
     return <PageLoader label="Loading the officer console" />;
@@ -158,7 +113,7 @@ export function OfficerPage() {
   const shellWidth = withSims ? "max-w-[1600px]" : "max-w-[1200px]";
 
   return (
-    <div className="flex h-full flex-col">
+    <ConsoleOnboarding key={officerId} surface="officer" accountId={officerId} tips={OFFICER_TIPS}>
       <OfficerTabBar
         active={s.activeTab}
         counts={s.counts}
@@ -169,12 +124,23 @@ export function OfficerPage() {
         className={`mx-auto flex w-full ${shellWidth} items-center justify-between gap-4 px-6 pb-2 pt-4`}
       >
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">
+          <h1
+            className="text-xl font-semibold tracking-tight"
+            data-onboarding-tip={
+              s.activeTab === "profiling-form" || s.activeTab === "social-media-links"
+                ? s.activeTab
+                : undefined
+            }
+          >
             {s.activeTab === "overview"
               ? "Officer Overview"
               : s.activeTab === "reports"
                 ? "Reports"
-                : (s.stepMeta?.label ?? "Officer")}
+                : s.activeTab === "profiling-form"
+                  ? "Profiling Form"
+                  : s.activeTab === "social-media-links"
+                    ? "Social Media Links"
+                    : (s.stepMeta?.label ?? "Officer")}
           </h1>
         </div>
         <div className="relative flex items-center gap-3">
@@ -204,25 +170,7 @@ export function OfficerPage() {
               <circle cx="12" cy="12" r="9" />
             </svg>
           </button>
-          <button
-            className="text-muted transition-[transform,color] duration-100 ease-out hover:text-ink active:scale-[0.97]"
-            data-guide-trigger
-            aria-label="Show guide"
-            aria-expanded={s.guideOpen}
-            onClick={() => s.openGuide(1)}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              aria-hidden="true"
-            >
-              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-            </svg>
-          </button>
+          <OnboardingHelp />
           <OfficerBell
             count={s.bellQuery.data?.total ?? 0}
             isLoading={s.bellQuery.isPending && !s.bellQuery.data}
@@ -364,15 +312,6 @@ export function OfficerPage() {
         onclose={() => s.setDetailId(null)}
         onmarkread={s.handleMarkRead}
       />
-
-      <OfficerGuideDialog
-        open={s.guideOpen}
-        step={s.guideStep}
-        dontShow={s.guideDontShow}
-        onStepChange={(n) => s.setGuideStep(n)}
-        onDontShowChange={(v) => s.setGuideDontShow(v)}
-        onclose={handleGuideClose}
-      />
-    </div>
+    </ConsoleOnboarding>
   );
 }

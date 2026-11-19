@@ -36,10 +36,10 @@ export default function UserMenu() {
     | undefined;
   const role = user?.role;
   const isOfficerSurface = canEnterSurface(role, "officer");
-  const onStudentSurface = location.pathname.startsWith("/student");
-  const showKeyboardGuide =
-    (role === "SBO_OFFICER" || role === "ENROLLMENT_ADVISER") &&
-    !onStudentSurface;
+  const onOfficerConsole = location.pathname === "/officer";
+  const showConsoleHelp = onOfficerConsole
+    ? isOfficerSurface
+    : location.pathname === "/instructor" && canEnterSurface(role, "instructor");
 
   useEffect(() => {
     if (!open) return;
@@ -171,14 +171,11 @@ export default function UserMenu() {
     }
   }
 
-  function handleOpenGuide() {
+  function handleOpenHelp() {
     setOpen(false);
-    const isOfficer = location.pathname.startsWith("/officer");
-    window.dispatchEvent(
-      new CustomEvent(
-        isOfficer ? "officer:open-guide" : "instructor:open-guide",
-      ),
-    );
+    window.dispatchEvent(new Event(
+      onOfficerConsole ? "officer:open-onboarding" : "instructor:open-onboarding",
+    ));
   }
 
   return (
@@ -245,20 +242,20 @@ export default function UserMenu() {
                   onclose={() => setStampPanelOpen(false)}
                 />
               )}
-              {showKeyboardGuide && (
+              {showConsoleHelp && (
                 <div className="mx-2 border-t border-border" />
               )}
             </>
           )}
 
-          {showKeyboardGuide && (
+          {showConsoleHelp && (
             <button
               role="menuitem"
               type="button"
-              onClick={handleOpenGuide}
+              onClick={handleOpenHelp}
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink transition-[transform,background-color] duration-100 ease-out hover:bg-surface active:scale-[0.98]"
             >
-              Keyboard guide
+              Console Help
             </button>
           )}
 

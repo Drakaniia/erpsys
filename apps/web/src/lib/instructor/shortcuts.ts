@@ -1,6 +1,6 @@
 export type ShortcutContext = {
   isTyping: boolean;
-  guideOpen: boolean;
+
   hasDialog: boolean;
   activeView: "queue" | "enrolled";
   canServeFirst: boolean;
@@ -21,7 +21,7 @@ export function getInstructorShortcutAction(
   ctx: ShortcutContext,
 ): ShortcutAction | null {
   if (ctx.isTyping) return null;
-  if (ctx.guideOpen) return null;
+
   if (ctx.hasDialog) return null;
 
   if (key === "?") return { type: "toggleShortcuts" };

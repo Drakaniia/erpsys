@@ -48,7 +48,7 @@ export function useDetailSheetState(
   const [revokeOpen, setRevokeOpen] = useState(false);
   const [replyOpen, setReplyOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
-  const [captureDismissed, setCaptureDismissed] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const [justVerified, setJustVerified] = useState(false);
 
@@ -77,7 +77,7 @@ export function useDetailSheetState(
     setRevokeOpen(false);
     setReplyOpen(false);
     setLightboxIndex(-1);
-    setCaptureDismissed(false);
+    setCameraOpen(false);
     setAnnouncement("");
     setLocalStatus(null);
     setLocalStampName(null);
@@ -225,8 +225,8 @@ export function useDetailSheetState(
     setReplyOpen,
     lightboxIndex,
     setLightboxIndex,
-    captureDismissed,
-    setCaptureDismissed,
+    cameraOpen,
+    setCameraOpen,
     announcement,
     setAnnouncement,
     justVerified,
