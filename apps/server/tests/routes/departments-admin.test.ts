@@ -166,8 +166,14 @@ const call = async (path: string, method = "GET", body?: unknown) => {
 };
 
 describe("department listing", () => {
+  it.each(["/me/queue", "/me/stamp", "/queues", "/departments/dept-1/enrollments"])("blocks admin access to %s", async (path) => {
+    const { status } = await call(path);
+    expect(status).toBe(403);
+  });
+
   it("gives an admin the rows with their owners and mapping counts", async () => {
-    const { body } = await call("/departments");
+    const { status, body } = await call("/departments");
+    expect(status).toBe(200);
     expect(body.total).toBe(2);
     const tech = body.data.find((row: { id: string }) => row.id === "dept-1");
     expect(tech).toMatchObject({

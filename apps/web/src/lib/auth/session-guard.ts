@@ -2,12 +2,15 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { authClient } from "$lib/auth-client";
 import { homeRouteForRole } from "$lib/auth/redirect";
+import { isInternalPath } from "$lib/auth/completion-gate";
 import { canEnterSurface, type SurfaceId } from "$lib/domain/roles";
 import { SIGNED_OUT_BROADCAST_KEY } from "$lib/perf/cache-policy";
 
-export function loginWithReason(reason?: string): string {
-  if (!reason) return "/login";
-  return `/login?reason=${encodeURIComponent(reason)}`;
+export function loginWithReason(reason?: string, dest?: string | null): string {
+  const params = new URLSearchParams();
+  if (reason) params.set("reason", reason);
+  if (dest && isInternalPath(dest)) params.set("dest", dest);
+  return params.size ? `/login?${params}` : "/login";
 }
 
 /** Set before an intentional sign-out so the guard shows "signed out", not "expired". */
@@ -56,8 +59,10 @@ export function clearSignedOutFlag(): void {
 }
 
 /** Intentional sign-out → "signed-out", anything else → "expired". */
-export function loginRouteForSessionLoss(): string {
-  return loginWithReason(peekSignedOut() ? "signed-out" : "expired");
+export function loginRouteForSessionLoss(dest?: string): string {
+  return peekSignedOut()
+    ? loginWithReason("signed-out")
+    : loginWithReason("expired", dest);
 }
 
 /**

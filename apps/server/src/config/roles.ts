@@ -3,7 +3,7 @@ export type SurfaceId = "student" | "officer" | "instructor" | "admin";
 export type Role = "STUDENT" | "SBO_OFFICER" | "ENROLLMENT_ADVISER" | "ADMIN";
 
 export const SURFACES_FOR_ROLE: Record<Role, readonly SurfaceId[]> = {
-  ADMIN: ["officer", "instructor", "admin", "student"],
+  ADMIN: ["admin"],
   SBO_OFFICER: ["officer", "student"],
   ENROLLMENT_ADVISER: ["instructor"],
   STUDENT: ["student"],

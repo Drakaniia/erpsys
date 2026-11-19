@@ -1,10 +1,14 @@
 import { StrictMode } from "react";
-import { act, render } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LoadingPage } from "./loading";
 
 const mocks = vi.hoisted(() => ({
   session: vi.fn(),
+  signOut: vi.fn(),
+  cancelQueries: vi.fn(),
+  clearQueries: vi.fn(),
+  clearPersisted: vi.fn(),
   status: vi.fn(),
   connect: vi.fn(),
   navigate: vi.fn(),
@@ -18,9 +22,10 @@ vi.mock("react-router", () => ({
   useSearchParams: () => [mocks.params],
 }));
 vi.mock("$lib/auth-client", () => ({
-  authClient: { getSession: mocks.session },
+  authClient: { getSession: mocks.session, signOut: mocks.signOut },
 }));
 vi.mock("$lib/api", () => ({
+  queryClient: { cancelQueries: mocks.cancelQueries, clear: mocks.clearQueries },
   api: {
     instructor: {
       getMyCalendar: { call: mocks.status },
@@ -29,11 +34,14 @@ vi.mock("$lib/api", () => ({
   },
 }));
 vi.mock("$lib/notifications", () => ({ notify: { warning: mocks.warning } }));
+vi.mock("$lib/perf/persist", () => ({ clearPersistedCache: mocks.clearPersisted }));
 vi.mock("../../components/ui/DitherLoader", () => ({ default: () => null }));
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
+  mocks.signOut.mockResolvedValue({ error: null });
+  mocks.cancelQueries.mockResolvedValue(undefined);
   mocks.params = new URLSearchParams("provider=google");
   mocks.session.mockResolvedValue({
     data: { user: { role: "ENROLLMENT_ADVISER" } },
@@ -57,6 +65,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  sessionStorage.removeItem("erpsys:signed-out");
 });
 
 async function finishLogin() {
@@ -69,6 +78,57 @@ async function finishLogin() {
     await vi.advanceTimersByTimeAsync(1500);
   });
 }
+
+describe("wrong-door sign-in", () => {
+  it("names the actual role and waits for Continue before Calendar or navigation", async () => {
+    mocks.params.set("dest", "/officer");
+    mocks.status.mockResolvedValue({ available: true, status: "CONNECTED" });
+    await finishLogin();
+
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByText("Enrollment Officer")).toBeTruthy();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+    expect(mocks.status).not.toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(dialog.getByRole("button", { name: "Continue" }));
+    });
+    expect(mocks.status).toHaveBeenCalledTimes(1);
+    expect(mocks.navigate).toHaveBeenCalledWith("/instructor", { replace: true });
+  });
+
+  it("signs out and returns to the original door when choosing another account", async () => {
+    const destination = "/instructor?tab=schedule";
+    mocks.params.set("dest", destination);
+    mocks.session.mockResolvedValue({ data: { user: { role: "SBO_OFFICER" } } });
+    await finishLogin();
+
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByText("SBO Officer")).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(dialog.getByRole("button", { name: "Choose another account" }));
+    });
+    expect(mocks.signOut).toHaveBeenCalledTimes(1);
+    expect(mocks.clearPersisted).toHaveBeenCalledTimes(1);
+    const [target, options] = mocks.navigate.mock.lastCall!;
+    const url = new URL(target, "https://erpsys.invalid");
+    expect(url.pathname).toBe("/login");
+    expect(url.searchParams.get("dest")).toBe(destination);
+    expect(options).toEqual({ replace: true });
+  });
+
+  it("keeps the confirmation open if sign-out fails", async () => {
+    mocks.params.set("dest", "/admin");
+    mocks.signOut.mockResolvedValue({ error: { message: "offline" } });
+    await finishLogin();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Choose another account" }));
+    });
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain("Could not sign out");
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+});
 
 describe("Google login Calendar connection", () => {
   it.each(["NOT_CONNECTED", "NEEDS_RECONNECT"])(

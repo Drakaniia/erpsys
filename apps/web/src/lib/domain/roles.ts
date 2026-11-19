@@ -8,7 +8,7 @@ export type SurfaceId = "student" | "officer" | "instructor" | "admin";
 export type Role = "STUDENT" | "SBO_OFFICER" | "ENROLLMENT_ADVISER" | "ADMIN";
 
 export const SURFACES_FOR_ROLE: Record<Role, readonly SurfaceId[]> = {
-  ADMIN: ["officer", "instructor", "admin", "student"],
+  ADMIN: ["admin"],
   SBO_OFFICER: ["officer", "student"],
   ENROLLMENT_ADVISER: ["instructor"],
   STUDENT: ["student"],
@@ -26,10 +26,7 @@ export function canUseStudentSurface(role: string | null | undefined): boolean {
   return canEnterSurface(role, "student");
 }
 
-/**
- * The console a role lands on. Deliberately not `SURFACES_FOR_ROLE[role][0]`:
- * ADMIN's surface list starts with `officer`, but ADMIN lands on `/admin`.
- */
+
 export function landingSurfaceForRole(
   role: string | null | undefined,
 ): SurfaceId {

@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type RequestHandler } from "express";
 import { z } from "zod";
 import { ApiError } from "../../config/errors.js";
 import { invalidateKnowledgeCache } from "../../lib/chat/knowledge.js";
@@ -39,7 +39,13 @@ import { departmentView } from "../../services/departments.js";
 export const contentRouter = Router();
 
 const admin = [requireSession, requireSurface("admin")];
-const officer = [requireSession, requireSurface("officer")];
+const contentManagers: RequestHandler[] = [
+  requireSession,
+  (req, res, next) => {
+    const surface = sessionUser(req).role === "ADMIN" ? "admin" : "officer";
+    requireSurface(surface)(req, res, next);
+  },
+];
 const idParams = z.object({ id: z.string().min(1) });
 const linkBody = {
   name: z.string().trim().min(1).max(120),
@@ -155,13 +161,13 @@ async function rename(id: string, input: { name: string; url: string }) {
 
 /**
  * `GET /api/v1/profiling-form`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Use: read the active year's linked Google Form.
  * Returns: `{ data: { formId, title, responderUri, editUrl, updatedByName, updatedAt } }`, or `null` when none.
  */
 contentRouter.get(
   "/profiling-form",
-  officer,
+  contentManagers,
   catchAsync(async (_req, res) => {
     okOne(res, await readProfilingForm());
   }),
@@ -169,14 +175,14 @@ contentRouter.get(
 
 /**
  * `POST /api/v1/profiling-form`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: create the year's Google Form through the Forms API (verified-email collection, published, shared with the caller) — body `{ title }`.
  * Returns: `201` with `{ data: form }`; `409` when one is already linked.
  */
 contentRouter.post(
   "/profiling-form",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const { title } = parseBody(
       z.object({ title: z.string().trim().min(1).max(200) }),
@@ -215,14 +221,14 @@ contentRouter.post(
 
 /**
  * `DELETE /api/v1/profiling-form`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: unlink the year's Google Form (the form itself stays in Google Drive).
  * Returns: `{ data: { ok: true } }`.
  */
 contentRouter.delete(
   "/profiling-form",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const actor = sessionUser(req);
     const year = await activeYearOrThrow();
@@ -240,13 +246,13 @@ contentRouter.delete(
 
 /**
  * `GET /api/v1/social-links`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Use: list links in display order (query `page`, `pageSize`).
  * Returns: `{ data, page, pageSize, total }`.
  */
 contentRouter.get(
   "/social-links",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const items = await listSocialLinks();
     const { page, pageSize } = parsePagination(req);
@@ -256,14 +262,14 @@ contentRouter.get(
 
 /**
  * `POST /api/v1/social-links`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: add a link — body `{ id?, name, url }`.
  * Returns: `201` when new, else `{ data: link }`.
  */
 contentRouter.post(
   "/social-links",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const input = parseBody(
       z.object({ id: z.string().optional(), ...linkBody }),
@@ -289,14 +295,14 @@ contentRouter.post(
 
 /**
  * `PUT /api/v1/social-links/order`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: reorder — body `{ orderedIds }`.
  * Returns: `{ data: { ok: true } }`.
  */
 contentRouter.put(
   "/social-links/order",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const { orderedIds } = parseBody(
       z.object({ orderedIds: z.array(z.string().min(1)) }),
@@ -316,14 +322,14 @@ contentRouter.put(
 
 /**
  * `PATCH /api/v1/social-links/:id`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: edit one — body `{ name, url }`.
  * Returns: `{ data: link }`.
  */
 contentRouter.patch(
   "/social-links/:id",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
     okOne(res, await rename(id, parseBody(z.object(linkBody), req)));
@@ -332,14 +338,14 @@ contentRouter.patch(
 
 /**
  * `DELETE /api/v1/social-links/:id`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: remove one.
  * Returns: `{ data: { ok: true } }`.
  */
 contentRouter.delete(
   "/social-links/:id",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
     await links().deleteOne(idIn([id]) as never);

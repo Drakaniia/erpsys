@@ -1,4 +1,4 @@
-import { Router, type Request } from "express";
+import { Router, type Request, type RequestHandler } from "express";
 import { z } from "zod";
 import {
   departmentLevelRangeLabel,
@@ -43,6 +43,13 @@ import {
 export const departmentsRouter = Router();
 
 const instructor = [requireSession, requireSurface("instructor")];
+const managers: RequestHandler[] = [
+  requireSession,
+  (req, res, next) => {
+    const surface = sessionUser(req).role === "ADMIN" ? "admin" : "instructor";
+    requireSurface(surface)(req, res, next);
+  },
+];
 
 const idParams = z.object({ id: z.string().min(1) });
 const yearLevels = z
@@ -133,14 +140,14 @@ departmentsRouter.put(
 
 /**
  * `GET /api/v1/departments`
- * Access: session + instructor surface.
+ * Access: session + instructor or admin surface.
  * Use: every department with who holds it; an admin sees all, an instructor
  * their own (query `page`, `pageSize`).
  * Returns: `{ data, page, pageSize, total }`.
  */
 departmentsRouter.get(
   "/departments",
-  instructor,
+  managers,
   catchAsync(async (req, res) => {
     const { callerId, isAdmin } = caller(req);
     const rows = await departmentListing(callerId, isAdmin);
@@ -157,14 +164,14 @@ departmentsRouter.get(
 
 /**
  * `POST /api/v1/departments`
- * Access: session + instructor surface.
+ * Access: session + instructor or admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: create one — body `{ name }`; an instructor holding none takes it.
  * Returns: `201` with `{ data: department }`.
  */
 departmentsRouter.post(
   "/departments",
-  instructor,
+  managers,
   catchAsync(async (req, res) => {
     const { name } = parseBody(
       z.object({ name: z.string().trim().min(1).max(120) }),
@@ -200,14 +207,14 @@ departmentsRouter.post(
 
 /**
  * `PATCH /api/v1/departments/:id`
- * Access: session + instructor surface.
+ * Access: session + instructor or admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: rename an assigned department (admins may edit any), or admin-only deactivate — body `{ name?, isActive? }`.
  * Returns: `{ data: department }`.
  */
 departmentsRouter.patch(
   "/departments/:id",
-  instructor,
+  managers,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
     const input = parseBody(
@@ -275,14 +282,14 @@ departmentsRouter.patch(
 
 /**
  * `PUT /api/v1/departments/:id/year-levels`
- * Access: session + instructor surface.
+ * Access: session + instructor or admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: set the year levels it serves — body `{ yearLevels }`.
  * Returns: `{ data: department }`.
  */
 departmentsRouter.put(
   "/departments/:id/year-levels",
-  instructor,
+  managers,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
     const body = parseBody(z.object({ yearLevels }), req);
@@ -304,14 +311,14 @@ departmentsRouter.put(
 
 /**
  * `DELETE /api/v1/departments/:id`
- * Access: session + instructor surface.
+ * Access: session + instructor or admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: delete it, only when nothing is queued in it.
  * Returns: `{ data: department }`.
  */
 departmentsRouter.delete(
   "/departments/:id",
-  instructor,
+  managers,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
     await requireDepartment(id);
