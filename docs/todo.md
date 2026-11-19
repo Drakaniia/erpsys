@@ -40,16 +40,6 @@ AI Gateway (in front of Workers AI calls for caching/rate-limit/observability, g
 
 /preview qa fron the moment open the app umtill all process, look for too many or duplicate api request, purpose of this so that the api wont hammer the server for too many request.. add implimentaion like api is busy with ui validation so it wont limit the api's
 
-
-
-
-
-
-
-in the final paper, dont mentions like AGENTS.md or 	lib/platform/metrics.ts, /api/metrics etc.. the paper or the panelist dont have to check the codebase.. its a pure printed paper    
-
-remove mongodb atlas in the documentation
-
 we try google sheets as an integration  
 
 docu page
@@ -61,25 +51,6 @@ If you open the wrong door, and login, add dialogue modal to notice that theyr r
 
 check if there still comments in the /server tthat is not  an api
 
-
-# Translation of Revisions (Cebuano/Visayan → English)
-
----
-
-## Image 1: **Integration**
-
-- **mpdf node**
-- **custom env** (custom environment)
-
-
-2. **Send the email OTP**
-3. **Google Sheets**
-4. **Google Authenticator**
-5. **fpdf/mpdf node**
-
-**How to maintain the system** – system admin
-
----
 
 ## Image 2: **Revision – Collab ERPSys**
 
@@ -125,29 +96,7 @@ in the step 1 assesment can still upload for proof of payment
 onboarding highlight for officer and instructor page with focus,  not wizard type
 
 
-review all instructor queue system, all flow, all edge cases if its handled properly
-
-created at and updated at
-
-There's no global timestamp mechanism — lib/db/db.ts has no auto-createdAt/updatedAt hook, each write sets what it sets.
-Both createdAt + updatedAt
-- user, session, account, verification — Better Auth schema writes them. Exception: the manual password-reset insert in UserAdminService.ts:115 sets neither.
-- chatbot_knowledge, integration_setting, integration_credential — set by hand.
-createdAt only
-- academic_year, notification, step_verification, upload, social_media_link, department_transfer_request
-Note: student_profile declares createdAt and StudentRecordView reads it, but neither insert path (StudentPlacementService.ts:62, StudentProfileService.ts:119) sets it — so it's missing on real docs. That's a bug, not just a gap.
-Neither
-- student_enrollment, department, adviser_department, requirement_item, step, admin_step_up, chat_usage
-Other timestamp fields instead
-- enrollment_queue → joinedAt / servedAt / completedAt
-- adviser_availability → openedAt / closedAt / lastActiveAt
-- admin_action_log, audit_log → at
-- storage_usage, profiling_form → updatedAt only
-If you want this uniform, the smallest fix is a $setOnInsert/$set timestamp injected once in guardDb() (lib/db/timestamp-ordering.ts already wraps every write) — but it would need a per-collection allowlist to avoid clobbering at/joinedAt conventions.
-Skipped: checking history to see whether any collection used to write these fields (data may be mixed old/new).
-
-
-run atomic commits  randomize the author:
+rewrite entire history  run atomic commits  randomize the author:
 ‎github Name: Alistair Ybanez
 ‎github Username: @Drakaniia
 ‎github email: floresaybaez574@gmail.com
@@ -174,19 +123,9 @@ SPLIT THE API DODCUMENTATION AND CHAPTERS 1-5
 Definition of Terms IS WRONG,  REFER TO THE @Collab Final Project Documentation.REFERENCE.pdf  TERMS LIKE THE  API, CONCURRENCY, RBACC, JWT  ETC..
 
 
-IN THE 2.2.1 , REMOVE THE 1ST COLUMN
+the first step we missed is we should make a normalized version of the database in sql tables, we make 1st normal form to the 3rd or final normal form. but we skip it.. can we create a sql version first based on the prblem statement or the system itselt. look for duplication, and not needed tables or collections, we make the collections as simple possible and minimal tables  that has created at and updated at in each collections
 
-FOR THE 2.2.2 REMOVE THE VERIFICATION COLUMN
 
-THE 2.2.4 System Interface and Execution IS WRONG, REFER TO THE REFERENCE,
-
-IN THE 3.5. Integration Strategies, ITS WRONG, DONT TABLE IT, YOU CAN BULLET IT (A,B,C), WITHT ROLE, BENEFIT, AND COLCLUSION
-
-DONT MENTION NGINX EVERYWHERE
-
-MAKE SURE EVERYTHING ESPECIALLY IN CHAPTER 5 IN LEYMANS TERM
-
-the first step we missed is we should make a normalized version of the database in sql tables, we make 1st normal form to the 3rd or final normal form. but we skip it.. can we create a sql version first based on the prblem statement or the system itselt. look for duplication, and not needed tables, we make the collections as simple possible and minimal tables  that has created at and updated at in each collections
 
 database backup
 
@@ -194,10 +133,7 @@ admin can change role to admin also, not just one
 
 security policy document in page
 
-
 backup
-
-add created at and updated at in all collections, with all that has edit
 
 database concurency, add array  when two person editing, bot can edit but only one is saved. not just in the middleware
 
@@ -205,15 +141,9 @@ timestamp. when two person editing, not just timestamp.ts  make it two array in 
 
 add only 1 ip access list
 
-in the database.. 
-
 add sir Gil in Mongodb Database
 
-
-
 smiplify collections, drop duplicate, make some in local session instead of storing in collections, make collections simple as possible 
-
-in chatbot knowledge page.  remove the preview and the markdown. maek it real editor whithout needing the markdown..  add new buttons like list unorder list, bold, underline, itallic , bold, h1 h2 or h3. all
 
 use temporary Data for screenshots for the chapter snippet in the /docs/paper  for the screenshots of the System for the main important pages, add it in the /paper/screenshots
 
@@ -225,3 +155,7 @@ why still button to connect to Google callendar if user logged in with google?
 add external link to the calendar so it opens in a new tab
 
 will the calendar auto open queue if whats in my schedule?
+
+ip address of the mongodb
+
+in the step 1, add sample preview for the requirements that needs to submit so students have idea what  image they have to sttach
