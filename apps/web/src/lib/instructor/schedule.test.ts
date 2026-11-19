@@ -37,7 +37,9 @@ describe("schedule form helpers", () => {
       startMinute: 540,
       endMinute: 720,
     });
-    const [cancel] = rowsToWindows([{ ...newRow("CANCEL"), date: "2026-12-07" }]);
+    const [cancel] = rowsToWindows([
+      { ...newRow("CANCEL"), date: "2026-12-07" },
+    ]);
     expect(cancel).toEqual({ kind: "CANCEL", date: "2026-12-07" });
   });
 

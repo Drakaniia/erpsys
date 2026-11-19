@@ -10,12 +10,14 @@ const mocks = vi.hoisted(() => ({
   link: vi.fn(),
 }));
 vi.mock("react-router", () => ({ useNavigate: () => mocks.navigate }));
-vi.mock("$lib/auth-client", () => ({ authClient: {
-  getSession: mocks.session,
-  listAccounts: mocks.accounts,
-  signIn: { social: mocks.social },
-  linkSocial: mocks.link,
-} }));
+vi.mock("$lib/auth-client", () => ({
+  authClient: {
+    getSession: mocks.session,
+    listAccounts: mocks.accounts,
+    signIn: { social: mocks.social },
+    linkSocial: mocks.link,
+  },
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -31,7 +33,9 @@ function setup(dest: string | null = null) {
 describe("Google sign-in completion wiring", () => {
   it("sends OAuth through the Calendar-aware page with the internal destination", async () => {
     const { result } = setup("/instructor?tab=schedule");
-    await act(async () => { await result.current.signInWithGoogle(); });
+    await act(async () => {
+      await result.current.signInWithGoogle();
+    });
     const callback = new URL(mocks.social.mock.calls[0][0].callbackURL);
     expect(callback.origin).toBe(window.location.origin);
     expect(callback.pathname).toBe("/loading");
@@ -40,27 +44,48 @@ describe("Google sign-in completion wiring", () => {
   });
 
   it("checks Calendar when continuing an existing Google instructor session", async () => {
-    mocks.session.mockResolvedValue({ data: { user: {
-      id: "instructor", email: "instructor@example.com", role: "ENROLLMENT_ADVISER",
-    } } });
+    mocks.session.mockResolvedValue({
+      data: {
+        user: {
+          id: "instructor",
+          email: "instructor@example.com",
+          role: "ENROLLMENT_ADVISER",
+        },
+      },
+    });
     mocks.accounts.mockResolvedValue({ data: [{ providerId: "google" }] });
     const { result } = setup();
-    await act(async () => { await result.current.signInWithGoogle(); });
+    await act(async () => {
+      await result.current.signInWithGoogle();
+    });
     expect(mocks.social).not.toHaveBeenCalled();
-    expect(mocks.navigate).toHaveBeenCalledWith("/loading?provider=google&dest=%2Finstructor");
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/loading?provider=google&dest=%2Finstructor",
+    );
   });
 
   it("uses the same completion page after Google account linking", async () => {
-    mocks.session.mockResolvedValue({ data: { user: {
-      id: "instructor", email: "instructor@example.com", role: "ENROLLMENT_ADVISER",
-    } } });
+    mocks.session.mockResolvedValue({
+      data: {
+        user: {
+          id: "instructor",
+          email: "instructor@example.com",
+          role: "ENROLLMENT_ADVISER",
+        },
+      },
+    });
     mocks.accounts.mockResolvedValue({ data: [{ providerId: "credential" }] });
     const { result } = setup();
-    await act(async () => { await result.current.signInWithGoogle(); });
+    await act(async () => {
+      await result.current.signInWithGoogle();
+    });
     expect(result.current.linkDialogOpen).toBe(true);
-    await act(async () => { await result.current.handleLinkConfirm(); });
+    await act(async () => {
+      await result.current.handleLinkConfirm();
+    });
     expect(mocks.link).toHaveBeenCalledWith({
-      provider: "google", callbackURL: `${window.location.origin}/loading?provider=google`,
+      provider: "google",
+      callbackURL: `${window.location.origin}/loading?provider=google`,
     });
   });
 });

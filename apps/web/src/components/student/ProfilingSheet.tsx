@@ -18,11 +18,18 @@ export default function ProfilingSheet({
     api.student.submitEvidence.mutationOptions(),
   );
   const { flags } = useIntegrations();
-  const presence = useEditTimestamp("submission", step.status !== "VERIFIED" ? "me~PROFILING" : null, step);
+  const presence = useEditTimestamp(
+    "submission",
+    step.status !== "VERIFIED" ? "me~PROFILING" : null,
+    step,
+  );
 
   async function submit() {
     try {
-      await submitMutation.mutateAsync({ stepCode: "PROFILING", ts: presence.ts });
+      await submitMutation.mutateAsync({
+        stepCode: "PROFILING",
+        ts: presence.ts,
+      });
       queryClient.invalidateQueries({ queryKey: ["student"] });
       notify("Submitted — pending officer review.");
     } catch (e) {
@@ -35,7 +42,6 @@ export default function ProfilingSheet({
 
   return (
     <div className="flex flex-col gap-4">
-
       {step.reply ? <ReplyNotice reply={step.reply} /> : null}
 
       {step.status === "VERIFIED" ? (

@@ -77,8 +77,8 @@ export function ClearanceRings({
         </div>
       ) : !anything ? (
         <PanelQuiet>
-          No step has been verified yet this term. The rings fill as you
-          verify submissions, step by step.
+          No step has been verified yet this term. The rings fill as you verify
+          submissions, step by step.
         </PanelQuiet>
       ) : (
         <div className="flex flex-1 flex-col gap-4">
@@ -140,7 +140,9 @@ export function ClearanceRings({
                     className="size-2 shrink-0 rounded-[3px]"
                     style={{ backgroundColor: row.color }}
                   />
-                  <span className="min-w-0 flex-1 truncate text-ink">{row.label}</span>
+                  <span className="min-w-0 flex-1 truncate text-ink">
+                    {row.label}
+                  </span>
                   <span className="text-muted tabular-nums">
                     {row.value.toLocaleString()}
                   </span>

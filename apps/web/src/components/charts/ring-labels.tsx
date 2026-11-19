@@ -52,7 +52,7 @@ const RingLabel = memo(function RingLabel({
   const progress = useMountProgress(
     enterTransition,
     (0.6 + index * 0.1) * enterStaggerScale,
-    `${animationKey}-label-${index}`
+    `${animationKey}-label-${index}`,
   );
   const done = useEnterComplete(progress);
   const enterOpacity = useTransform(progress, [0, 1], [0, 1]);
@@ -118,7 +118,7 @@ export const RingLabels = memo(function RingLabels({
   const layout = arcStartLabelLayout(
     startAngle,
     endAngle,
-    offsetProp ?? fontSize * 0.6
+    offsetProp ?? fontSize * 0.6,
   );
 
   return (
@@ -126,7 +126,7 @@ export const RingLabels = memo(function RingLabels({
       {data.map((ring, index) => {
         const { innerRadius, outerRadius } = getRingRadii(index);
         const { x, y, transform } = layout.position(
-          (innerRadius + outerRadius) / 2
+          (innerRadius + outerRadius) / 2,
         );
         return (
           <RingLabel

@@ -177,15 +177,28 @@ const queueRow = (id: string) =>
 
 describe("enrollment completion", () => {
   it("does not complete after the serving owner changes during validation", async () => {
-    const transition = EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
-    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(async (...args) => {
-      context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
-      return transition(...args);
+    const transition =
+      EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
+    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(
+      async (...args) => {
+        context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
+        return transition(...args);
+      },
+    );
+    const response = await call("/enrollments/q-serving/completion", {
+      method: "POST",
+      body: JSON.stringify({ departmentId: "dept-1" }),
     });
-    const response = await call("/enrollments/q-serving/completion", { method: "POST", body: JSON.stringify({ departmentId: "dept-1" }) });
     expect(response.status).toBe(409);
-    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "IN_PROGRESS", servedById: "adv2" });
-    expect(context.store[COLLECTIONS.stepVerification].some((row) => row.stepId === "step-ENROLLMENT")).toBe(false);
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
+      status: "IN_PROGRESS",
+      servedById: "adv2",
+    });
+    expect(
+      context.store[COLLECTIONS.stepVerification].some(
+        (row) => row.stepId === "step-ENROLLMENT",
+      ),
+    ).toBe(false);
   });
   it("marks the entry completed and verifies ENROLLMENT", async () => {
     const response = await complete();

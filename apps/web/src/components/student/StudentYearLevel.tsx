@@ -35,7 +35,11 @@ export default function StudentYearLevel({ data }: { data: MyStepsData }) {
   const offeredLevels = offeredYearLevels(courseOption);
 
   const [levelModalOpen, setLevelModalOpen] = useState(false);
-  const presence = useEditTimestamp("student-enrollment", levelModalOpen ? "me" : null, data);
+  const presence = useEditTimestamp(
+    "student-enrollment",
+    levelModalOpen ? "me" : null,
+    data,
+  );
   const [levelError, setLevelError] = useState<string | null>(null);
   const saveLevelMutation = useMutation(
     api.student.saveEnrollment.mutationOptions(),
@@ -76,7 +80,6 @@ export default function StudentYearLevel({ data }: { data: MyStepsData }) {
 
   return (
     <>
-
       <button
         type="button"
         onClick={() => setLevelModalOpen(true)}

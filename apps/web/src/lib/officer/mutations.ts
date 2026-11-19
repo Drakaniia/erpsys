@@ -29,7 +29,10 @@ export function useOfficerMutations(toast: OfficerToast) {
       });
       toast("Google Form created");
     } catch (e) {
-      toast((e as Error).message || "Could not create the Google Form", "error");
+      toast(
+        (e as Error).message || "Could not create the Google Form",
+        "error",
+      );
     }
   }
 
@@ -45,7 +48,12 @@ export function useOfficerMutations(toast: OfficerToast) {
     }
   }
 
-  async function handleSaveLink(name: string, url: string, id?: string, ts?: number) {
+  async function handleSaveLink(
+    name: string,
+    url: string,
+    id?: string,
+    ts?: number,
+  ) {
     try {
       await saveLinkMutation.mutateAsync({ id, name, url, ts });
       queryClient.invalidateQueries({ queryKey: ["officer"] });

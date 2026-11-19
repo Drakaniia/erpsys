@@ -158,7 +158,10 @@ export default function DetailSheetBody({
       <div className="flex-1 overflow-y-auto px-5 pb-4">
         {data.step.code === "ASSESSMENT" && (
           <section className="py-4">
-            <h3 className="w-fit text-sm font-semibold tracking-tight" data-onboarding-tip="review">
+            <h3
+              className="w-fit text-sm font-semibold tracking-tight"
+              data-onboarding-tip="review"
+            >
               Requirements
             </h3>
             <ul className="mt-2 space-y-1.5">
@@ -188,7 +191,12 @@ export default function DetailSheetBody({
 
         {(data.step.code === "PROFILING" || data.answers?.length > 0) && (
           <section className="border-t border-border py-4">
-            <h3 className="w-fit text-sm font-semibold tracking-tight" data-onboarding-tip={data.evidence.length === 0 ? "review" : undefined}>
+            <h3
+              className="w-fit text-sm font-semibold tracking-tight"
+              data-onboarding-tip={
+                data.evidence.length === 0 ? "review" : undefined
+              }
+            >
               Google Form response
             </h3>
             <p className="mt-1 text-xs text-muted">
@@ -216,7 +224,12 @@ export default function DetailSheetBody({
         {data.step.code !== "ASSESSMENT" && data.evidence.length > 0 && (
           <section className="border-t border-border py-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold tracking-tight" data-onboarding-tip="review">Evidence</h3>
+              <h3
+                className="text-sm font-semibold tracking-tight"
+                data-onboarding-tip="review"
+              >
+                Evidence
+              </h3>
               <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted tabular-nums">
                 {data.evidence.length}{" "}
                 {data.evidence.length === 1 ? "item" : "items"}
@@ -304,9 +317,16 @@ export default function DetailSheetBody({
         )}
 
         {data.step.code === "MUGSHOT" && status !== "VERIFIED" && (
-          <section className="space-y-2 border-t border-border py-4" aria-label="Mugshot camera">
+          <section
+            className="space-y-2 border-t border-border py-4"
+            aria-label="Mugshot camera"
+          >
             {cameraOpen ? (
-              <WebcamCapture busy={captureBusy} onsave={oncapturesave} oncancel={oncapturecancel} />
+              <WebcamCapture
+                busy={captureBusy}
+                onsave={oncapturesave}
+                oncancel={oncapturecancel}
+              />
             ) : (
               <button
                 type="button"

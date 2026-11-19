@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AuthenticatorSection from "./AuthenticatorSection";
 import type { AdminAuthenticator } from "$lib/integrations/use-integrations";
@@ -39,7 +45,8 @@ function setup(
   );
   return {
     nativeConfirm,
-    deletes: () => fetch.mock.calls.filter(([, init]) => init?.method === "DELETE"),
+    deletes: () =>
+      fetch.mock.calls.filter(([, init]) => init?.method === "DELETE"),
   };
 }
 
@@ -57,11 +64,19 @@ describe("AuthenticatorSection", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Reset authenticator?" });
     expect(dialog.getAttribute("aria-modal")).toBe("true");
-    expect(within(dialog).getByText(/Reset the authenticator for Test Admin/)).toBeTruthy();
-    expect(within(dialog).getByText(/They will set up a new one at their next unlock/)).toBeTruthy();
+    expect(
+      within(dialog).getByText(/Reset the authenticator for Test Admin/),
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByText(
+        /They will set up a new one at their next unlock/,
+      ),
+    ).toBeTruthy();
     expect(nativeConfirm).not.toHaveBeenCalled();
     expect(deletes()).toHaveLength(0);
-    expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(document.activeElement).toBe(
+      within(dialog).getByRole("button", { name: "Cancel" }),
+    );
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -73,7 +88,9 @@ describe("AuthenticatorSection", () => {
     const { deletes } = setup(undefined, { ...ADMIN, name: "" });
     const trigger = await screen.findByRole("button", { name: "Reset" });
     fireEvent.click(trigger);
-    expect(screen.getByText(/Reset the authenticator for admin@example.test/)).toBeTruthy();
+    expect(
+      screen.getByText(/Reset the authenticator for admin@example.test/),
+    ).toBeTruthy();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
 
@@ -85,21 +102,33 @@ describe("AuthenticatorSection", () => {
 
   it("resets only after confirmation, blocks dismissal while busy, and closes on success", async () => {
     let complete!: (value: Response) => void;
-    const pending = new Promise<Response>((resolve) => { complete = resolve; });
+    const pending = new Promise<Response>((resolve) => {
+      complete = resolve;
+    });
     const { deletes } = setup(() => pending);
     fireEvent.click(await screen.findByRole("button", { name: "Reset" }));
-    fireEvent.click(screen.getByRole("button", { name: "Reset authenticator" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset authenticator" }),
+    );
 
     const working = await screen.findByRole("button", { name: "Working…" });
     expect((working as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole("button", { name: "Cancel" }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole("button", { name: "Reset" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (screen.getByRole("button", { name: "Cancel" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByRole("button", { name: "Reset" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
     fireEvent.click(working);
     fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(screen.getByRole("dialog"));
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(deletes()).toHaveLength(1);
-    expect(String(deletes()[0][0])).toContain(`/authenticators/${ADMIN.userId}`);
+    expect(String(deletes()[0][0])).toContain(
+      `/authenticators/${ADMIN.userId}`,
+    );
 
     complete(response({ data: {} }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -107,17 +136,24 @@ describe("AuthenticatorSection", () => {
   });
 
   it("keeps failures inside the modal and allows retry", async () => {
-    const onReset = vi.fn()
-      .mockResolvedValueOnce(response({ error: "Reset failed. Try again." }, 500))
+    const onReset = vi
+      .fn()
+      .mockResolvedValueOnce(
+        response({ error: "Reset failed. Try again." }, 500),
+      )
       .mockResolvedValueOnce(response({ data: {} }));
     const { deletes } = setup(onReset);
     fireEvent.click(await screen.findByRole("button", { name: "Reset" }));
-    fireEvent.click(screen.getByRole("button", { name: "Reset authenticator" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset authenticator" }),
+    );
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toBe("Reset failed. Try again.");
     expect(screen.getByRole("dialog").contains(alert)).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "Reset authenticator" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset authenticator" }),
+    );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(deletes()).toHaveLength(2);
   });

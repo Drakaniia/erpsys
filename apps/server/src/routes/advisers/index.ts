@@ -25,10 +25,7 @@ import { EnrollmentQueueModel } from "../../models/EnrollmentQueueModel.js";
 import { UserModel } from "../../models/UserModel.js";
 import { activeYearOrThrow } from "../../services/academic-years.js";
 import { replaceAssignments } from "../../services/advisers.js";
-import {
-  assertDepartmentAssigned,
-  release,
-} from "../../services/queues.js";
+import { assertDepartmentAssigned, release } from "../../services/queues.js";
 
 /**
  * `/api/v1` — the adviser roster, plus an instructor's own availability switch.
@@ -139,7 +136,9 @@ advisersRouter.put(
     ]);
     const academicYearId = String(year._id);
     if (isOpen && !department?.isActive) {
-      throw new ApiError("CONFLICT", { message: "This department is inactive — it cannot accept students." });
+      throw new ApiError("CONFLICT", {
+        message: "This department is inactive — it cannot accept students.",
+      });
     }
     await AdviserAvailabilityModel.setOpen({
       adviserId,
@@ -150,9 +149,18 @@ advisersRouter.put(
     });
 
     if (isOpen) {
-      return okOne(res, { departmentId, myOpen: true, isOpen: true, openBy: null });
+      return okOne(res, {
+        departmentId,
+        myOpen: true,
+        isOpen: true,
+        openBy: null,
+      });
     }
-    await EnrollmentQueueModel.releaseServingBy(departmentId, adviserId, academicYearId);
+    await EnrollmentQueueModel.releaseServingBy(
+      departmentId,
+      adviserId,
+      academicYearId,
+    );
 
     const open = await AdviserAvailabilityModel.listOpenByDepartment(
       departmentId,

@@ -22,10 +22,19 @@ type Store = Map<string, number[]>;
 type Registered = { store: Store; windowMs: number };
 
 const registry = new Set<Registered>();
-let sharedCheck: ((name: string, key: string, windowMs: number, max: number) => Promise<RateLimitDecision>) | undefined;
+let sharedCheck:
+  | ((
+      name: string,
+      key: string,
+      windowMs: number,
+      max: number,
+    ) => Promise<RateLimitDecision>)
+  | undefined;
 let budgetSequence = 0;
 
-export function configureSharedRateLimits(check: NonNullable<typeof sharedCheck>): void {
+export function configureSharedRateLimits(
+  check: NonNullable<typeof sharedCheck>,
+): void {
   sharedCheck = check;
 }
 
@@ -123,7 +132,9 @@ export function createRateLimitBudget(opts: {
       return record(store, key, Date.now(), windowMs, max, maxKeys);
     },
     async checkAsync(key) {
-      return sharedCheck ? sharedCheck(name, key, windowMs, max) : this.check(key);
+      return sharedCheck
+        ? sharedCheck(name, key, windowMs, max)
+        : this.check(key);
     },
     reset() {
       store.clear();
@@ -141,7 +152,11 @@ export function slidingWindowRateLimit(opts: {
   message?: string;
 }): RequestHandler {
   const { windowMs, max, key, message = DEFAULT_MESSAGE } = opts;
-  const budget = createRateLimitBudget({ name: `http:${windowMs}:${max}`, windowMs, max });
+  const budget = createRateLimitBudget({
+    name: `http:${windowMs}:${max}`,
+    windowMs,
+    max,
+  });
 
   return function rateLimit(req, res, next) {
     const keyForRequest = key(req);
@@ -150,13 +165,17 @@ export function slidingWindowRateLimit(opts: {
       return;
     }
     const respond = (decision: RateLimitDecision) => {
-      if (decision.allowed) { next(); return; }
+      if (decision.allowed) {
+        next();
+        return;
+      }
       res.status(429);
       res.setHeader("Retry-After", String(decision.retryAfterSeconds));
       res.json({ error: message });
     };
-    if (sharedCheck) { void budget.checkAsync(keyForRequest).then(respond, next); }
-    else respond(budget.check(keyForRequest));
+    if (sharedCheck) {
+      void budget.checkAsync(keyForRequest).then(respond, next);
+    } else respond(budget.check(keyForRequest));
   };
 }
 
@@ -196,7 +215,8 @@ const CREDENTIAL_PATHS = new Set([
   "/sign-up/student",
   "/sign-in/email-otp",
   "/email-otp/send-verification-otp",
-  "/email-otp/verify-email",]);
+  "/email-otp/verify-email",
+]);
 
 function authSubPath(req: Request): string {
   const path = (req.originalUrl ?? req.url ?? "").split("?")[0];

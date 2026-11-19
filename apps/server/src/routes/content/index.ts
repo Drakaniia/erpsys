@@ -48,7 +48,6 @@ const linkBody = {
 const links = () =>
   getDbSync().collection<SocialLinkRow>(COLLECTIONS.socialMediaLink);
 
-
 type KnowledgeDoc = {
   _id: string;
   content: string;
@@ -107,7 +106,10 @@ contentRouter.put(
   "/chatbot-knowledge",
   admin,
   catchAsync(async (req, res) => {
-    const { content } = parseBody(z.object({ content: z.string().max(200_000) }), req);
+    const { content } = parseBody(
+      z.object({ content: z.string().max(200_000) }),
+      req,
+    );
     const actorId = sessionUser(req).id;
     const existing = await latestKnowledge();
     const updatedAt = new Date();
@@ -115,7 +117,9 @@ contentRouter.put(
     if (existing) {
       await knowledge().updateOne(
         { _id: existing._id } as never,
-        { $set: { content, version, updatedById: actorId, updatedAt } } as never,
+        {
+          $set: { content, version, updatedById: actorId, updatedAt },
+        } as never,
       );
     } else {
       await knowledge().insertOne({
@@ -128,7 +132,11 @@ contentRouter.put(
       } as never);
     }
     invalidateKnowledgeCache();
-    await AdminActionLogModel.log(actorId, "Updated chatbot doc", `v${version}`);
+    await AdminActionLogModel.log(
+      actorId,
+      "Updated chatbot doc",
+      `v${version}`,
+    );
     okOne(res, { version, updatedAt: updatedAt.toISOString() });
   }),
 );
@@ -187,8 +195,12 @@ contentRouter.post(
     }
     const { formId, responderUri } = await createForm(title, actor.email);
     await AcademicYearModel.setProfilingForm(String(year._id), {
-      formId, title, responderUri, updatedById: actor.id,
-      createdAt: new Date(), updatedAt: new Date(),
+      formId,
+      title,
+      responderUri,
+      updatedById: actor.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
     if (actor.role === "ADMIN") {
       await AdminActionLogModel.log(

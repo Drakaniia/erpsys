@@ -116,20 +116,17 @@ export class StepVerificationModel {
     if (stepIds.length === 0) return [];
     return getDbSync()
       .collection<StepVerificationRow>(COLLECTIONS.stepVerification)
-      .find(
-        { academicYearId, stepId: { $in: stepIds } } as never,
-        {
-          projection: {
-            studentProfileId: 1,
-            stepId: 1,
-            status: 1,
-            appliedAt: 1,
-            createdAt: 1,
-            verifiedAt: 1,
-            respondedAt: 1,
-          },
+      .find({ academicYearId, stepId: { $in: stepIds } } as never, {
+        projection: {
+          studentProfileId: 1,
+          stepId: 1,
+          status: 1,
+          appliedAt: 1,
+          createdAt: 1,
+          verifiedAt: 1,
+          respondedAt: 1,
         },
-      )
+      })
       .toArray();
   }
 

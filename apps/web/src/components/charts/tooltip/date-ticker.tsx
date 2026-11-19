@@ -19,7 +19,7 @@ const COMPACT_TICKER_THRESHOLD = 60;
 function driveSpring(
   value: MotionValue<number>,
   target: number,
-  instant: boolean
+  instant: boolean,
 ) {
   if (instant) {
     value.jump(target);
@@ -49,7 +49,7 @@ function toSegments(values: readonly string[]): TickerSegment[] {
 function segmentIndexAt(
   segments: readonly TickerSegment[],
   index: number,
-  total: number
+  total: number,
 ) {
   if (index < 0 || index >= total) {
     return 0;
@@ -79,7 +79,7 @@ function useActiveItemWidth(
   activeIndex: number,
   width: MotionValue<number>,
   reduceMotion: boolean,
-  cacheKey?: string
+  cacheKey?: string,
 ) {
   const widthsRef = useRef<number[]>([]);
   const activeIndexRef = useRef(activeIndex);
@@ -110,7 +110,7 @@ function useActiveItemWidth(
       }
       widthsRef.current = Array.from(
         stack.querySelectorAll<HTMLElement>("[data-ticker-item]"),
-        (node) => node.getBoundingClientRect().width
+        (node) => node.getBoundingClientRect().width,
       );
       const key = cacheKeyRef.current;
       if (key !== undefined) {
@@ -216,22 +216,22 @@ const DateTickerInner = memo(function DateTickerInner({
   // still until it actually changes instead of scrolling through repeats.
   const monthSegments = useMemo(
     () => toSegments(parsedLabels.map((label) => label.month)),
-    [parsedLabels]
+    [parsedLabels],
   );
   const daySegments = useMemo(
     () => toSegments(parsedLabels.map((label) => label.day)),
-    [parsedLabels]
+    [parsedLabels],
   );
 
   const currentMonthIndex = segmentIndexAt(
     monthSegments,
     currentIndex,
-    parsedLabels.length
+    parsedLabels.length,
   );
   const currentDayIndex = segmentIndexAt(
     daySegments,
     currentIndex,
-    parsedLabels.length
+    parsedLabels.length,
   );
 
   // Animated Y offsets
@@ -248,14 +248,14 @@ const DateTickerInner = memo(function DateTickerInner({
     monthSegments,
     currentMonthIndex,
     monthWidth,
-    reduceMotion
+    reduceMotion,
   );
   useActiveItemWidth(
     dayStackRef,
     daySegments,
     currentDayIndex,
     dayWidth,
-    reduceMotion
+    reduceMotion,
   );
 
   // Scroll the stacks to the active day / month before paint.

@@ -57,7 +57,11 @@ describe("sendMail", () => {
     // A deployment without credentials must not fail the caller — password
     // reset, queue serving and enrollment completion all keep working.
     expect(
-      await sendMail({ to: "student@buksu.edu.ph", subject: "Hi", text: "Body" }),
+      await sendMail({
+        to: "student@buksu.edu.ph",
+        subject: "Hi",
+        text: "Body",
+      }),
     ).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -66,7 +70,11 @@ describe("sendMail", () => {
     configure();
     toggleHolder.enabled = false;
     expect(
-      await sendMail({ to: "student@buksu.edu.ph", subject: "Hi", text: "Body" }),
+      await sendMail({
+        to: "student@buksu.edu.ph",
+        subject: "Hi",
+        text: "Body",
+      }),
     ).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -146,7 +154,11 @@ describe("sendMail", () => {
     });
 
     expect(
-      await sendMail({ to: "student@buksu.edu.ph", subject: "Hi", text: "Body" }),
+      await sendMail({
+        to: "student@buksu.edu.ph",
+        subject: "Hi",
+        text: "Body",
+      }),
     ).toBe(false);
     expect(console.error).toHaveBeenCalled();
   });
@@ -156,7 +168,11 @@ describe("sendMail", () => {
     fetchMock.mockRejectedValue(new Error("offline"));
 
     expect(
-      await sendMail({ to: "student@buksu.edu.ph", subject: "Hi", text: "Body" }),
+      await sendMail({
+        to: "student@buksu.edu.ph",
+        subject: "Hi",
+        text: "Body",
+      }),
     ).toBe(false);
     expect(console.error).toHaveBeenCalled();
   });

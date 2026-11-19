@@ -31,7 +31,9 @@ function rememberTs(data: unknown, ts: number): void {
     if (!row || typeof row !== "object") continue;
     tsByObject.set(row, ts);
     (row as { _editTs?: number })._editTs = ts;
-    const id = (row as { _id?: unknown; id?: unknown })._id ?? (row as { id?: unknown }).id;
+    const id =
+      (row as { _id?: unknown; id?: unknown })._id ??
+      (row as { id?: unknown }).id;
     if (id !== undefined && id !== null) tsById.set(String(id), ts);
     for (const nested of Object.values(row)) {
       if (nested && typeof nested === "object") rememberTs(nested, ts);
@@ -153,7 +155,6 @@ async function request(route: ClientRoute, input: unknown): Promise<unknown> {
       error.status === 409 &&
       (error.data as { code?: string } | undefined)?.code === TS_ABORTED
     ) {
-
       notify.error(
         "Save rejected: this record changed or a newer editor read it. Your draft is unchanged. Reload before retrying.",
       );
@@ -211,7 +212,8 @@ async function send(route: ClientRoute, input: unknown): Promise<unknown> {
   const json: unknown = text ? JSON.parse(text) : undefined;
   if (json && typeof json === "object" && "data" in json) {
     const { ts } = json as { ts?: unknown };
-    if (typeof ts === "number") rememberTs((json as { data: unknown }).data, ts);
+    if (typeof ts === "number")
+      rememberTs((json as { data: unknown }).data, ts);
     if (route.list) return json;
     return (json as { data: unknown }).data;
   }

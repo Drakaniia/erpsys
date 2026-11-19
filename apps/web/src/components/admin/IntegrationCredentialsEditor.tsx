@@ -158,15 +158,19 @@ export default function IntegrationCredentialsEditor({
   const status = (error as { status?: number } | null)?.status;
   const failures = failuresOf(save.error);
   const validationFailures = failuresOf(validate.error);
-  const fieldErrors = byField(failures.length > 0 ? failures : validationFailures);
+  const fieldErrors = byField(
+    failures.length > 0 ? failures : validationFailures,
+  );
   const validateStatus = (validate.error as { status?: number } | null)?.status;
   const unreadable = row.credentials.some((field) => field.unreadable);
 
   return (
     <div className="flex flex-col gap-4 pt-3">
-
       {unreadable && (
-        <p role="status" className="border-l-2 border-warning pl-2.5 text-xs text-warning">
+        <p
+          role="status"
+          className="border-l-2 border-warning pl-2.5 text-xs text-warning"
+        >
           Stored credentials cannot be read — the encryption key changed.
           Re-enter them, or reset to .env.
         </p>
@@ -278,12 +282,14 @@ export default function IntegrationCredentialsEditor({
             {status === 422 ? error?.message : validate.error?.message}
           </p>
           <ul className="mt-1 flex flex-col gap-0.5">
-            {(failures.length > 0 ? failures : validationFailures).map((failure) => (
-              <li key={failure.key}>
-                <span className="font-mono">{failure.key}</span> —{" "}
-                {failure.reason}
-              </li>
-            ))}
+            {(failures.length > 0 ? failures : validationFailures).map(
+              (failure) => (
+                <li key={failure.key}>
+                  <span className="font-mono">{failure.key}</span> —{" "}
+                  {failure.reason}
+                </li>
+              ),
+            )}
           </ul>
         </div>
       ) : status === 409 ? (

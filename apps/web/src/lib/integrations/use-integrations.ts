@@ -215,7 +215,9 @@ export function useSetIntegration() {
 export function useSaveCredentials() {
   return useMutation<AdminIntegrationRow, Error, SaveCredentialsInput>({
     mutationFn: (vars) =>
-      api.admin.saveIntegrationCredentials.call(vars) as Promise<AdminIntegrationRow>,
+      api.admin.saveIntegrationCredentials.call(
+        vars,
+      ) as Promise<AdminIntegrationRow>,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["integrations"] });
     },
@@ -230,14 +232,18 @@ export function useSaveCredentials() {
 export function useValidateCredentials() {
   return useMutation<CredentialValidation, Error, SaveCredentialsInput>({
     mutationFn: (vars) =>
-      api.admin.validateIntegrationCredentials.call(vars) as Promise<CredentialValidation>,
+      api.admin.validateIntegrationCredentials.call(
+        vars,
+      ) as Promise<CredentialValidation>,
   });
 }
 
 export function useResetCredentials() {
   return useMutation<AdminIntegrationRow, Error, IntegrationKey>({
     mutationFn: (key) =>
-      api.admin.resetIntegrationCredentials.call({ key }) as Promise<AdminIntegrationRow>,
+      api.admin.resetIntegrationCredentials.call({
+        key,
+      }) as Promise<AdminIntegrationRow>,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["integrations"] });
     },
@@ -249,11 +255,7 @@ export function useResetCredentials() {
  * in the query cache. The mutation's data is dropped once the caller is done.
  */
 export function useExportCredentials() {
-  return useMutation<
-    { filename: string; content: string },
-    Error,
-    void
-  >({
+  return useMutation<{ filename: string; content: string }, Error, void>({
     mutationFn: () =>
       api.admin.exportIntegrationCredentials.call({}) as Promise<{
         filename: string;

@@ -65,7 +65,12 @@ function seed(): Record<string, Row[]> {
         isActive: true,
         yearLevels: ["FIRST"],
       },
-      { _id: "dept-2", name: "College of Arts", isActive: true, yearLevels: [] },
+      {
+        _id: "dept-2",
+        name: "College of Arts",
+        isActive: true,
+        yearLevels: [],
+      },
     ],
     [COLLECTIONS.adviserDepartment]: [
       {
@@ -76,7 +81,12 @@ function seed(): Record<string, Row[]> {
       },
     ],
     [COLLECTIONS.user]: [
-      { _id: "adm1", name: "Admin", email: "admin@buksu.edu.ph", role: "ADMIN" },
+      {
+        _id: "adm1",
+        name: "Admin",
+        email: "admin@buksu.edu.ph",
+        role: "ADMIN",
+      },
       {
         _id: "adv1",
         name: "Ada",
@@ -179,14 +189,22 @@ describe("instructor schedule", () => {
 
   it("saves a deletion after a newer calendar-status read without reporting a failed save", async () => {
     context.store[COLLECTIONS.calendarConnection].push({
-      _id: "calendar-1", userId: "adv1", status: "CONNECTED",
-      syncState: "CLEAN", attempts: 0,
+      _id: "calendar-1",
+      userId: "adv1",
+      status: "CONNECTED",
+      syncState: "CLEAN",
+      attempts: 0,
     });
-    await call("/me/schedule", "PUT", { departmentId: "dept-1", windows: [monday] });
+    await call("/me/schedule", "PUT", {
+      departmentId: "dept-1",
+      windows: [monday],
+    });
     const read = await call("/me/schedule?departmentId=dept-1");
     await call("/me/calendar");
     const saved = await call("/me/schedule", "PUT", {
-      departmentId: "dept-1", windows: [], ts: read.body.ts,
+      departmentId: "dept-1",
+      windows: [],
+      ts: read.body.ts,
     });
     expect(saved.status).toBe(200);
     expect(saved.body.data.windows).toEqual([]);
@@ -194,11 +212,16 @@ describe("instructor schedule", () => {
   });
 
   it("rejects a stale schedule without deleting posted hours", async () => {
-    await call("/me/schedule", "PUT", { departmentId: "dept-1", windows: [monday] });
+    await call("/me/schedule", "PUT", {
+      departmentId: "dept-1",
+      windows: [monday],
+    });
     const read = await call("/me/schedule?departmentId=dept-1");
     await call("/me/schedule?departmentId=dept-1");
     const saved = await call("/me/schedule", "PUT", {
-      departmentId: "dept-1", windows: [], ts: read.body.ts,
+      departmentId: "dept-1",
+      windows: [],
+      ts: read.body.ts,
     });
     expect(saved.status).toBe(409);
     expect(saved.body.data.code).toBe("TS_ABORTED");

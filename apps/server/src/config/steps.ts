@@ -67,7 +67,6 @@ export function stepHintFor(
   return STEP_HINTS[code] ?? "";
 }
 
-
 export function evidenceUploadIds(evidence: unknown): string[] {
   if (!evidence || typeof evidence !== "object") return [];
   const ids = (evidence as { uploadIds?: unknown }).uploadIds;

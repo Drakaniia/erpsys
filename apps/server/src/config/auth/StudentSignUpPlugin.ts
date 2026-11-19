@@ -18,7 +18,6 @@ import { StudentEnrollmentModel } from "../../models/StudentEnrollmentModel.js";
 import { StudentProfileModel } from "../../models/StudentProfileModel.js";
 import { UserModel } from "../../models/UserModel.js";
 
-
 const bodySchema = z
   .object({
     name: z.string().min(1),
@@ -36,7 +35,6 @@ const bodySchema = z
     turnstileToken: z.string().min(1).max(2048).optional(),
   })
   .passthrough();
-
 
 function isDuplicateKeyError(error: unknown): boolean {
   let current: unknown = error;
@@ -173,7 +171,10 @@ export function createStudentSignUpPlugin() {
           for (const cookie of result.headers.getSetCookie()) {
             ctx.responseHeaders?.append("set-cookie", cookie);
           }
-          return ctx.json({ ...result.response, user: { ...user, isOutsideOrg: false } });
+          return ctx.json({
+            ...result.response,
+            user: { ...user, isOutsideOrg: false },
+          });
         },
       ),
     },

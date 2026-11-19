@@ -9,7 +9,9 @@ export function readSeenTips(key: string): Set<string> {
   try {
     const value: unknown = JSON.parse(localStorage.getItem(key) ?? "[]");
     if (Array.isArray(value)) {
-      return new Set(value.filter((id): id is string => typeof id === "string"));
+      return new Set(
+        value.filter((id): id is string => typeof id === "string"),
+      );
     }
   } catch {
     // Tips still work for this visit if storage is blocked or corrupted.

@@ -50,7 +50,8 @@ type Target = {
 };
 
 const users = () => getDbSync().collection<Target>(COLLECTIONS.user);
-const notFound = () => new ApiError("NOT_FOUND", { message: "User not found." });
+const notFound = () =>
+  new ApiError("NOT_FOUND", { message: "User not found." });
 
 async function profileIds(actor: unknown): Promise<string[]> {
   const profiles = await getDbSync()
@@ -79,11 +80,9 @@ async function hasActivity(userId: string): Promise<boolean> {
     db.collection(COLLECTIONS.enrollmentQueue).countDocuments({
       $or: [inProfiles, { servedById: actor }, { movedToEndById: actor }],
     } as never),
-    ...[
-      COLLECTIONS.adviserDepartment,
-      COLLECTIONS.adviserAvailability,
-    ].map((name) =>
-      db.collection(name).countDocuments({ adviserId: actor } as never),
+    ...[COLLECTIONS.adviserDepartment, COLLECTIONS.adviserAvailability].map(
+      (name) =>
+        db.collection(name).countDocuments({ adviserId: actor } as never),
     ),
     db
       .collection(COLLECTIONS.notification)
@@ -105,7 +104,9 @@ async function disableAccount(target: Target): Promise<void> {
     { _id: target._id } as never,
     { $set: { blockedAt: new Date() } } as never,
   );
-  await db.collection(COLLECTIONS.session).deleteMany({ userId: actor } as never);
+  await db
+    .collection(COLLECTIONS.session)
+    .deleteMany({ userId: actor } as never);
   await db.collection(COLLECTIONS.enrollmentQueue).deleteMany({
     studentProfileId: { $in: await profileIds(actor) },
   } as never);
@@ -115,10 +116,14 @@ async function disableAccount(target: Target): Promise<void> {
       $set: { isOpen: false, closedAt: new Date(), autoClosedAt: null },
     } as never,
   );
-  await db.collection(COLLECTIONS.enrollmentQueue).updateMany(
-    { servedById: actor, status: "IN_PROGRESS" } as never,
-    { $set: { status: "WAITING", servedById: null, servedAt: null } } as never,
-  );
+  await db
+    .collection(COLLECTIONS.enrollmentQueue)
+    .updateMany(
+      { servedById: actor, status: "IN_PROGRESS" } as never,
+      {
+        $set: { status: "WAITING", servedById: null, servedAt: null },
+      } as never,
+    );
 }
 
 async function hardDeleteAccount(target: Target): Promise<void> {
@@ -231,8 +236,10 @@ usersRouter.delete(
     for (const id of ids) {
       const target = byId.get(id);
       if (!target) skipped.push({ userId: id, reason: "NOT_FOUND" });
-      else if (target.role === "ADMIN") skipped.push({ userId: id, reason: "ADMIN" });
-      else if (target.blockedAt) skipped.push({ userId: id, reason: "BLOCKED" });
+      else if (target.role === "ADMIN")
+        skipped.push({ userId: id, reason: "ADMIN" });
+      else if (target.blockedAt)
+        skipped.push({ userId: id, reason: "BLOCKED" });
       else {
         await removeCalendarData(id);
         if (await hasActivity(id)) {
@@ -265,7 +272,11 @@ usersRouter.delete(
         await AdminActionLogModel.log(actorId, "Deleted account", `User:${id}`);
       }
       for (const id of blocked) {
-        await AdminActionLogModel.log(actorId, "Disabled account", `User:${id}`);
+        await AdminActionLogModel.log(
+          actorId,
+          "Disabled account",
+          `User:${id}`,
+        );
       }
     }
     okOne(res, { hardDeleted, blocked, skipped });

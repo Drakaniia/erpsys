@@ -32,7 +32,9 @@ function storeDb(): Store {
   const store: Store = { db: null as unknown as Db, docs: [] };
   store.db = {
     collection: () => ({
-      find: () => ({ toArray: async () => store.docs.map((doc) => ({ ...doc })) }),
+      find: () => ({
+        toArray: async () => store.docs.map((doc) => ({ ...doc })),
+      }),
       findOne: async (filter: { key?: string }) => {
         const hit = store.docs.find((doc) => doc.key === filter.key);
         return hit ? { ...hit } : null;
@@ -48,7 +50,11 @@ const storedGoogleId = () => ({
   _id: "ic-1",
   key: "googleAuth",
   values: {
-    GOOGLE_CLIENT_ID: encryptField("googleAuth", "GOOGLE_CLIENT_ID", "stored-id"),
+    GOOGLE_CLIENT_ID: encryptField(
+      "googleAuth",
+      "GOOGLE_CLIENT_ID",
+      "stored-id",
+    ),
   },
   version: 1,
   updatedAt: new Date(),
@@ -81,13 +87,17 @@ describe("CREDENTIAL_FIELDS", () => {
       const byKey = new Map(fields.map((field) => [field.envKey, field]));
       for (const field of fields) {
         if (!field.pair) continue;
-        expect(byKey.get(field.pair)?.pair, `${field.envKey} pairs back`).toBe(field.envKey);
+        expect(byKey.get(field.pair)?.pair, `${field.envKey} pairs back`).toBe(
+          field.envKey,
+        );
       }
     }
   });
 
   it("flattens to the registry key list without duplicates", () => {
-    const flattened = Object.values(CREDENTIAL_FIELDS).flat().map((field) => field.envKey);
+    const flattened = Object.values(CREDENTIAL_FIELDS)
+      .flat()
+      .map((field) => field.envKey);
     expect([...CREDENTIAL_ENV_KEYS]).toEqual(flattened);
     expect(new Set(flattened).size).toBe(flattened.length);
   });
@@ -113,7 +123,9 @@ describe("encryptField / decryptField", () => {
   it("round-trips a value", () => {
     const field = encryptField("r2", "R2_SECRET_ACCESS_KEY", "hunter2-secret");
     expect(field.ciphertext).not.toContain("hunter2");
-    expect(decryptField("r2", "R2_SECRET_ACCESS_KEY", field)).toBe("hunter2-secret");
+    expect(decryptField("r2", "R2_SECRET_ACCESS_KEY", field)).toBe(
+      "hunter2-secret",
+    );
   });
 
   it("fails closed under a different encryption key", () => {
@@ -159,7 +171,10 @@ describe("loadCredentialOverrides", () => {
         }),
       }),
     };
-    expect(await loadCredentialOverrides()).toEqual({ values: {}, fingerprints: {} });
+    expect(await loadCredentialOverrides()).toEqual({
+      values: {},
+      fingerprints: {},
+    });
     expect(overridesLoaded()).toBe(false);
     holder.db = store.db;
     await loadCredentialOverrides();

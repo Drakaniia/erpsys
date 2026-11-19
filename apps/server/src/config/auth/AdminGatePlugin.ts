@@ -25,7 +25,10 @@ const TWO_FACTOR_PATHS = [
   "/two-factor/verify-totp",
   "/two-factor/verify-backup-code",
 ];
-const CHECK_PATHS = ["/two-factor/verify-totp", "/two-factor/verify-backup-code"];
+const CHECK_PATHS = [
+  "/two-factor/verify-totp",
+  "/two-factor/verify-backup-code",
+];
 
 type SessionCtx = {
   context: {
@@ -52,7 +55,8 @@ async function rethrowing(work: () => Promise<void>): Promise<void> {
 
 async function adminUser(ctx: unknown) {
   const session = await getSessionFromCtx(ctx as never);
-  if (!session) throw new APIError("UNAUTHORIZED", { message: "Unauthorized." });
+  if (!session)
+    throw new APIError("UNAUTHORIZED", { message: "Unauthorized." });
   if (!(await isAdminUser(session.user.id))) {
     throw new APIError("FORBIDDEN", { message: "Not available." });
   }
@@ -91,7 +95,10 @@ export function createAdminGatePlugin() {
       ),
       adminGatePin: createAuthEndpoint(
         "/admin-gate/pin",
-        { method: "POST", body: z.object({ pin: z.string().regex(/^\d{6}$/) }) },
+        {
+          method: "POST",
+          body: z.object({ pin: z.string().regex(/^\d{6}$/) }),
+        },
         async (ctx) => {
           const user = await adminUser(ctx);
           await rethrowing(() => submitPin(user.id, ctx.body.pin));
@@ -100,7 +107,10 @@ export function createAdminGatePlugin() {
       ),
       adminGatePassword: createAuthEndpoint(
         "/admin-gate/password",
-        { method: "POST", body: z.object({ password: z.string().min(1).max(128) }) },
+        {
+          method: "POST",
+          body: z.object({ password: z.string().min(1).max(128) }),
+        },
         async (ctx) => {
           const user = await adminUser(ctx);
           await rethrowing(() => beforePassword(user.id));
@@ -120,7 +130,10 @@ export function createAdminGatePlugin() {
       ),
       adminGateCodeVerify: createAuthEndpoint(
         "/admin-gate/code/verify",
-        { method: "POST", body: z.object({ code: z.string().regex(/^\d{6}$/) }) },
+        {
+          method: "POST",
+          body: z.object({ code: z.string().regex(/^\d{6}$/) }),
+        },
         async (ctx) => {
           const user = await adminUser(ctx);
           await rethrowing(() => verifyCode(user.id, ctx.body.code));
@@ -131,13 +144,18 @@ export function createAdminGatePlugin() {
     hooks: {
       before: [
         {
-          matcher: (context: { path?: string }) => !!context.path?.startsWith("/two-factor/"),
+          matcher: (context: { path?: string }) =>
+            !!context.path?.startsWith("/two-factor/"),
           handler: createAuthMiddleware(async (ctx) => {
             if (!TWO_FACTOR_PATHS.includes(ctx.path)) {
               throw new APIError("FORBIDDEN", { message: "Not available." });
             }
-            if ((ctx.body as { trustDevice?: unknown } | undefined)?.trustDevice) {
-              throw new APIError("BAD_REQUEST", { message: "Trusted devices are not allowed." });
+            if (
+              (ctx.body as { trustDevice?: unknown } | undefined)?.trustDevice
+            ) {
+              throw new APIError("BAD_REQUEST", {
+                message: "Trusted devices are not allowed.",
+              });
             }
             const user = await adminUser(ctx);
             if (ctx.path !== "/two-factor/enable") {
@@ -155,11 +173,13 @@ export function createAdminGatePlugin() {
       ],
       after: [
         {
-          matcher: (context: { path?: string }) => CHECK_PATHS.includes(context.path ?? ""),
+          matcher: (context: { path?: string }) =>
+            CHECK_PATHS.includes(context.path ?? ""),
           handler: createAuthMiddleware(async (ctx) => {
             if (isAPIError(ctx.context.returned)) return;
             const userId =
-              ctx.context.newSession?.user.id ?? (await getSessionFromCtx(ctx as never))?.user.id;
+              ctx.context.newSession?.user.id ??
+              (await getSessionFromCtx(ctx as never))?.user.id;
             if (userId) await unlockStepUp(userId);
           }),
         },

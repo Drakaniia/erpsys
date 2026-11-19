@@ -12,7 +12,9 @@ import SocialMediaLinksPanel from "../components/officer/SocialMediaLinksPanel";
 import StepOverview from "../components/officer/StepOverview";
 import SubmissionList from "../components/officer/SubmissionList";
 import DetailSheet from "../components/officer/DetailSheet";
-import ConsoleOnboarding, { OnboardingHelp } from "../components/ui/ConsoleOnboarding";
+import ConsoleOnboarding, {
+  OnboardingHelp,
+} from "../components/ui/ConsoleOnboarding";
 import { OFFICER_TIPS } from "$lib/officer/onboarding";
 import PageLoader from "../components/ui/PageLoader";
 import { authClient } from "$lib/auth-client";
@@ -22,7 +24,6 @@ import { useOfficerState } from "$lib/officer/state";
 import { getOfficerShortcutAction } from "$lib/officer/shortcuts";
 import { OFFICER_TABS } from "$lib/officer/tabs";
 import { isSimsWarm, rememberSimsWarm } from "$lib/officer/sims";
-
 
 const shortcuts = [
   { action: "Step tabs (Assessment–Consent)", keys: ["1–5"] },
@@ -42,7 +43,6 @@ export function OfficerPage() {
   const user = sessionQuery.data?.user as
     | { id?: string; role?: string }
     | undefined;
-
 
   useEffect(() => {
     if (sessionQuery.isPending) return;
@@ -67,7 +67,6 @@ export function OfficerPage() {
     setSimsMounted(true);
     rememberSimsWarm();
   }, [withSims]);
-
 
   useEffect(() => {
     function onKeydown(e: KeyboardEvent) {
@@ -113,7 +112,12 @@ export function OfficerPage() {
   const shellWidth = withSims ? "max-w-[1600px]" : "max-w-[1200px]";
 
   return (
-    <ConsoleOnboarding key={officerId} surface="officer" accountId={officerId} tips={OFFICER_TIPS}>
+    <ConsoleOnboarding
+      key={officerId}
+      surface="officer"
+      accountId={officerId}
+      tips={OFFICER_TIPS}
+    >
       <OfficerTabBar
         active={s.activeTab}
         counts={s.counts}
@@ -127,7 +131,8 @@ export function OfficerPage() {
           <h1
             className="text-xl font-semibold tracking-tight"
             data-onboarding-tip={
-              s.activeTab === "profiling-form" || s.activeTab === "social-media-links"
+              s.activeTab === "profiling-form" ||
+              s.activeTab === "social-media-links"
                 ? s.activeTab
                 : undefined
             }

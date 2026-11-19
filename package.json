@@ -12,9 +12,7 @@
     "test:load": "node load/run.mjs"
   },
   "devDependencies": {
-
     "@testing-library/jest-dom": "^7.0.1",
-
     "@testing-library/user-event": "^14.6.7",
     "autocannon": "^8.0.0",
     "jsdom": "^30.1.1",

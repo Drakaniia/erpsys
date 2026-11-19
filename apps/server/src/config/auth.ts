@@ -11,7 +11,10 @@ import { AdviserDepartmentModel } from "../models/AdviserDepartmentModel.js";
 import { EnrollmentQueueModel } from "../models/EnrollmentQueueModel.js";
 import { UserModel } from "../models/UserModel.js";
 import { COLLECTIONS, getDbSync, idIn } from "../lib/db/db.js";
-import { integrationConfigured, integrationEnabled } from "../lib/platform/integration-settings.js";
+import {
+  integrationConfigured,
+  integrationEnabled,
+} from "../lib/platform/integration-settings.js";
 import { env, webOrigins } from "../lib/platform/env.js";
 import { sendMail } from "../lib/platform/mailer.js";
 import { verifyTurnstile } from "../lib/platform/turnstile.js";
@@ -39,8 +42,17 @@ async function requireTurnstile(ctx: {
   request?: { headers: Headers };
 }): Promise<void> {
   const action = TURNSTILE_PATHS[ctx.path];
-  if (!action || !env.TURNSTILE_SECRET_KEY || !(await integrationEnabled("turnstile"))) return;
-  if (ctx.path === "/email-otp/send-verification-otp" && ctx.body?.type !== "sign-in") return;
+  if (
+    !action ||
+    !env.TURNSTILE_SECRET_KEY ||
+    !(await integrationEnabled("turnstile"))
+  )
+    return;
+  if (
+    ctx.path === "/email-otp/send-verification-otp" &&
+    ctx.body?.type !== "sign-in"
+  )
+    return;
   const headers = ctx.request?.headers;
   const token =
     ctx.body?.["cf-turnstile-response"] ??
@@ -66,7 +78,10 @@ async function requireTurnstile(ctx: {
   }
 }
 
-function deriveRole(email: string, emailVerified: boolean): {
+function deriveRole(
+  email: string,
+  emailVerified: boolean,
+): {
   role: "STUDENT" | "ENROLLMENT_ADVISER" | "ADMIN";
   isOutsideOrg: boolean;
 } {
@@ -91,7 +106,12 @@ export const auth = betterAuth({
       allowedAttempts: 3,
       overrideDefaultEmailVerification: true,
       sendVerificationOTP: async ({ email, otp, type }) => {
-        const purpose = type === "sign-in" ? "sign in" : type === "forget-password" ? "reset your password" : "verify your email";
+        const purpose =
+          type === "sign-in"
+            ? "sign in"
+            : type === "forget-password"
+              ? "reset your password"
+              : "verify your email";
         const delivered = await sendMail({
           to: email,
           subject: "Your ERPSYS email code",
@@ -99,7 +119,8 @@ export const auth = betterAuth({
         });
         if (!delivered) {
           throw new APIError("SERVICE_UNAVAILABLE", {
-            message: "The code email could not be sent. Please try again later.",
+            message:
+              "The code email could not be sent. Please try again later.",
           });
         }
       },
@@ -132,23 +153,27 @@ export const auth = betterAuth({
   },
   emailVerification: {
     beforeEmailVerification: async (user): Promise<void> => {
-      if (user.emailVerified || deriveRole(user.email, true).role === "STUDENT") return;
+      if (user.emailVerified || deriveRole(user.email, true).role === "STUDENT")
+        return;
       const { internalAdapter } = await auth.$context;
       const accounts = await internalAdapter.findAccounts(user.id);
       for (const account of accounts) {
-        if (account.providerId === "credential") await internalAdapter.deleteAccount(account.id);
+        if (account.providerId === "credential")
+          await internalAdapter.deleteAccount(account.id);
       }
       await internalAdapter.deleteUserSessions(user.id);
     },
   },
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
-  socialProviders: env.LOCAL_ONLY ? {} : {
-    google: {
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
-    },
-  },
+  socialProviders: env.LOCAL_ONLY
+    ? {}
+    : {
+        google: {
+          clientId: env.GOOGLE_CLIENT_ID,
+          clientSecret: env.GOOGLE_CLIENT_SECRET,
+        },
+      },
   account: {
     accountLinking: {
       enabled: true,
@@ -176,9 +201,20 @@ export const auth = betterAuth({
   },
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
-      if (ctx.path === "/email-otp/send-verification-otp" || ctx.path === "/email-otp/request-password-reset" || ctx.path === "/forget-password/email-otp" || ctx.path === "/send-verification-email") {
-        if (!integrationConfigured("email") || !(await integrationEnabled("email"))) {
-          throw new APIError("SERVICE_UNAVAILABLE", { message: "Email delivery is unavailable. Use another sign-in method or contact the office." });
+      if (
+        ctx.path === "/email-otp/send-verification-otp" ||
+        ctx.path === "/email-otp/request-password-reset" ||
+        ctx.path === "/forget-password/email-otp" ||
+        ctx.path === "/send-verification-email"
+      ) {
+        if (
+          !integrationConfigured("email") ||
+          !(await integrationEnabled("email"))
+        ) {
+          throw new APIError("SERVICE_UNAVAILABLE", {
+            message:
+              "Email delivery is unavailable. Use another sign-in method or contact the office.",
+          });
         }
       }
       await requireTurnstile(ctx as never);
@@ -226,11 +262,16 @@ export const auth = betterAuth({
             }
             if (user?.email && user.emailVerified === true) {
               const derived = deriveRole(user.email, true);
-              if ((derived.role === "ADMIN" && user.role !== "ADMIN") || (derived.role === "ENROLLMENT_ADVISER" && user.role === "STUDENT")) {
-                await getDbSync().collection(COLLECTIONS.user).updateOne(
-                  idIn([session.userId]) as never,
-                  { $set: { role: derived.role, isOutsideOrg: false } },
-                );
+              if (
+                (derived.role === "ADMIN" && user.role !== "ADMIN") ||
+                (derived.role === "ENROLLMENT_ADVISER" &&
+                  user.role === "STUDENT")
+              ) {
+                await getDbSync()
+                  .collection(COLLECTIONS.user)
+                  .updateOne(idIn([session.userId]) as never, {
+                    $set: { role: derived.role, isOutsideOrg: false },
+                  });
               }
             }
           }

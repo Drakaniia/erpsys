@@ -69,7 +69,12 @@ export class AdminStepUpModel {
     max: number,
   ): Promise<AdminStepUpRow | null> {
     return rows().findOneAndUpdate(
-      { _id: userId, codeHash: { $ne: null }, codeAt: null, attempts: { $lt: max } },
+      {
+        _id: userId,
+        codeHash: { $ne: null },
+        codeAt: null,
+        attempts: { $lt: max },
+      },
       { $inc: { attempts: 1 }, $set: { updatedAt: new Date() } },
       { returnDocument: "after" },
     );

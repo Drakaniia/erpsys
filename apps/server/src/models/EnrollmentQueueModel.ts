@@ -65,7 +65,6 @@ export class EnrollmentQueueModel {
       } as never);
   }
 
-
   static async transition(
     id: string,
     from: string,
@@ -75,7 +74,11 @@ export class EnrollmentQueueModel {
     const result = await getDbSync()
       .collection(COLLECTIONS.enrollmentQueue)
       .updateOne(
-        { _id: id, status: from, ...(servedById !== undefined ? { servedById } : {}) } as never,
+        {
+          _id: id,
+          status: from,
+          ...(servedById !== undefined ? { servedById } : {}),
+        } as never,
         { $set: patch } as never,
       );
     return (result.matchedCount ?? 0) > 0;
@@ -159,10 +162,7 @@ export class EnrollmentQueueModel {
       .toArray();
   }
 
-
-  static async listForYear(
-    academicYearId: string,
-  ): Promise<
+  static async listForYear(academicYearId: string): Promise<
     Array<{
       departmentId: string;
       status?: string | null;
@@ -177,7 +177,6 @@ export class EnrollmentQueueModel {
       })
       .toArray();
   }
-
 
   static async listByStatus(
     departmentIds: string[],
@@ -230,7 +229,6 @@ export class EnrollmentQueueModel {
       .toArray();
     return rows[0] ?? null;
   }
-
 
   static async releaseServingExcept(
     adviserId: string,

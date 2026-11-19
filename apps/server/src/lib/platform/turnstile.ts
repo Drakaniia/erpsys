@@ -18,7 +18,8 @@ export async function verifyTurnstile(
   } = {},
 ): Promise<VerifyTurnstileResult> {
   const secret = opts.secret ?? env.TURNSTILE_SECRET_KEY;
-  if (!secret || !(await integrationEnabled("turnstile"))) return { success: true };
+  if (!secret || !(await integrationEnabled("turnstile")))
+    return { success: true };
   if (typeof token !== "string" || token.length === 0 || token.length > 2048) {
     return { success: false, errorCodes: ["invalid-input-response"] };
   }
@@ -30,15 +31,24 @@ export async function verifyTurnstile(
   const body = new URLSearchParams({ secret, response: token });
   if (opts.remoteIp) body.set("remoteip", opts.remoteIp);
 
-  let json: { success: boolean; hostname?: string; action?: string; "error-codes"?: string[] };
+  let json: {
+    success: boolean;
+    hostname?: string;
+    action?: string;
+    "error-codes"?: string[];
+  };
   try {
-    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body,
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) return { success: false, errorCodes: [`siteverify-${res.status}`] };
+    const res = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+        signal: AbortSignal.timeout(10_000),
+      },
+    );
+    if (!res.ok)
+      return { success: false, errorCodes: [`siteverify-${res.status}`] };
     json = (await res.json()) as typeof json;
   } catch {
     return { success: false, errorCodes: ["siteverify-network-error"] };
@@ -46,7 +56,11 @@ export async function verifyTurnstile(
 
   const seen = { hostname: json.hostname, action: json.action };
   if (!json.success) {
-    return { success: false, ...seen, errorCodes: json["error-codes"] ?? ["unknown"] };
+    return {
+      success: false,
+      ...seen,
+      errorCodes: json["error-codes"] ?? ["unknown"],
+    };
   }
   if (opts.expectedAction && json.action !== opts.expectedAction) {
     return { success: false, ...seen, errorCodes: ["action-mismatch"] };

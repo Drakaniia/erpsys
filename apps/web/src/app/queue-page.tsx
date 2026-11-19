@@ -238,9 +238,7 @@ export function QueuePage() {
         onclose={m.closeFacultyConfirm}
       />
 
-      {m.shareModalOpen &&
-      m.shareLanding.kind === "show" &&
-      m.shareMismatch ? (
+      {m.shareModalOpen && m.shareLanding.kind === "show" && m.shareMismatch ? (
         <div className="modal-scrim fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div
             role="dialog"

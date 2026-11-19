@@ -20,7 +20,7 @@ export const TOOLTIP_HIDE_DELAY_MS = 120;
 export function useDelayedTooltipData<T>(
   tooltipData: T | null,
   showDelay = 0,
-  hideDelay = TOOLTIP_HIDE_DELAY_MS
+  hideDelay = TOOLTIP_HIDE_DELAY_MS,
 ): T | null {
   const [displayData, setDisplayData] = useState<T | null>(null);
   const [prevTooltipData, setPrevTooltipData] = useState<T | null>(null);

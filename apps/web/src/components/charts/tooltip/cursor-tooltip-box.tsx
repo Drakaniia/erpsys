@@ -105,7 +105,10 @@ export function CursorTooltipBox({
     const left = flip ? pointer.x - offset - width : pointer.x + offset;
     const top = Math.max(
       offset,
-      Math.min(pointer.y - height / 2, container.clientHeight - height - offset)
+      Math.min(
+        pointer.y - height / 2,
+        container.clientHeight - height - offset,
+      ),
     );
     if (reducedMotion || !visibleRef.current) {
       x.jump(left);
@@ -149,7 +152,7 @@ export function CursorTooltipBox({
         place();
       }
     },
-    [place]
+    [place],
   );
 
   if (!container) {
@@ -211,7 +214,7 @@ function CursorTooltipPanel({
       animate={{ opacity: 1 }}
       className={cn(
         "pointer-events-none absolute top-0 left-0 z-50",
-        className
+        className,
       )}
       exit={{ opacity: 0 }}
       initial={{ opacity: 0 }}
@@ -226,7 +229,7 @@ function CursorTooltipPanel({
           panelStyle?.backgroundColor === undefined &&
             backgroundColor === chartCssVars.tooltipBackground &&
             "bg-chart-tooltip-background",
-          panelStyle?.backdropFilter === undefined && "backdrop-blur-md"
+          panelStyle?.backdropFilter === undefined && "backdrop-blur-md",
         )}
         entrance={reducedMotion ? false : { scale: 0.85 }}
         style={{
@@ -240,7 +243,7 @@ function CursorTooltipPanel({
         {children}
       </TooltipPanel>
     </m.div>,
-    container
+    container,
   );
 }
 

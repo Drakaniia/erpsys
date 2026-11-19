@@ -16,7 +16,9 @@ const SECONDARY_BUTTON =
 export default function AuthenticatorSection() {
   const query = useAuthenticators();
   const reset = useResetAuthenticator();
-  const [resetTarget, setResetTarget] = useState<AdminAuthenticator | null>(null);
+  const [resetTarget, setResetTarget] = useState<AdminAuthenticator | null>(
+    null,
+  );
 
   function closeReset() {
     if (reset.isPending) return;
@@ -84,8 +86,9 @@ export default function AuthenticatorSection() {
           title="Reset authenticator?"
           body={
             <>
-              Reset the authenticator for {resetTarget.name || resetTarget.email}?
-              They will set up a new one at their next unlock.
+              Reset the authenticator for{" "}
+              {resetTarget.name || resetTarget.email}? They will set up a new
+              one at their next unlock.
               {reset.error ? (
                 <span role="alert" className="mt-2 block text-warning">
                   {reset.error.message}

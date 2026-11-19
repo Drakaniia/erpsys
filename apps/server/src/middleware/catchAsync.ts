@@ -17,7 +17,7 @@ export function catchAsync(handler: AsyncHandler) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const attempt = (n: number): Promise<unknown> =>
       handler(req, res, next).catch(async (error: unknown) =>
-        !res.headersSent && await restartSharedAborted(error, n)
+        !res.headersSent && (await restartSharedAborted(error, n))
           ? attempt(n + 1)
           : next(error),
       );

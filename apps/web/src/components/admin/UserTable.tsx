@@ -123,7 +123,6 @@ export default function UserTable({
   const myId =
     (sessionQuery.data?.user as { id?: string } | undefined)?.id ?? "";
 
-
   return (
     <div className="flex flex-col gap-4">
       <UserFilters
@@ -195,7 +194,6 @@ export default function UserTable({
                     myId={myId}
                     selected={selected.has(item.id)}
                     onToggle={toggleOne}
-
                     admin={admin}
                   />
                 ))

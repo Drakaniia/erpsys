@@ -253,34 +253,39 @@ describe("admin overview", () => {
     ["object", {}],
     ["array", []],
     ["number", 123],
-  ])("keeps admin activity with a %s timestamp without failing", async (_label, createdAt) => {
-    context.store[COLLECTIONS.adminActionLog]!.push({
-      _id: "log-invalid",
-      actorId: "adm1",
-      action: "Updated department",
-      targetRef: "dept-1",
-      ...(createdAt === undefined ? {} : { createdAt }),
-    });
+  ])(
+    "keeps admin activity with a %s timestamp without failing",
+    async (_label, createdAt) => {
+      context.store[COLLECTIONS.adminActionLog]!.push({
+        _id: "log-invalid",
+        actorId: "adm1",
+        action: "Updated department",
+        targetRef: "dept-1",
+        ...(createdAt === undefined ? {} : { createdAt }),
+      });
 
-    for (const hasActiveYear of [true, false]) {
-      if (!hasActiveYear) context.store[COLLECTIONS.academicYear] = [];
-      const { status, body } = await call("/me/overview");
-      expect(status).toBe(200);
-      expect(body.data.recentActivity).toHaveLength(2);
-      expect(body.data.recentActivity).toEqual(expect.arrayContaining([
-        expect.objectContaining({
-          id: "log-invalid",
-          action: "Updated department",
-          actorName: "Admin",
-          at: "",
-        }),
-        expect.objectContaining({
-          id: "log-1",
-          at: "2025-06-02T08:00:00.000Z",
-        }),
-      ]));
-    }
-  });
+      for (const hasActiveYear of [true, false]) {
+        if (!hasActiveYear) context.store[COLLECTIONS.academicYear] = [];
+        const { status, body } = await call("/me/overview");
+        expect(status).toBe(200);
+        expect(body.data.recentActivity).toHaveLength(2);
+        expect(body.data.recentActivity).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: "log-invalid",
+              action: "Updated department",
+              actorName: "Admin",
+              at: "",
+            }),
+            expect.objectContaining({
+              id: "log-1",
+              at: "2025-06-02T08:00:00.000Z",
+            }),
+          ]),
+        );
+      }
+    },
+  );
 
   it("accepts a parseable string timestamp in admin activity", async () => {
     context.store[COLLECTIONS.adminActionLog]![0]!.createdAt =
@@ -303,8 +308,14 @@ describe("admin overview", () => {
       expect(trend).toHaveLength(14);
       expect(trend[0]!.day).toBe("2025-06-27");
       // 20:00Z on Jul 9 is already Jul 10 on campus (UTC+8), so both joins land on the last day.
-      expect(trend.at(-1)).toEqual({ day: "2025-07-10", joined: 2, completed: 1 });
-      expect(trend.slice(0, -1).every((d) => d.joined === 0 && d.completed === 0)).toBe(true);
+      expect(trend.at(-1)).toEqual({
+        day: "2025-07-10",
+        joined: 2,
+        completed: 1,
+      });
+      expect(
+        trend.slice(0, -1).every((d) => d.joined === 0 && d.completed === 0),
+      ).toBe(true);
     } finally {
       vi.useRealTimers();
     }

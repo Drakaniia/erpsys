@@ -4,7 +4,12 @@ import { z } from "zod";
 import { resetAuthenticator } from "../../config/auth/admin-gate.js";
 import { ApiError } from "../../config/errors.js";
 import { canEnterSurface } from "../../config/roles.js";
-import { publicIntegrationPayload, setIntegrationEnabled, integrationLocked, lockedError } from "../../lib/platform/integration-settings.js";
+import {
+  publicIntegrationPayload,
+  setIntegrationEnabled,
+  integrationLocked,
+  lockedError,
+} from "../../lib/platform/integration-settings.js";
 import { slidingWindowRateLimit } from "../../lib/platform/rate-limit.js";
 import {
   getSession,
@@ -46,7 +51,8 @@ const credentialWriteLimit = slidingWindowRateLimit({
   message: "Too many credential attempts — wait a minute, then retry.",
 });
 
-const keyOf = (req: { params: Record<string, unknown> }) => assertIntegrationKey(String(req.params.key));
+const keyOf = (req: { params: Record<string, unknown> }) =>
+  assertIntegrationKey(String(req.params.key));
 
 function refuseLocked(req: Request, _res: Response, next: NextFunction) {
   const key = keyOf(req);
@@ -211,7 +217,10 @@ integrationsRouter.put(
       }),
       req,
     );
-    okOne(res, await saveCredentials({ actorId: sessionUser(req).id, key, ...input }));
+    okOne(
+      res,
+      await saveCredentials({ actorId: sessionUser(req).id, key, ...input }),
+    );
   }),
 );
 

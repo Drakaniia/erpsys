@@ -29,7 +29,11 @@ export default function OnboardingModal({
   onclose?: () => void;
 }) {
   const hardGate = mode === "gate";
-  const presence = useEditTimestamp("student-enrollment", data.profile ? "me" : null, data);
+  const presence = useEditTimestamp(
+    "student-enrollment",
+    data.profile ? "me" : null,
+    data,
+  );
   const optionsQuery = useQuery(
     api.options.getSignupOptions.queryOptions({
       staleTime: 5 * 60 * 1000,
@@ -307,7 +311,6 @@ export default function OnboardingModal({
             </p>
           ) : null}
           <form className="mt-5 space-y-4" onSubmit={handleSubmit} noValidate>
-
             {showNumberField ? (
               <div className="space-y-1.5">
                 <label

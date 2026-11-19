@@ -21,9 +21,15 @@ function matchesValue(rowValue: unknown, filterValue: unknown): boolean {
   ) {
     const operator = filterValue as Record<string, unknown>;
     if ("$elemMatch" in operator) {
-      return Array.isArray(rowValue) && rowValue.some((item) => matches(item as Row, operator.$elemMatch as Row));
+      return (
+        Array.isArray(rowValue) &&
+        rowValue.some((item) =>
+          matches(item as Row, operator.$elemMatch as Row),
+        )
+      );
     }
-    if ("$size" in operator) return Array.isArray(rowValue) && rowValue.length === operator.$size;
+    if ("$size" in operator)
+      return Array.isArray(rowValue) && rowValue.length === operator.$size;
     if (Array.isArray(operator.$in)) {
       return operator.$in.some((value) => String(value) === String(rowValue));
     }
@@ -171,7 +177,8 @@ export function fakeDb(seed: Record<string, Row[]>) {
           return { ...row };
         },
         insertOne: async (doc: Row) => {
-          if (rows.some((row) => row._id === doc._id)) throw Object.assign(new Error("Duplicate _id"), { code: 11000 });
+          if (rows.some((row) => row._id === doc._id))
+            throw Object.assign(new Error("Duplicate _id"), { code: 11000 });
           rows.push({ ...doc });
           return { insertedId: doc._id };
         },
@@ -195,7 +202,10 @@ export function fakeDb(seed: Record<string, Row[]>) {
         },
         replaceOne: async (filter: Row, doc: Row, options?: Row) => {
           const index = rows.findIndex((row) => match(filter).includes(row));
-          const next: Row = { ...(filter._id ? { _id: filter._id } : {}), ...doc };
+          const next: Row = {
+            ...(filter._id ? { _id: filter._id } : {}),
+            ...doc,
+          };
           if (index >= 0) rows[index] = { ...next, _id: rows[index]._id };
           else if (options?.upsert) rows.push(next);
           return { matchedCount: index >= 0 ? 1 : 0 };

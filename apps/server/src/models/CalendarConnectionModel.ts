@@ -82,7 +82,9 @@ export class CalendarConnectionModel {
   static async markDirty(userId: string, now: Date): Promise<void> {
     await rows().updateOne(
       { userId, status: "CONNECTED" } as never,
-      { $set: { syncState: "DIRTY", attempts: 0, nextAttemptAt: now } } as never,
+      {
+        $set: { syncState: "DIRTY", attempts: 0, nextAttemptAt: now },
+      } as never,
     );
   }
 

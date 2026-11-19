@@ -11,13 +11,13 @@ one-hour idle auto-close still decide whether a queue is open.
 
 ## What you need
 
-| Item | Where |
-| --- | --- |
+| Item                 | Where                                                                   |
+| -------------------- | ----------------------------------------------------------------------- |
 | Sign-in OAuth client | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (shared with Google sign-in) |
-| Token encryption key | `CALENDAR_TOKEN_KEY`, 32+ random characters |
-| Calendar API enabled | Google Cloud API Library, same project as the client |
-| Scope | `https://www.googleapis.com/auth/calendar.app.created` |
-| Redirect URI | `https://<host>/api/v1/calendar/callback` |
+| Token encryption key | `CALENDAR_TOKEN_KEY`, 32+ random characters                             |
+| Calendar API enabled | Google Cloud API Library, same project as the client                    |
+| Scope                | `https://www.googleapis.com/auth/calendar.app.created`                  |
+| Redirect URI         | `https://<host>/api/v1/calendar/callback`                               |
 
 There is no refresh token to mint: each instructor authorises with their own
 account. Google sign-in automatically starts Calendar consent for instructors
@@ -109,9 +109,9 @@ events are left as they are.
 
 ## Troubleshooting
 
-| Symptom | Likely cause |
-| --- | --- |
-| No Connect button in the schedule dialog | Integration off, or `CALENDAR_TOKEN_KEY`/client credentials missing. |
-| `Calendar permission was not granted` | The instructor unticked the Calendar permission on the consent screen. |
-| Everyone shows **Needs reconnect** after a deploy | `CALENDAR_TOKEN_KEY` changed. |
-| Weekly **Needs reconnect** in Testing mode | Tokens expire after 7 days for unverified External apps. |
+| Symptom                                           | Likely cause                                                           |
+| ------------------------------------------------- | ---------------------------------------------------------------------- |
+| No Connect button in the schedule dialog          | Integration off, or `CALENDAR_TOKEN_KEY`/client credentials missing.   |
+| `Calendar permission was not granted`             | The instructor unticked the Calendar permission on the consent screen. |
+| Everyone shows **Needs reconnect** after a deploy | `CALENDAR_TOKEN_KEY` changed.                                          |
+| Weekly **Needs reconnect** in Testing mode        | Tokens expire after 7 days for unverified External apps.               |

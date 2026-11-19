@@ -30,7 +30,6 @@ export default function LoginCard() {
 
   const [formError, setFormError] = useState("");
 
-
   const google = useGoogleSignIn({
     dest: params.get("dest"),
     onError: setFormError,
@@ -149,7 +148,6 @@ export default function LoginCard() {
 
   return (
     <div className="w-full">
-
       <form
         className="space-y-5"
         onSubmit={(e) => {

@@ -58,22 +58,49 @@ export async function allocateTs(): Promise<number> {
  * Concurrency: timestamp ordering — distributed transaction start.
  * Rule: allocate globally before entering request context; retain client anchoring when supplied.
  */
-export async function beginSharedTransaction<T>(clientTs: number | undefined, method: string, fn: () => T): Promise<T> {
+export async function beginSharedTransaction<T>(
+  clientTs: number | undefined,
+  method: string,
+  fn: () => T,
+): Promise<T> {
   const issued = await allocateTs();
-  if (clientTs !== undefined && (!Number.isSafeInteger(clientTs) || clientTs <= 0 || clientTs > issued)) {
-    throw new ApiError("BAD_REQUEST", { message: "`ts` must be a timestamp this server issued." });
+  if (
+    clientTs !== undefined &&
+    (!Number.isSafeInteger(clientTs) || clientTs <= 0 || clientTs > issued)
+  ) {
+    throw new ApiError("BAD_REQUEST", {
+      message: "`ts` must be a timestamp this server issued.",
+    });
   }
-  return store.run({ ts: clientTs ?? issued, anchor: clientTs === undefined ? "server" : "client", stampReads: method !== "GET", wrote: false }, fn);
+  return store.run(
+    {
+      ts: clientTs ?? issued,
+      anchor: clientTs === undefined ? "server" : "client",
+      stampReads: method !== "GET",
+      wrote: false,
+    },
+    fn,
+  );
 }
 
 /**
  * Concurrency: timestamp ordering — distributed restart.
  * Rule: restart only an unwritten server transaction, at most three times, with a globally allocated TS.
  */
-export async function restartSharedAborted(error: unknown, attempt: number): Promise<boolean> {
+export async function restartSharedAborted(
+  error: unknown,
+  attempt: number,
+): Promise<boolean> {
   const tx = store.getStore();
   const code = (error as { data?: { code?: unknown } } | null)?.data?.code;
-  if (!tx || code !== TS_ABORTED || tx.anchor !== "server" || tx.wrote || attempt >= TS_MAX_RESTARTS) return false;
+  if (
+    !tx ||
+    code !== TS_ABORTED ||
+    tx.anchor !== "server" ||
+    tx.wrote ||
+    attempt >= TS_MAX_RESTARTS
+  )
+    return false;
   tx.ts = await allocateTs();
   return true;
 }
@@ -265,15 +292,30 @@ function writeRule(
           : { ...doc, writeTs: tx.ts };
       } else {
         const update = stamped ? stampUpdate(doc) : doc;
-        rest[0] = { ...update, $set: { ...(update.$set as Row), writeTs: tx.ts } };
+        rest[0] = {
+          ...update,
+          $set: { ...(update.$set as Row), writeTs: tx.ts },
+        };
       }
     }
     const options = rest[isDelete ? 0 : 1] as { upsert?: boolean } | undefined;
     const scoped = options?.upsert ? filter : { $and: [filter, fresh(tx.ts)] };
     const result = await op(scoped, ...rest);
-    const count = (result as { matchedCount?: number; deletedCount?: number } | null);
-    if (result === null || count?.matchedCount === 0 || count?.deletedCount === 0) {
-      if (await raw.findOne({ $and: [filter, stale(tx.ts)] } as never, { projection: { _id: 1 } })) throw aborted(tx);
+    const count = result as {
+      matchedCount?: number;
+      deletedCount?: number;
+    } | null;
+    if (
+      result === null ||
+      count?.matchedCount === 0 ||
+      count?.deletedCount === 0
+    ) {
+      if (
+        await raw.findOne({ $and: [filter, stale(tx.ts)] } as never, {
+          projection: { _id: 1 },
+        })
+      )
+        throw aborted(tx);
     }
     tx.wrote = true;
     return result;
@@ -284,7 +326,12 @@ function writeRule(
  * Concurrency: timestamp ordering — insert.
  * Pass: a new X starts with writeTs(X) = TS(T); nothing can be older than it.
  */
-function insertRule(op: Op, tx: Transaction, many: boolean, stamped: boolean): Op {
+function insertRule(
+  op: Op,
+  tx: Transaction,
+  many: boolean,
+  stamped: boolean,
+): Op {
   return async (docs, ...rest) => {
     const rows = (many ? docs : [docs]) as Row[];
     for (const doc of rows) doc.writeTs = tx.ts;
@@ -323,9 +370,17 @@ function guardCollection(
 ): Collection<Document> {
   const stamped = !STAMP_FREE.has(name);
   const insert = (op: Op, many: boolean, tx: Transaction | undefined): Op =>
-    tx ? insertRule(op, tx, many, stamped) : stamped ? stampingInsert(op, many) : op;
+    tx
+      ? insertRule(op, tx, many, stamped)
+      : stamped
+        ? stampingInsert(op, many)
+        : op;
   const write = (op: Op, prop: string, tx: Transaction | undefined): Op =>
-    tx ? writeRule(raw, prop, op, tx, stamped) : stamped ? stampingWrite(op, prop) : op;
+    tx
+      ? writeRule(raw, prop, op, tx, stamped)
+      : stamped
+        ? stampingWrite(op, prop)
+        : op;
   return new Proxy(raw, {
     get(target, prop) {
       const value = Reflect.get(target, prop, target);

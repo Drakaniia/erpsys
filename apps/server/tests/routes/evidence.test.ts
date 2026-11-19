@@ -92,7 +92,6 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.upload]: [],
     [COLLECTIONS.notification]: [],
     [COLLECTIONS.studentEnrollment]: [],
-
   };
 }
 
@@ -380,7 +379,9 @@ describe("step submission", () => {
     it("refuses when the student has not answered the Google Form", async () => {
       const response = await post();
       expect(response.status).toBe(412);
-      expect((await response.json()).error).toContain("No Google Form response");
+      expect((await response.json()).error).toContain(
+        "No Google Form response",
+      );
       expect(context.store[COLLECTIONS.stepVerification]).toHaveLength(0);
     });
 

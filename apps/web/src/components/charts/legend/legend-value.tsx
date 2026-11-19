@@ -30,7 +30,7 @@ export function LegendValue({
     <span
       className={cn(
         "flex items-center gap-2 text-legend-muted-foreground",
-        className
+        className,
       )}
     >
       <span>{formatValue(item.value)}</span>

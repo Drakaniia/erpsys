@@ -227,10 +227,7 @@ export function StudentPage() {
                   {s.openCode === "ASSESSMENT" ? (
                     <AssessmentSheet step={s.openStepRow} notify={s.toast} />
                   ) : s.openCode === "PROFILING" ? (
-                    <ProfilingSheet
-                      step={s.openStepRow}
-                      notify={s.toast}
-                    />
+                    <ProfilingSheet step={s.openStepRow} notify={s.toast} />
                   ) : s.openCode && s.data ? (
                     <EvidenceSheet
                       step={s.openStepRow}

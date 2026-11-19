@@ -43,7 +43,11 @@ export default function ChatbotEditor({
     }
   }, [loaded, docQuery.data, docQuery.isSuccess]);
 
-  const presence = useEditTimestamp("chatbot-knowledge", docQuery.isSuccess ? "default" : null, docQuery.data);
+  const presence = useEditTimestamp(
+    "chatbot-knowledge",
+    docQuery.isSuccess ? "default" : null,
+    docQuery.data,
+  );
   const dirty = loaded && draft !== savedContent;
   const wordCount = useMemo(() => {
     const text = document.createElement("div");
@@ -54,7 +58,10 @@ export default function ChatbotEditor({
   // ---- Save ----
   async function save() {
     try {
-      const res = await saveMutation.mutateAsync({ content: draft, ts: presence.ts });
+      const res = await saveMutation.mutateAsync({
+        content: draft,
+        ts: presence.ts,
+      });
       presence.saved(res);
       setSavedContent(draft);
       ontoast(`Saved — version ${res.version}`);
@@ -107,7 +114,6 @@ export default function ChatbotEditor({
 
   return (
     <div className="flex flex-col gap-4">
-
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-0.5">
           <p className="text-sm text-muted">

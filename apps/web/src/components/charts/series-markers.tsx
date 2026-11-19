@@ -30,7 +30,7 @@ export interface SeriesMarkersProps extends SeriesPointMarkerStyle {
    */
   getPointOffset?: (
     index: number,
-    seriesIndex: number
+    seriesIndex: number,
   ) => { x: number; y: number };
 }
 
@@ -106,7 +106,7 @@ export function SeriesMarkers({
         outlineWidth,
         showActiveHighlight,
       }),
-    [radius, strokeWidth, ringGap, outlineWidth, showActiveHighlight]
+    [radius, strokeWidth, ringGap, outlineWidth, showActiveHighlight],
   );
 
   const revealDurationSec =
@@ -119,7 +119,7 @@ export function SeriesMarkers({
       const value = d[dataKey];
       return typeof value === "number" ? (yScale(value) ?? 0) : null;
     },
-    [dataKey, yScale]
+    [dataKey, yScale],
   );
 
   const points = useMemo<PointAt[]>(
@@ -150,7 +150,7 @@ export function SeriesMarkers({
       visualExtent,
       getPointOffset,
       seriesIndex,
-    ]
+    ],
   );
 
   // Memo so the inner <SeriesMarkersActiveHighlight> sees a stable prop and
@@ -173,7 +173,7 @@ export function SeriesMarkers({
       outlineWidth,
       outlineColor,
       radius,
-    ]
+    ],
   );
 
   if (isRevealing) {
@@ -218,7 +218,7 @@ export function SeriesMarkers({
         key={`${dataKey}-${point.index}`}
         {...markerStyle}
       />
-    )
+    ),
   );
   const activeScale = showActiveHighlight ? 1.35 : 1;
 

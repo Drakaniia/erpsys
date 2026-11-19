@@ -79,7 +79,9 @@ export function QueueStatusCard({
               : "The adviser will reopen it soon."}
           </p>
           {scheduleText ? (
-            <p className="mt-1 text-center text-sm text-muted">{scheduleText}</p>
+            <p className="mt-1 text-center text-sm text-muted">
+              {scheduleText}
+            </p>
           ) : null}
         </div>
       ) : null}

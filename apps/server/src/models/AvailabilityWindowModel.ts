@@ -108,5 +108,4 @@ export class AvailabilityWindowModel {
     await windows().deleteMany({ departmentId } as never);
     return [...new Set(rows.map((row) => row.adviserId))];
   }
-
 }

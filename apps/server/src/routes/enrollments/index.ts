@@ -54,9 +54,7 @@ enrollmentsRouter.get(
       StudentProfileModel.findByUserId(sessionUser(req).id),
       AcademicYearModel.findActive(),
     ]);
-    const summaries = profile
-      ? await listEnrollments(profile._id)
-      : [];
+    const summaries = profile ? await listEnrollments(profile._id) : [];
     const activeId = year ? String(year._id) : null;
     const rows = summaries.map((summary) => ({
       ...summary,

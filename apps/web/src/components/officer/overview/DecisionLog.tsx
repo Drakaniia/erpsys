@@ -11,9 +11,21 @@ function Mark({ action }: { action: string }) {
     <span
       aria-hidden="true"
       className="flex size-6 shrink-0 items-center justify-center rounded-full"
-      style={{ backgroundColor: `color-mix(in oklab, ${color} 14%, transparent)`, color }}
+      style={{
+        backgroundColor: `color-mix(in oklab, ${color} 14%, transparent)`,
+        color,
+      }}
     >
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         {returned ? (
           <path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
         ) : (

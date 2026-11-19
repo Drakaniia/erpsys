@@ -339,36 +339,66 @@ describe("officer serving", () => {
 
   it("cannot release or move a serving student after another adviser takes ownership", async () => {
     pushWaiting("entry-1", "2025-07-01T00:00:00Z");
-    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], { status: "IN_PROGRESS", servedById: "adv1" });
-    const transition = EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
-    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(async (...args) => {
-      context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
-      return transition(...args);
+    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], {
+      status: "IN_PROGRESS",
+      servedById: "adv1",
     });
-    const response = await call("/queues/serving", { method: "DELETE", body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }) });
+    const transition =
+      EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
+    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(
+      async (...args) => {
+        context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
+        return transition(...args);
+      },
+    );
+    const response = await call("/queues/serving", {
+      method: "DELETE",
+      body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }),
+    });
     expect(response.status).toBe(409);
-    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "IN_PROGRESS", servedById: "adv2" });
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
+      status: "IN_PROGRESS",
+      servedById: "adv2",
+    });
   });
 
   it("refuses a waiting student whose department changed", async () => {
     pushWaiting("entry-1", "2025-07-01T00:00:00Z");
-    context.store[COLLECTIONS.studentEnrollment][0].departmentId = "other-department";
-    const response = await call("/queues/serving", { method: "POST", body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }) });
+    context.store[COLLECTIONS.studentEnrollment][0].departmentId =
+      "other-department";
+    const response = await call("/queues/serving", {
+      method: "POST",
+      body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }),
+    });
     expect(response.status).toBe(409);
-    expect(context.store[COLLECTIONS.enrollmentQueue][0].status).toBe("WAITING");
+    expect(context.store[COLLECTIONS.enrollmentQueue][0].status).toBe(
+      "WAITING",
+    );
   });
 
   it("does not move a student after a different adviser takes the serving lock", async () => {
     pushWaiting("entry-1", "2025-07-01T00:00:00Z");
-    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], { status: "IN_PROGRESS", servedById: "adv1" });
-    const transition = EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
-    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(async (...args) => {
-      context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
-      return transition(...args);
+    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], {
+      status: "IN_PROGRESS",
+      servedById: "adv1",
     });
-    const response = await call("/queues/serving/position", { method: "POST", body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }) });
+    const transition =
+      EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
+    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(
+      async (...args) => {
+        context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
+        return transition(...args);
+      },
+    );
+    const response = await call("/queues/serving/position", {
+      method: "POST",
+      body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }),
+    });
     expect(response.status).toBe(409);
-    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "IN_PROGRESS", servedById: "adv2" });
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
+      status: "IN_PROGRESS",
+      servedById: "adv2",
+    });
   });
 
   it("releases the serving slot without enrolling", async () => {
@@ -458,8 +488,11 @@ describe("officer serving", () => {
   });
 
   const removeEntry = async (id: string) =>
-    (await (await call(`/queue-entries/${id}/removal`, { method: "POST" })).json())
-      .data.snapshot;
+    (
+      await (
+        await call(`/queue-entries/${id}/removal`, { method: "POST" })
+      ).json()
+    ).data.snapshot;
   const restore = (id: string, snapshot: Record<string, unknown>) =>
     call(`/queue-entries/${id}/restoration`, {
       method: "POST",

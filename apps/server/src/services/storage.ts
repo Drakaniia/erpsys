@@ -169,7 +169,8 @@ export async function quotaBlock(size: number) {
     quotaBytes: env.R2_QUOTA_BYTES,
     classAOps: usage.classAOps,
     classBOps: usage.classBOps,
-    uploadsEnabledValue: env.R2_UPLOADS_ENABLED && (await integrationEnabled("r2")),
+    uploadsEnabledValue:
+      env.R2_UPLOADS_ENABLED && (await integrationEnabled("r2")),
     message:
       env.R2_MAINTENANCE_MESSAGE.trim() ||
       "File uploads are temporarily paused for maintenance.",

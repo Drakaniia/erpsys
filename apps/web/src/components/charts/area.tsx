@@ -115,7 +115,7 @@ function useAreaLoadingPulseState(
   chartPhase: ChartPhase,
   loading: boolean | undefined,
   loadingPulseMode: LineLoadingPulseMode | undefined,
-  notifyLoadingPulseComplete?: () => void
+  notifyLoadingPulseComplete?: () => void,
 ) {
   const phasePulseMode = resolveLineLoadingPulseMode(chartPhase);
   const pulseMode =
@@ -202,7 +202,7 @@ export function Area({
     chartPhase,
     loading,
     loadingPulseMode,
-    notifyLoadingPulseComplete
+    notifyLoadingPulseComplete,
   );
 
   const seriesIndex = useMemo(() => {
@@ -224,7 +224,7 @@ export function Area({
     ],
     // Only the dash tail and loading pulse read the metrics; outside the
     // resting "ready" phase keep measuring so a pulse starts on a fresh path.
-    hasDashTail || showLoadingPulse || chartPhase !== "ready"
+    hasDashTail || showLoadingPulse || chartPhase !== "ready",
   );
 
   // Unique IDs for this area
@@ -247,7 +247,7 @@ export function Area({
       const value = d[dataKey];
       return typeof value === "number" ? (yScale(value) ?? 0) : 0;
     },
-    [dataKey, yScale]
+    [dataKey, yScale],
   );
 
   // The stroke gradient is only emitted when at least one edge fades, so fall
@@ -272,21 +272,21 @@ export function Area({
   // other reasons reuse them. Hidden layers skip the work, as before.
   const getX = useCallback(
     (d: Record<string, unknown>) => xScale(xAccessor(d)) ?? 0,
-    [xAccessor, xScale]
+    [xAccessor, xScale],
   );
   const areaPathD = useMemo(
     () =>
       showFill
         ? areaClosedD(renderData, { curve, x: getX, y: getY, yScale })
         : "",
-    [curve, getX, getY, renderData, showFill, yScale]
+    [curve, getX, getY, renderData, showFill, yScale],
   );
   const strokePathD = useMemo(
     () =>
       shouldMeasurePath
         ? linePathD(renderData, { curve, x: getX, y: getY })
         : "",
-    [curve, getX, getY, renderData, shouldMeasurePath]
+    [curve, getX, getY, renderData, shouldMeasurePath],
   );
 
   const seriesLayers = (

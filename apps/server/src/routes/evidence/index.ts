@@ -42,9 +42,7 @@ const student = [requireSession, requireSurface("student")];
 const stepCodeParams = z.object({ code: uploadStepCodeSchema });
 
 async function stepContext(req: Request, code: string) {
-  const { profile, year } = await requireStudentContext(
-    sessionUser(req),
-  );
+  const { profile, year } = await requireStudentContext(sessionUser(req));
   const step = await StepModel.findByCode(code);
   if (!step) {
     throw new ApiError("NOT_FOUND", { message: "Step not configured." });
@@ -137,9 +135,7 @@ evidenceRouter.delete(
   student,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(z.object({ id: z.string().min(1) }), req);
-    const { profile } = await requireStudentContext(
-      sessionUser(req),
-    );
+    const { profile } = await requireStudentContext(sessionUser(req));
     const upload = await UploadModel.findForProfile(id, profile._id);
     if (!upload) {
       throw new ApiError("NOT_FOUND", { message: "Upload not found." });
@@ -153,7 +149,9 @@ evidenceRouter.delete(
         existing?.status === "VERIFIED" &&
         evidenceUploadIds(existing.evidence).includes(id)
       ) {
-        throw new ApiError("CONFLICT", { message: "Verified steps are locked." });
+        throw new ApiError("CONFLICT", {
+          message: "Verified steps are locked.",
+        });
       }
     }
     await UploadModel.deleteById(id);

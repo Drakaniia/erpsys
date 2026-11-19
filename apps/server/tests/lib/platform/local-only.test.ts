@@ -7,7 +7,12 @@ vi.hoisted(() => {
 });
 
 import { env } from "../../../src/lib/platform/env.js";
-import { INTEGRATION_KEYS, integrationEnabled, integrationConfigured, setIntegrationEnabled } from "../../../src/lib/platform/integration-settings.js";
+import {
+  INTEGRATION_KEYS,
+  integrationEnabled,
+  integrationConfigured,
+  setIntegrationEnabled,
+} from "../../../src/lib/platform/integration-settings.js";
 import { configuredR2Client } from "../../../src/lib/storage/configured-client.js";
 import { probeCredentials } from "../../../src/lib/platform/credential-probes.js";
 
@@ -23,5 +28,7 @@ it("keeps MongoDB while blocking external integrations even when credentials exi
     }
   }
   expect(configuredR2Client()).toBeNull();
-  await expect(setIntegrationEnabled({ key: "email", enabled: true, actorId: "test" })).rejects.toThrow("local-only mode");
+  await expect(
+    setIntegrationEnabled({ key: "email", enabled: true, actorId: "test" }),
+  ).rejects.toThrow("local-only mode");
 });

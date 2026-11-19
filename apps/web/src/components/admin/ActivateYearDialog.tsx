@@ -81,7 +81,6 @@ export default function ActivateYearDialog({
         role="presentation"
         onClick={(e) => e.stopPropagation()}
       >
-
         <h2
           id="activate-year-title"
           className="text-base font-semibold text-ink"

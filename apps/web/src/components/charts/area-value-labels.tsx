@@ -44,7 +44,7 @@ export function AreaValueLabels({ series }: { series: AreaProps[] }) {
         points: visible.filter(
           ({ datum }) =>
             typeof datum[area.dataKey] === "number" &&
-            Number.isFinite(datum[area.dataKey])
+            Number.isFinite(datum[area.dataKey]),
         ),
       }))
       .filter(({ area }) => area.showValue);
@@ -53,8 +53,8 @@ export function AreaValueLabels({ series }: { series: AreaProps[] }) {
         points.length,
         innerWidth,
         area.valueLabelMinCount,
-        area.valueLabelMaxCount
-      )
+        area.valueLabelMaxCount,
+      ),
     );
     const sharedCount = resolveSharedAreaValueLabelCount(counts);
     return visibleSeries.flatMap(({ area, seriesIndex, points }, i) => {
@@ -130,7 +130,7 @@ export function AreaValueLabels({ series }: { series: AreaProps[] }) {
         const bounds = element.getBBox();
         element.setAttribute(
           "transform",
-          `translate(${box.x - bounds.x - bounds.width / 2}, ${box.y - bounds.y - bounds.height / 2})`
+          `translate(${box.x - bounds.x - bounds.width / 2}, ${box.y - bounds.y - bounds.height / 2})`,
         );
         element.style.visibility = "visible";
       }
@@ -162,7 +162,7 @@ export function AreaValueLabels({ series }: { series: AreaProps[] }) {
                   {...viewportFadeGradientAttrs(innerWidth)}
                 >
                   {fadeGradientStops(
-                    resolveFadeSides(area.fadeEdges ?? false)
+                    resolveFadeSides(area.fadeEdges ?? false),
                   ).map((stop) => (
                     <stop
                       key={stop.offset}
@@ -187,7 +187,7 @@ export function AreaValueLabels({ series }: { series: AreaProps[] }) {
                   />
                 </mask>
               </g>
-            )
+            ),
         )}
       </defs>
       {labels.map((label) => {

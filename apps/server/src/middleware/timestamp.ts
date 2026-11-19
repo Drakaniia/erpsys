@@ -14,7 +14,11 @@ export const timestampOrdering: RequestHandler = (req, _res, next) => {
   const clientTs = body?.ts;
   if (body && "ts" in body) delete body.ts;
   if (clientTs !== undefined && !isIssuedTs(clientTs)) {
-    next(new ApiError("BAD_REQUEST", { message: "`ts` must be a timestamp this server issued." }));
+    next(
+      new ApiError("BAD_REQUEST", {
+        message: "`ts` must be a timestamp this server issued.",
+      }),
+    );
     return;
   }
   beginTransaction(clientTs as number | undefined, req.method, next);

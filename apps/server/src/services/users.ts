@@ -1,7 +1,4 @@
-import {
-  deriveDepartmentCode,
-  type YearLevel,
-} from "../config/constants.js";
+import { deriveDepartmentCode, type YearLevel } from "../config/constants.js";
 import { escapeQueryRegex } from "../config/queue.js";
 import type { AcademicYearRow } from "../models/AcademicYearModel.js";
 import { DepartmentModel } from "../models/DepartmentModel.js";
@@ -39,7 +36,8 @@ async function directoryFilter(
     ];
   }
   if (input.role !== "ALL") filter.role = input.role;
-  if (input.outside !== "ALL") filter.isOutsideOrg = input.outside === "OUTSIDE";
+  if (input.outside !== "ALL")
+    filter.isOutsideOrg = input.outside === "OUTSIDE";
   if (year && (input.departmentId || input.yearLevel)) {
     const matched = await StudentEnrollmentModel.listForYearFilter({
       academicYearId: String(year._id),
@@ -149,9 +147,13 @@ export async function userDirectoryPage(
     items.sort(
       (a, b) =>
         sign *
-        (a.studentNumber ?? "").localeCompare(b.studentNumber ?? "", undefined, {
-          numeric: true,
-        }),
+        (a.studentNumber ?? "").localeCompare(
+          b.studentNumber ?? "",
+          undefined,
+          {
+            numeric: true,
+          },
+        ),
     );
   } else if (input.sort === "name") {
     items.sort((a, b) => sign * a.name.localeCompare(b.name));

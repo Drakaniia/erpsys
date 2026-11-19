@@ -37,7 +37,17 @@ describe("Pagination", () => {
   it("changes page size through the shared dropdown", async () => {
     const user = userEvent.setup();
     const sizes: number[] = [];
-    render(<Pagination page={1} pageSize={25} total={100} totalPages={4} onpagechange={noop} onpagesizechange={(size) => sizes.push(size)} label={(n) => `${n} users`} />);
+    render(
+      <Pagination
+        page={1}
+        pageSize={25}
+        total={100}
+        totalPages={4}
+        onpagechange={noop}
+        onpagesizechange={(size) => sizes.push(size)}
+        label={(n) => `${n} users`}
+      />,
+    );
     await user.click(screen.getByRole("combobox", { name: "Per page" }));
     await user.click(screen.getByRole("option", { name: "50" }));
     expect(sizes).toEqual([50]);

@@ -129,7 +129,8 @@ export default function StepUpDialog({
       }
       if (step === "password") {
         const failure = await submitPassword(value);
-        if (failure) return setError(gateMessage(failure, "Incorrect password."));
+        if (failure)
+          return setError(gateMessage(failure, "Incorrect password."));
         setPassword(value);
         return go("code");
       }
@@ -204,7 +205,9 @@ export default function StepUpDialog({
                 type="button"
                 className="mt-2 text-xs font-medium text-auth-blue"
                 onClick={() =>
-                  void navigator.clipboard?.writeText(setup.backupCodes.join("\n"))
+                  void navigator.clipboard?.writeText(
+                    setup.backupCodes.join("\n"),
+                  )
                 }
               >
                 Copy backup codes
@@ -233,9 +236,13 @@ export default function StepUpDialog({
                 setError("");
               }}
               className={`auth-input w-full ${
-                isPassword ? "" : "text-center font-mono text-xl tracking-[0.4em]"
+                isPassword
+                  ? ""
+                  : "text-center font-mono text-xl tracking-[0.4em]"
               }`}
-              placeholder={isPassword ? "Password" : backup ? "Backup code" : "000000"}
+              placeholder={
+                isPassword ? "Password" : backup ? "Backup code" : "000000"
+              }
             />
             {error ? (
               <p className="auth-alert" role="alert" aria-live="polite">

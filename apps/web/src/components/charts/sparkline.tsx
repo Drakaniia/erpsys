@@ -175,7 +175,7 @@ function observeWidth(element: Element, listener: SizeListener) {
 
 function useSparklineWidth(
   ref: RefObject<HTMLDivElement | null>,
-  fixedWidth: number | undefined
+  fixedWidth: number | undefined,
 ): number {
   const [measured, setMeasured] = useState(0);
   useEffect(() => {
@@ -184,7 +184,7 @@ function useSparklineWidth(
       return;
     }
     return observeWidth(element, (width) =>
-      setMeasured(Math.round(width * 2) / 2)
+      setMeasured(Math.round(width * 2) / 2),
     );
   }, [ref, fixedWidth]);
   return fixedWidth ?? measured;
@@ -210,7 +210,7 @@ function useEnterAnimation(
     duration: number;
     easing: string;
     keyframes: Keyframe[];
-  }
+  },
 ) {
   const played = useRef(false);
   const { animate, duration, easing, keyframes } = options;
@@ -258,7 +258,7 @@ function useDataTransition(
   layout: SparklineLayout,
   width: number,
   duration: number,
-  draw: (frame: SparklineLayout) => void
+  draw: (frame: SparklineLayout) => void,
 ) {
   const displayed = useRef<SparklineLayout | null>(null);
   const prevWidth = useRef(width);
@@ -320,7 +320,7 @@ const drawKeyframes: Keyframe[] = [
 function useHoverState<T>(
   data: readonly T[],
   hoverIndexProp: number | null | undefined,
-  onHoverChange: SparklineBaseProps<T>["onHoverChange"]
+  onHoverChange: SparklineBaseProps<T>["onHoverChange"],
 ) {
   const [internal, setInternal] = useState<number | null>(null);
   const controlled = hoverIndexProp !== undefined;
@@ -340,7 +340,7 @@ function useHoverState<T>(
       }
       onHoverChange?.(index, index === null ? null : (data[index] ?? null));
     },
-    [controlled, data, onHoverChange]
+    [controlled, data, onHoverChange],
   );
 
   return [hoverIndex, setHoverIndex] as const;
@@ -389,14 +389,14 @@ function SparklineFrame<T>({
 
   const values = useMemo(
     () => resolveSparklineValues(data, dataKey),
-    [data, dataKey]
+    [data, dataKey],
   );
   const resolvedPadding = resolveSparklinePadding(paddingProp, defaultPadding);
   const { top, right, bottom, left } = resolvedPadding;
   // Keyed on the four numbers so inline `padding={{ … }}` literals stay cheap.
   const padding = useMemo(
     () => ({ top, right, bottom, left }),
-    [top, right, bottom, left]
+    [top, right, bottom, left],
   );
   const yMin = yDomain?.[0];
   const yMax = yDomain?.[1];
@@ -412,13 +412,13 @@ function SparklineFrame<T>({
           includeZero,
         }),
       }),
-    [values, width, height, padding, kind, yMin, yMax, includeZero]
+    [values, width, height, padding, kind, yMin, yMax, includeZero],
   );
 
   const [hoverIndex, setHoverIndex] = useHoverState(
     data,
     hoverIndexProp,
-    onHoverChange
+    onHoverChange,
   );
 
   const handlePointerMove = useCallback(
@@ -430,14 +430,14 @@ function SparklineFrame<T>({
           width,
           padding,
           kind,
-        })
+        }),
       );
     },
-    [setHoverIndex, values.length, width, padding, kind]
+    [setHoverIndex, values.length, width, padding, kind],
   );
   const handlePointerLeave = useCallback(
     () => setHoverIndex(null),
-    [setHoverIndex]
+    [setHoverIndex],
   );
 
   const label = config["aria-label"] ?? describeSparkline(values);
@@ -447,7 +447,7 @@ function SparklineFrame<T>({
       className={cn(
         "relative min-w-0",
         widthProp === undefined && "w-full",
-        className
+        className,
       )}
       ref={containerRef}
       style={{ width: widthProp, height, ...style }}
@@ -683,7 +683,7 @@ function SparklineHighlight({
     // Reuse the base stroke's `d` — it may be mid data-transition.
     highlightRef.current?.setAttribute(
       "d",
-      lineRef.current?.getAttribute("d") ?? ""
+      lineRef.current?.getAttribute("d") ?? "",
     );
     if (prefersReducedMotion()) {
       x.jump(start);
@@ -750,7 +750,7 @@ function HoverOverlay({
 /** Resolves the hover spring: `null` means snap. */
 function resolveHoverSpring(
   hoverTransition: boolean,
-  springConfig: Partial<SparklineSpringConfig> | undefined
+  springConfig: Partial<SparklineSpringConfig> | undefined,
 ): SparklineSpringConfig | null {
   return hoverTransition
     ? { ...DEFAULT_SPARKLINE_HOVER_SPRING, ...springConfig }
@@ -878,25 +878,25 @@ function LineOrAreaPaths({
 }) {
   const linePath = useMemo(
     () => buildSparklineLinePath(layout.points, curve),
-    [layout, curve]
+    [layout, curve],
   );
   const areaPath = useMemo(
     () =>
       variant === "area"
         ? buildSparklineAreaPath(layout.points, curve, layout.baselineY)
         : "",
-    [variant, layout, curve]
+    [variant, layout, curve],
   );
 
   const areaRef = useRef<SVGPathElement>(null);
   useDataTransition(layout, width, dataTransitionDuration, (frame) => {
     lineRef.current?.setAttribute(
       "d",
-      buildSparklineLinePath(frame.points, curve)
+      buildSparklineLinePath(frame.points, curve),
     );
     areaRef.current?.setAttribute(
       "d",
-      buildSparklineAreaPath(frame.points, curve, frame.baselineY)
+      buildSparklineAreaPath(frame.points, curve, frame.baselineY),
     );
   });
 
@@ -1096,12 +1096,12 @@ function BarPaths({
   useDataTransition(layout, width, dataTransitionDuration, (frame) => {
     barsRef.current?.setAttribute(
       "d",
-      buildSparklineBarsPath(frame, { gap: barGap, radius: barRadius })
+      buildSparklineBarsPath(frame, { gap: barGap, radius: barRadius }),
     );
   });
   const barsPath = useMemo(
     () => buildSparklineBarsPath(layout, { gap: barGap, radius: barRadius }),
-    [layout, barGap, barRadius]
+    [layout, barGap, barRadius],
   );
 
   // Bars grow from the baseline while a left → right wipe staggers them.
@@ -1118,7 +1118,7 @@ function BarPaths({
         transformOrigin: `0 ${layout.baselineY}px`,
       },
     ],
-    [layout.baselineY]
+    [layout.baselineY],
   );
   useEnterAnimation(groupRef, width > 0, {
     animate,
@@ -1152,7 +1152,7 @@ function BarPaths({
                 sparklineBarWidth(layout.band, barGap),
                 hovered.y,
                 layout.baselineY,
-                barRadius
+                barRadius,
               )}
               exit={{ opacity: 0 }}
               fill={color}
@@ -1180,11 +1180,11 @@ function BarPaths({
 
 /** Tiny line chart — one path, no axes, minimal hover crosshair + dot. */
 export const LineSparkline = memo(
-  LineSparklineImpl
+  LineSparklineImpl,
 ) as typeof LineSparklineImpl;
 /** Tiny area chart — line over a gradient or solid fill. */
 export const AreaSparkline = memo(
-  AreaSparklineImpl
+  AreaSparklineImpl,
 ) as typeof AreaSparklineImpl;
 /** Tiny bar chart — all bars drawn as a single path. */
 export const BarSparkline = memo(BarSparklineImpl) as typeof BarSparklineImpl;
@@ -1202,15 +1202,15 @@ export const BarSparkline = memo(BarSparklineImpl) as typeof BarSparklineImpl;
  */
 export function useSparklineHover<T>() {
   const [state, setState] = useState<{ index: number | null; datum: T | null }>(
-    { index: null, datum: null }
+    { index: null, datum: null },
   );
   const onHoverChange = useCallback(
     (index: number | null, datum: T | null) => setState({ index, datum }),
-    []
+    [],
   );
   const sparklineProps = useMemo(
     () => ({ hoverIndex: state.index, onHoverChange }),
-    [state.index, onHoverChange]
+    [state.index, onHoverChange],
   );
   return {
     index: state.index,

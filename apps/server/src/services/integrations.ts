@@ -1,7 +1,10 @@
 import { ApiError } from "../config/errors.js";
 import { COLLECTIONS, getDbSync, idIn, refIn } from "../lib/db/db.js";
 import { genId } from "../lib/db/ids.js";
-import { probeCredentials, type CredentialFailure } from "../lib/platform/credential-probes.js";
+import {
+  probeCredentials,
+  type CredentialFailure,
+} from "../lib/platform/credential-probes.js";
 import {
   CREDENTIAL_ENV_KEYS,
   CREDENTIAL_FIELDS,
@@ -65,13 +68,15 @@ export function assertIntegrationKey(raw: string): IntegrationKey {
 
 const unprocessable = (failures: CredentialFailure[]) =>
   new ApiError("UNPROCESSABLE_CONTENT", {
-    message: failures.length === 1 ? failures[0].reason : "Credentials rejected.",
+    message:
+      failures.length === 1 ? failures[0].reason : "Credentials rejected.",
     data: { failures },
   });
 
 const conflict = () =>
   new ApiError("CONFLICT", {
-    message: "These credentials changed since this row was loaded. Reload and try again.",
+    message:
+      "These credentials changed since this row was loaded. Reload and try again.",
   });
 
 async function actorNames(ids: string[]): Promise<Map<string, string>> {
@@ -80,7 +85,9 @@ async function actorNames(ids: string[]): Promise<Map<string, string>> {
     .collection<{ _id: unknown; name?: string }>(COLLECTIONS.user)
     .find(idIn(ids) as never)
     .toArray();
-  return new Map(users.flatMap((user) => (user.name ? [[String(user._id), user.name]] : [])));
+  return new Map(
+    users.flatMap((user) => (user.name ? [[String(user._id), user.name]] : [])),
+  );
 }
 
 function fieldView(
@@ -102,7 +109,11 @@ function fieldView(
     value: spec.className === "plain" && set ? effective : null,
     masked: spec.className === "secret" && set ? maskSecret(effective) : null,
     source:
-      stored !== undefined ? "stored" : baseEnvValue(spec.envKey).trim() ? "env" : "missing",
+      stored !== undefined
+        ? "stored"
+        : baseEnvValue(spec.envKey).trim()
+          ? "env"
+          : "missing",
     unreadable,
     updatedAt,
     updatedByName,
@@ -116,7 +127,9 @@ export async function adminAuthenticators() {
     .find({ userId: refIn(admins.map((admin) => String(admin._id))) } as never)
     .toArray();
   const enrolled = new Set(
-    factors.filter((factor) => factor.verified !== false).map((factor) => String(factor.userId)),
+    factors
+      .filter((factor) => factor.verified !== false)
+      .map((factor) => String(factor.userId)),
   );
   return admins.map((admin) => ({
     userId: String(admin._id),
@@ -162,13 +175,17 @@ async function authFeatures(
       key: "emailCode",
       label: "Email-code sign-in",
       state: emailLive ? "on" : "off",
-      note: emailLive ? "Existing accounts can sign in with a 6-digit email code. Codes expire in 5 minutes and allow 3 wrong attempts. This does not create accounts." : "Email delivery is off or unconfigured. Use a password or Google instead.",
+      note: emailLive
+        ? "Existing accounts can sign in with a 6-digit email code. Codes expire in 5 minutes and allow 3 wrong attempts. This does not create accounts."
+        : "Email delivery is off or unconfigured. Use a password or Google instead.",
     },
     {
       key: "emailVerification",
       label: "Optional email verification",
       state: emailLive ? "on" : "limited",
-      note: emailLive ? "Users can verify their email in Connected accounts. Verification is not required for first login. Email-code login also proves email ownership." : "Email verification is unavailable until email delivery is enabled and configured. Password login still works.",
+      note: emailLive
+        ? "Users can verify their email in Connected accounts. Verification is not required for first login. Email-code login also proves email ownership."
+        : "Email verification is unavailable until email delivery is enabled and configured. Password login still works.",
     },
     {
       key: "studentSignUp",
@@ -228,19 +245,30 @@ async function authFeatures(
 }
 
 export async function integrationRows() {
-  const [states, docs] = await Promise.all([allIntegrationStates(), readCredentialDocs()]);
+  const [states, docs] = await Promise.all([
+    allIntegrationStates(),
+    readCredentialDocs(),
+  ]);
   const byKey = new Map(docs.map((doc) => [doc.key, doc] as const));
   const actors = await actorNames([
-    ...new Set(docs.flatMap((doc) => (doc.updatedById ? [String(doc.updatedById)] : []))),
+    ...new Set(
+      docs.flatMap((doc) => (doc.updatedById ? [String(doc.updatedById)] : [])),
+    ),
   ]);
   const unreadable = unreadableIntegrations();
 
   return Promise.all(
     ROW_ORDER.map(async (key) => {
       const doc = byKey.get(key);
-      const decrypted = doc ? decryptDocValues(doc) : { values: {} as Record<string, string>, unreadable: false };
-      const updatedAt = doc?.version ? new Date(doc.updatedAt).toISOString() : null;
-      const updatedByName = doc?.updatedById ? (actors.get(String(doc.updatedById)) ?? null) : null;
+      const decrypted = doc
+        ? decryptDocValues(doc)
+        : { values: {} as Record<string, string>, unreadable: false };
+      const updatedAt = doc?.version
+        ? new Date(doc.updatedAt).toISOString()
+        : null;
+      const updatedByName = doc?.updatedById
+        ? (actors.get(String(doc.updatedById)) ?? null)
+        : null;
       return {
         key,
         label: INTEGRATION_LABEL[key],
@@ -273,24 +301,36 @@ async function rowFor(key: IntegrationKey) {
   return (await integrationRows()).find((row) => row.key === key)!;
 }
 
-async function logAction(actorId: string, action: string, targetRef: string, detail: string) {
-  await getDbSync().collection(COLLECTIONS.auditLog).insertOne({
-    _id: genId("admin-action"),
-    kind: "action",
-    actorId,
-    action,
-    targetRef,
-    detail,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  } as never);
+async function logAction(
+  actorId: string,
+  action: string,
+  targetRef: string,
+  detail: string,
+) {
+  await getDbSync()
+    .collection(COLLECTIONS.auditLog)
+    .insertOne({
+      _id: genId("admin-action"),
+      kind: "action",
+      actorId,
+      action,
+      targetRef,
+      detail,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as never);
 }
 
-function assertKnownKeys(specs: CredentialFieldSpec[], values: Record<string, string | null>) {
+function assertKnownKeys(
+  specs: CredentialFieldSpec[],
+  values: Record<string, string | null>,
+) {
   const known = new Set(specs.map((spec) => spec.envKey));
   for (const envKey of Object.keys(values)) {
     if (!known.has(envKey)) {
-      throw new ApiError("BAD_REQUEST", { message: `Unknown credential key: ${envKey}.` });
+      throw new ApiError("BAD_REQUEST", {
+        message: `Unknown credential key: ${envKey}.`,
+      });
     }
   }
 }
@@ -300,11 +340,16 @@ function candidateGroup(
   specs: CredentialFieldSpec[],
   current: Record<string, string>,
   values: Record<string, string | null>,
-): { candidate: Record<string, string>; failures: CredentialFailure[]; clearingOnly: boolean } {
+): {
+  candidate: Record<string, string>;
+  failures: CredentialFailure[];
+  clearingOnly: boolean;
+} {
   const failures: CredentialFailure[] = [];
   const candidate: Record<string, string> = {};
   const clearingOnly =
-    Object.keys(values).length > 0 && Object.values(values).every((value) => value === null);
+    Object.keys(values).length > 0 &&
+    Object.values(values).every((value) => value === null);
   for (const spec of specs) {
     const incoming = values[spec.envKey];
     if (incoming === "") {
@@ -316,7 +361,9 @@ function candidateGroup(
     }
     const fallback = baseEnvValue(spec.envKey).trim();
     candidate[spec.envKey] =
-      incoming === undefined ? (current[spec.envKey] ?? fallback) : (incoming ?? fallback);
+      incoming === undefined
+        ? (current[spec.envKey] ?? fallback)
+        : (incoming ?? fallback);
   }
 
   for (const spec of specs) {
@@ -358,7 +405,12 @@ export async function validateCredentials(args: {
   assertKnownKeys(specs, args.values);
   const doc = await credentialCollection().findOne({ key: args.key } as never);
   const current = doc ? decryptDocValues(doc).values : {};
-  const { candidate, failures, clearingOnly } = candidateGroup(args.key, specs, current, args.values);
+  const { candidate, failures, clearingOnly } = candidateGroup(
+    args.key,
+    specs,
+    current,
+    args.values,
+  );
   if (failures.length > 0) throw unprocessable(failures);
   if (!clearingOnly) {
     const probe = await probeCredentials(args.key, candidate);
@@ -394,7 +446,12 @@ export async function saveCredentials(args: {
   const doc = await credentialCollection().findOne({ key: args.key } as never);
   const current = doc ? decryptDocValues(doc).values : {};
 
-  const { candidate, failures, clearingOnly } = candidateGroup(args.key, specs, current, args.values);
+  const { candidate, failures, clearingOnly } = candidateGroup(
+    args.key,
+    specs,
+    current,
+    args.values,
+  );
   if (failures.length > 0) throw unprocessable(failures);
 
   if (!clearingOnly) {
@@ -445,7 +502,12 @@ export async function saveCredentials(args: {
     const result = await credentialCollection().updateOne(
       { _id: doc._id, version: currentVersion } as never,
       {
-        $set: { ...sets, version: currentVersion + 1, updatedById: args.actorId, updatedAt: at },
+        $set: {
+          ...sets,
+          version: currentVersion + 1,
+          updatedById: args.actorId,
+          updatedAt: at,
+        },
         ...(Object.keys(unsets).length > 0 ? { $unset: unsets } : {}),
       } as never,
     );
@@ -456,7 +518,11 @@ export async function saveCredentials(args: {
   console.log(
     `[integrations] credentials saved key=${args.key} actor=${args.actorId} fields=${touched.join(",")}`,
   );
-  const secret = new Set(specs.filter((spec) => spec.className === "secret").map((spec) => spec.envKey));
+  const secret = new Set(
+    specs
+      .filter((spec) => spec.className === "secret")
+      .map((spec) => spec.envKey),
+  );
   await logAction(
     args.actorId,
     args.key === "googleAuth"
@@ -483,12 +549,24 @@ export async function resetCredentials(actorId: string, key: IntegrationKey) {
     await credentialCollection().updateOne(
       { _id: doc._id } as never,
       {
-        $set: { values: {}, version: doc.version + 1, updatedById: actorId, updatedAt: new Date() },
+        $set: {
+          values: {},
+          version: doc.version + 1,
+          updatedById: actorId,
+          updatedAt: new Date(),
+        },
       } as never,
     );
     invalidateIntegrationCache();
-    console.log(`[integrations] credentials reset key=${key} actor=${actorId} fields=${keys.join(",")}`);
-    await logAction(actorId, `Reset ${INTEGRATION_LABEL[key]} credentials`, key, keys.join(", "));
+    console.log(
+      `[integrations] credentials reset key=${key} actor=${actorId} fields=${keys.join(",")}`,
+    );
+    await logAction(
+      actorId,
+      `Reset ${INTEGRATION_LABEL[key]} credentials`,
+      key,
+      keys.join(", "),
+    );
   }
   return rowFor(key);
 }
@@ -501,7 +579,9 @@ const escapeEnvValue = (value: string) =>
 export async function exportCredentialsEnv(actorId: string) {
   const [docs, actor] = await Promise.all([
     readCredentialDocs(),
-    getDbSync().collection<{ email?: string }>(COLLECTIONS.user).findOne(idIn([actorId]) as never),
+    getDbSync()
+      .collection<{ email?: string }>(COLLECTIONS.user)
+      .findOne(idIn([actorId]) as never),
   ]);
   const stored: Record<string, string> = {};
   const undecryptable = new Set<IntegrationKey>();
@@ -526,14 +606,19 @@ export async function exportCredentialsEnv(actorId: string) {
       );
     }
     const specs = CREDENTIAL_FIELDS[key];
-    if (!specs.some((spec) => spec.required && effective(spec.envKey).trim() !== "")) {
+    if (
+      !specs.some(
+        (spec) => spec.required && effective(spec.envKey).trim() !== "",
+      )
+    ) {
       for (const spec of specs.filter((field) => field.required)) {
         lines.push(`# ${spec.envKey} is not configured`);
       }
     } else {
       for (const spec of specs) {
         const value = effective(spec.envKey);
-        if (value.trim() !== "") lines.push(`${spec.envKey}=${escapeEnvValue(value)}`);
+        if (value.trim() !== "")
+          lines.push(`${spec.envKey}=${escapeEnvValue(value)}`);
       }
     }
     lines.push("");
@@ -545,5 +630,8 @@ export async function exportCredentialsEnv(actorId: string) {
     "integrations",
     CREDENTIAL_ENV_KEYS.join(", "),
   );
-  return { filename: "erpsys-integrations.env", content: `${lines.join("\n").trimEnd()}\n` };
+  return {
+    filename: "erpsys-integrations.env",
+    content: `${lines.join("\n").trimEnd()}\n`,
+  };
 }

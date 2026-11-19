@@ -44,7 +44,6 @@ export default function UserRowDialogs({
 }) {
   return (
     <>
-
       <RoleChangeDialog
         open={roleDialog !== null}
         role={roleDialog?.role ?? "SBO_OFFICER"}

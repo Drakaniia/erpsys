@@ -115,7 +115,6 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.enrollmentQueue]: [],
     [COLLECTIONS.adviserDepartment]: [],
     [COLLECTIONS.adviserAvailability]: [],
-
   };
 }
 

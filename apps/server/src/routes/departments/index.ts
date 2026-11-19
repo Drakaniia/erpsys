@@ -36,8 +36,6 @@ import {
   myDepartment,
 } from "../../services/departments.js";
 
-
-
 /**
  * `/api/v1` — `/me/departments` in both verbs, then the instructor/admin
  * department CRUD and register.
@@ -76,7 +74,8 @@ async function assertIdentityAvailable(
 
 async function requireDepartment(id: string) {
   const row = await DepartmentModel.findById(id);
-  if (!row) throw new ApiError("NOT_FOUND", { message: "Department not found." });
+  if (!row)
+    throw new ApiError("NOT_FOUND", { message: "Department not found." });
   return row;
 }
 
@@ -225,13 +224,22 @@ departmentsRouter.patch(
     const { callerId, isAdmin } = caller(req);
     await requireDepartment(id);
     if (input.isActive !== undefined && !isAdmin) {
-      throw new ApiError("FORBIDDEN", { message: "Only an admin can change department status." });
+      throw new ApiError("FORBIDDEN", {
+        message: "Only an admin can change department status.",
+      });
     }
-    if (input.name !== undefined) await requireAssigned({ callerId, isAdmin }, id, "edit");
-    if (input.isActive === false && (await EnrollmentQueueModel.countInLine({
-      departmentId: id, status: { $in: ["WAITING", "IN_PROGRESS"] },
-    })) > 0) {
-      throw new ApiError("CONFLICT", { message: "Close the queue first — dept has students still in line." });
+    if (input.name !== undefined)
+      await requireAssigned({ callerId, isAdmin }, id, "edit");
+    if (
+      input.isActive === false &&
+      (await EnrollmentQueueModel.countInLine({
+        departmentId: id,
+        status: { $in: ["WAITING", "IN_PROGRESS"] },
+      })) > 0
+    ) {
+      throw new ApiError("CONFLICT", {
+        message: "Close the queue first — dept has students still in line.",
+      });
     }
     let out: Record<string, unknown> = { id };
 
@@ -251,7 +259,6 @@ departmentsRouter.patch(
     }
 
     if (input.isActive !== undefined) {
-
       const existing = await requireDepartment(id);
       await DepartmentModel.update(id, { isActive: input.isActive });
       await AdminActionLogModel.log(

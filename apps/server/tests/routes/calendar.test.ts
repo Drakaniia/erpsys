@@ -34,24 +34,30 @@ vi.mock("../../src/lib/db/db.js", async (importOriginal) => {
   return { ...actual, getDbSync: () => holder.db };
 });
 vi.mock("../../src/lib/google/calendar.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../src/lib/google/calendar.js")>()),
+  ...(await importOriginal<
+    typeof import("../../src/lib/google/calendar.js")
+  >()),
   ...google,
 }));
 vi.mock("../../src/lib/platform/rate-limit.js", async (importOriginal) => ({
   ...(await importOriginal<
     typeof import("../../src/lib/platform/rate-limit.js")
   >()),
-  slidingWindowRateLimit: () => (_req: unknown, _res: unknown, next: () => void) =>
-    next(),
+  slidingWindowRateLimit:
+    () => (_req: unknown, _res: unknown, next: () => void) =>
+      next(),
 }));
 
-vi.mock("../../src/lib/platform/integration-settings.js", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("../../src/lib/platform/integration-settings.js")
-  >()),
-  integrationEnabled: async () => holder.available,
-  integrationConfigured: () => true,
-}));
+vi.mock(
+  "../../src/lib/platform/integration-settings.js",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../src/lib/platform/integration-settings.js")
+    >()),
+    integrationEnabled: async () => holder.available,
+    integrationConfigured: () => true,
+  }),
+);
 
 import { CALENDAR_SCOPE } from "../../src/lib/google/calendar.js";
 import { env } from "../../src/lib/platform/env.js";
@@ -188,17 +194,22 @@ describe("connecting", () => {
     ["http://localhost:5173", "http://localhost:5173"],
     ["https://portal.example.org/", "https://portal.example.org"],
     ["", "https://portal.example.org"],
-  ])("uses the same callback for consent and token exchange with public URL %s and auth URL %s", async (publicUrl, authUrl) => {
-    env.PUBLIC_SITE_URL = publicUrl;
-    env.BETTER_AUTH_URL = authUrl;
-    const { body } = await call("/me/calendar/connect");
-    const params = new URL(body.data.url).searchParams;
-    const callback = `${(publicUrl || authUrl).replace(/\/+$/, "")}/api/v1/calendar/callback`;
-    expect(params.get("redirect_uri")).toBe(callback);
-    const done = await call(`/calendar/callback?code=abc&state=${params.get("state")}`);
-    expect(done.location).toBe("/instructor?calendar=connected");
-    expect(google.exchangeCode).toHaveBeenCalledWith("abc", callback);
-  });
+  ])(
+    "uses the same callback for consent and token exchange with public URL %s and auth URL %s",
+    async (publicUrl, authUrl) => {
+      env.PUBLIC_SITE_URL = publicUrl;
+      env.BETTER_AUTH_URL = authUrl;
+      const { body } = await call("/me/calendar/connect");
+      const params = new URL(body.data.url).searchParams;
+      const callback = `${(publicUrl || authUrl).replace(/\/+$/, "")}/api/v1/calendar/callback`;
+      expect(params.get("redirect_uri")).toBe(callback);
+      const done = await call(
+        `/calendar/callback?code=abc&state=${params.get("state")}`,
+      );
+      expect(done.location).toBe("/instructor?calendar=connected");
+      expect(google.exchangeCode).toHaveBeenCalledWith("abc", callback);
+    },
+  );
 
   it("hands out a consent URL for the narrow calendar scope", async () => {
     const { body } = await call("/me/calendar/connect");

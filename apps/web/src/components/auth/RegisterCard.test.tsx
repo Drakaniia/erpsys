@@ -22,10 +22,6 @@ const integration = vi.hoisted(() => ({
   turnstileSiteKey: "runtime-site-key",
 }));
 
-
-
-
-
 vi.mock("$lib/integrations/use-integrations", () => ({
   useIntegrations: () => integration,
 }));
@@ -87,7 +83,9 @@ describe("RegisterCard integration flags", () => {
   it("uses the current server-provided Turnstile key", () => {
     integration.turnstileSiteKey = "updated-runtime-key";
     renderCard();
-    expect(turnstile()?.getAttribute("data-sitekey")).toBe("updated-runtime-key");
+    expect(turnstile()?.getAttribute("data-sitekey")).toBe(
+      "updated-runtime-key",
+    );
   });
 
   it("does not use a build-time fallback when the runtime key is absent", () => {

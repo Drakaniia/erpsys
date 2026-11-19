@@ -29,7 +29,6 @@ import GoogleIcon from "./GoogleIcon";
 import Turnstile, { type TurnstileHandle } from "./Turnstile";
 import { useIntegrations } from "$lib/integrations/use-integrations";
 
-
 export default function RegisterCard() {
   const navigate = useNavigate();
 

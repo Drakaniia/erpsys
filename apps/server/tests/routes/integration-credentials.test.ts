@@ -283,20 +283,32 @@ describe("POST /integrations/:key/credentials/validate", () => {
 
   it.each([
     [null, 401],
-    [{ user: { id: "student1", email: "student@buksu.edu.ph", role: "STUDENT" } }, 403],
-  ])("rejects unauthorized validation with %s and status %s", async (session, status) => {
-    holder.session = session;
+    [
+      {
+        user: {
+          id: "student1",
+          email: "student@buksu.edu.ph",
+          role: "STUDENT",
+        },
+      },
+      403,
+    ],
+  ])(
+    "rejects unauthorized validation with %s and status %s",
+    async (session, status) => {
+      holder.session = session;
 
-    const response = await call("/integrations/r2/credentials/validate", {
-      method: "POST",
-      body: JSON.stringify({ version: 0, values: R2_VALUES }),
-    });
+      const response = await call("/integrations/r2/credentials/validate", {
+        method: "POST",
+        body: JSON.stringify({ version: 0, values: R2_VALUES }),
+      });
 
-    expect(response.status).toBe(status);
-    expect(holder.probeCalls).toBe(0);
-    expect(credentialDocs()).toHaveLength(0);
-    expect(audits()).toHaveLength(0);
-  });
+      expect(response.status).toBe(status);
+      expect(holder.probeCalls).toBe(0);
+      expect(credentialDocs()).toHaveLength(0);
+      expect(audits()).toHaveLength(0);
+    },
+  );
 
   it("answers with the merged group and writes nothing", async () => {
     credentialDocs().push({
@@ -400,10 +412,13 @@ describe("POST /integrations/:key/credentials/validate", () => {
   });
 
   it("is closed for the locked Better Auth row", async () => {
-    const response = await call("/integrations/betterAuth/credentials/validate", {
-      method: "POST",
-      body: JSON.stringify({ version: 0, values: {} }),
-    });
+    const response = await call(
+      "/integrations/betterAuth/credentials/validate",
+      {
+        method: "POST",
+        body: JSON.stringify({ version: 0, values: {} }),
+      },
+    );
 
     expect(response.status).toBe(409);
     expect((await response.json()).data.code).toBe("INTEGRATION_LOCKED");
@@ -438,12 +453,36 @@ describe("public site key", () => {
 
 describe("shared integration document", () => {
   it("keeps a disabled switch while saving and resetting credentials", async () => {
-    expect((await call("/integrations/r2", { method: "PATCH", body: JSON.stringify({ enabled: false }) })).status).toBe(200);
-    expect((await call("/integrations/r2/credentials", { method: "PUT", body: JSON.stringify({ version: 0, values: R2_VALUES }) })).status).toBe(200);
+    expect(
+      (
+        await call("/integrations/r2", {
+          method: "PATCH",
+          body: JSON.stringify({ enabled: false }),
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await call("/integrations/r2/credentials", {
+          method: "PUT",
+          body: JSON.stringify({ version: 0, values: R2_VALUES }),
+        })
+      ).status,
+    ).toBe(200);
     expect(credentialDocs()).toHaveLength(1);
-    expect(credentialDocs()[0]).toMatchObject({ enabled: false, version: 1, enabledById: "admin1" });
-    expect((await call("/integrations/r2/credentials", { method: "DELETE" })).status).toBe(200);
-    expect(credentialDocs()[0]).toMatchObject({ enabled: false, version: 2, values: {} });
+    expect(credentialDocs()[0]).toMatchObject({
+      enabled: false,
+      version: 1,
+      enabledById: "admin1",
+    });
+    expect(
+      (await call("/integrations/r2/credentials", { method: "DELETE" })).status,
+    ).toBe(200);
+    expect(credentialDocs()[0]).toMatchObject({
+      enabled: false,
+      version: 2,
+      values: {},
+    });
   });
 });
 
@@ -475,7 +514,9 @@ describe("DELETE /integrations/:key/credentials", () => {
     expect(credentialDocs()[0].values).toEqual({});
     expect(audits()[0].action).toBe("Reset Google sign-in credentials");
     expect(context.store[COLLECTIONS.integrationSetting]).toHaveLength(1);
-    expect(context.store[COLLECTIONS.integrationSetting][0].enabled).toBeUndefined();
+    expect(
+      context.store[COLLECTIONS.integrationSetting][0].enabled,
+    ).toBeUndefined();
   });
 });
 
@@ -567,14 +608,23 @@ describe("the always-on Better Auth core", () => {
 
 describe("/integrations/authenticators", () => {
   it("lists admins with their enrollment, and a reset forgets the device and ends the unlock", async () => {
-    context.store.twoFactor = [{ _id: "tf1", userId: "admin1", verified: true }];
+    context.store.twoFactor = [
+      { _id: "tf1", userId: "admin1", verified: true },
+    ];
 
     const list = await call("/integrations/authenticators");
     expect((await list.json()).data).toEqual([
-      { userId: "admin1", name: "Admin", email: "admin@buksu.edu.ph", enrolled: true },
+      {
+        userId: "admin1",
+        name: "Admin",
+        email: "admin@buksu.edu.ph",
+        enrolled: true,
+      },
     ]);
 
-    const response = await call("/integrations/authenticators/admin1", { method: "DELETE" });
+    const response = await call("/integrations/authenticators/admin1", {
+      method: "DELETE",
+    });
     expect(response.status).toBe(200);
     expect(context.store.twoFactor).toHaveLength(0);
     expect(context.store[COLLECTIONS.adminStepUp]).toHaveLength(0);
@@ -583,8 +633,14 @@ describe("/integrations/authenticators", () => {
   });
 
   it("refuses to reset a non-admin", async () => {
-    context.store[COLLECTIONS.user].push({ _id: "s1", name: "S", role: "STUDENT" });
-    const response = await call("/integrations/authenticators/s1", { method: "DELETE" });
+    context.store[COLLECTIONS.user].push({
+      _id: "s1",
+      name: "S",
+      role: "STUDENT",
+    });
+    const response = await call("/integrations/authenticators/s1", {
+      method: "DELETE",
+    });
     expect(response.status).toBe(404);
   });
 });

@@ -63,7 +63,7 @@ export function PatternArea({
         },
         yScale,
       }),
-    [curve, dataKey, renderData, xAccessor, xScale, yScale]
+    [curve, dataKey, renderData, xAccessor, xScale, yScale],
   );
 
   const hasVerticalFade = fillOpacity !== 1 || fadeBottom > 0;

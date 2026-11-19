@@ -263,7 +263,6 @@ export default function IntegrationsPanel({
         </div>
       </div>
 
-
       <CoreConfigSection />
     </div>
   );
@@ -476,9 +475,9 @@ function IntegrationDetail({
           {row.locked ? (
             <p className="mt-1 text-sm leading-relaxed text-pretty text-muted">
               It has no credentials of its own. The signing secret and the
-              public URL are deployment env values
-              (<code>BETTER_AUTH_SECRET</code>, <code>BETTER_AUTH_URL</code>),
-              so they can't be edited or exported from here.
+              public URL are deployment env values (
+              <code>BETTER_AUTH_SECRET</code>, <code>BETTER_AUTH_URL</code>), so
+              they can't be edited or exported from here.
             </p>
           ) : (
             <IntegrationCredentialsEditor row={row} />

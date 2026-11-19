@@ -16,7 +16,12 @@ export default function SocialMediaLinksPanel({
   data: SocialMediaLinkData[] | undefined;
   isLoading?: boolean;
   busy: boolean;
-  onsave: (name: string, url: string, id?: string, ts?: number) => Promise<boolean>;
+  onsave: (
+    name: string,
+    url: string,
+    id?: string,
+    ts?: number,
+  ) => Promise<boolean>;
   onremove: (id: string) => void;
   onreorder: (orderedIds: string[]) => void;
 }) {
@@ -28,7 +33,11 @@ export default function SocialMediaLinksPanel({
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
   const items = data ?? [];
-  const presence = useEditTimestamp("social-link", editingId !== "new" ? editingId : null, items.find((item) => item.id === editingId));
+  const presence = useEditTimestamp(
+    "social-link",
+    editingId !== "new" ? editingId : null,
+    items.find((item) => item.id === editingId),
+  );
 
   function startAdd() {
     setNameInput("");
@@ -94,7 +103,6 @@ export default function SocialMediaLinksPanel({
 
   return (
     <div>
-
       {isLoading && data === undefined ? (
         <SocialLinksSkeleton />
       ) : items.length === 0 && editingId !== "new" ? (

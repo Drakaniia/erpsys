@@ -81,7 +81,8 @@ const CHAT_GENERIC_ERROR_MESSAGE =
   "I'm getting a lot of questions right now — try again in a minute.";
 const CHAT_UNREACHABLE_MESSAGE =
   "I can't reach the assistant right now — please try again in a little while.";
-const CHAT_INTERRUPTED_MESSAGE = "The reply was interrupted — please try again.";
+const CHAT_INTERRUPTED_MESSAGE =
+  "The reply was interrupted — please try again.";
 const CHAT_TOO_LONG_MESSAGE =
   "That conversation got too long — start a new chat and ask again.";
 const DEV_CANNED_REPLY = [
@@ -89,7 +90,11 @@ const DEV_CANNED_REPLY = [
   "Add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to .env for real answers.",
 ].join(" ");
 
-const chatRateLimit = createRateLimitBudget({ name: "student-chat", windowMs: 60_000, max: 10 });
+const chatRateLimit = createRateLimitBudget({
+  name: "student-chat",
+  windowMs: 60_000,
+  max: 10,
+});
 
 configurePacer(env.CLOUDFLARE_RPM);
 
@@ -126,7 +131,9 @@ function formatValidationMessage(
 
 async function streamChat(req: Request, res: ExpressResponse): Promise<void> {
   const user = sessionUser(req);
-  const decision = await chatRateLimit.checkAsync(`user:${user.id}|ip:${clientIp(req)}`);
+  const decision = await chatRateLimit.checkAsync(
+    `user:${user.id}|ip:${clientIp(req)}`,
+  );
   if (!decision.allowed) {
     res.setHeader("Retry-After", String(decision.retryAfterSeconds));
     res.status(429).json({ error: CHAT_RATE_LIMIT_MESSAGE });
@@ -135,7 +142,9 @@ async function streamChat(req: Request, res: ExpressResponse): Promise<void> {
 
   const parsed = ChatBodySchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: formatValidationMessage(parsed.error.issues) });
+    res
+      .status(400)
+      .json({ error: formatValidationMessage(parsed.error.issues) });
     return;
   }
 
@@ -145,7 +154,8 @@ async function streamChat(req: Request, res: ExpressResponse): Promise<void> {
   ) {
     res.status(503).json({
       error:
-        env.CLOUDFLARE_MAINTENANCE_MESSAGE.trim() || DEFAULT_MAINTENANCE_MESSAGE,
+        env.CLOUDFLARE_MAINTENANCE_MESSAGE.trim() ||
+        DEFAULT_MAINTENANCE_MESSAGE,
     });
     return;
   }

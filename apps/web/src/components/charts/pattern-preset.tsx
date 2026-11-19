@@ -246,7 +246,7 @@ const LEGACY_PATTERN_PRESETS: Record<LegacyPatternPresetId, PatternPresetKey> =
 
 /** Map any preset id (current or legacy) to a current one; unknown → `none`. */
 export function resolvePatternPresetId(
-  preset: string | null | undefined
+  preset: string | null | undefined,
 ): PatternPresetKey {
   if (!preset) {
     return "none";
@@ -314,7 +314,7 @@ export function isCirclesPattern(preset: PatternPresetId): boolean {
 /** Rendered tile size for a preset at `scale`. */
 export function patternPresetTileSize(
   preset: PatternPresetId,
-  scale = 1
+  scale = 1,
 ): { width: number; height: number; strokeWidth: number } {
   const id = resolvePatternPresetId(preset);
   const def: PatternPresetDef | undefined =
@@ -331,7 +331,7 @@ export function patternPresetTileSize(
 export function renderPatternPreset(
   preset: PatternPresetId,
   id: string,
-  options: PatternPresetOptions = {}
+  options: PatternPresetOptions = {},
 ): ReactNode {
   const resolved = resolvePatternPresetId(preset);
   if (resolved === "none") {

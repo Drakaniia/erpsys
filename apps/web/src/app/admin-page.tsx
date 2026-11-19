@@ -223,7 +223,6 @@ export function AdminPage() {
           <IntegrationsPanel
             registerrefresh={(fn) => registerRefresh("integrations", fn)}
           />
-
         ) : activeTab === "audit-log" ? (
           <AuditLogTable
             registerrefresh={(fn) => registerRefresh("audit-log", fn)}

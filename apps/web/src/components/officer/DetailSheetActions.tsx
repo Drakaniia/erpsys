@@ -31,7 +31,10 @@ export default function DetailSheetActions({
           Revoke stamp
         </button>
       ) : (
-        <div className="flex w-fit max-w-full flex-wrap items-center gap-2" data-onboarding-tip={replyOpen ? undefined : "review-actions"}>
+        <div
+          className="flex w-fit max-w-full flex-wrap items-center gap-2"
+          data-onboarding-tip={replyOpen ? undefined : "review-actions"}
+        >
           <StampButton
             label="Stamp as verified"
             disabled={busyAny}

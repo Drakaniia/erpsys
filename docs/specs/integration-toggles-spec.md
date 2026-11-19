@@ -3,12 +3,12 @@
 Admins get a switch per external integration. Flipping one hides the surface in
 the UI **and** closes the server-side door. Five integrations, no more:
 
-| Key              | Integration           | What "off" means                                          |
-| ---------------- | --------------------- | --------------------------------------------------------- |
-| `turnstile`      | Cloudflare Turnstile  | Widget not rendered; sign-in runs unchallenged            |
-| `r2`             | Cloudflare R2         | New uploads refused; reads of existing files keep working |
-| `googleAuth`     | Google OAuth          | Email + password is the only sign-in path                 |
-| `cloudflareChat` | Cloudflare Workers AI | Student chat tab is not rendered; stream endpoint 503s    |
+| Key              | Integration           | What "off" means                                             |
+| ---------------- | --------------------- | ------------------------------------------------------------ |
+| `turnstile`      | Cloudflare Turnstile  | Widget not rendered; sign-in runs unchallenged               |
+| `r2`             | Cloudflare R2         | New uploads refused; reads of existing files keep working    |
+| `googleAuth`     | Google OAuth          | Email + password is the only sign-in path                    |
+| `cloudflareChat` | Cloudflare Workers AI | Student chat tab is not rendered; stream endpoint 503s       |
 | `email`          | Resend (email)        | No reset, turn or enrollment email is sent; in-app rows stay |
 
 **Out of scope:** MongoDB, the queue-share HMAC, `PUBLIC_SITE_URL`, SSE, pdfmake,
@@ -642,9 +642,9 @@ declaration so the next reader does not have to rediscover it.
 Email delivery added a fifth integration row, so the "four rows" wording
 elsewhere in this document describes the original design only.
 
-| Key     | Integration | What "off" means                                                                |
-| ------- | ----------- | -------------------------------------------------------------------------------- |
-| `email` | Brevo       | No password reset, turn alert or enrollment-complete email; in-app rows stay     |
+| Key     | Integration | What "off" means                                                             |
+| ------- | ----------- | ---------------------------------------------------------------------------- |
+| `email` | Brevo       | No password reset, turn alert or enrollment-complete email; in-app rows stay |
 
 - **Configured** when `BREVO_API_KEY` and `MAIL_FROM` are both present.
 - **No DNS:** Brevo's single-sender verification confirms one address by email,

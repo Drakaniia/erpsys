@@ -14,7 +14,7 @@ export function isFullArc(startAngle: number, endAngle: number): boolean {
 export function radialArcPath(
   radius: number,
   startAngle: number,
-  endAngle: number
+  endAngle: number,
 ): string {
   if (isFullArc(startAngle, endAngle)) {
     return `M0,${-radius}A${radius},${radius},0,1,1,0,${radius}A${radius},${radius},0,1,1,0,${-radius}Z`;
@@ -41,7 +41,7 @@ export type ArcTextAnchor = "start" | "middle" | "end";
 export function arcStartLabelLayout(
   startAngle: number,
   endAngle: number,
-  offset: number
+  offset: number,
 ) {
   const direction = endAngle >= startAngle ? 1 : -1;
   // Tangent of the arc at its start, pointing along the sweep.
@@ -83,7 +83,7 @@ export function outsideArcLabelPoint(
   radius: number,
   gap: number,
   width: number,
-  height: number
+  height: number,
 ) {
   const extent =
     Math.abs(Math.sin(angle)) * (width / 2) +

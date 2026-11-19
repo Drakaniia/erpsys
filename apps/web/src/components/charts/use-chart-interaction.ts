@@ -41,7 +41,7 @@ interface UseChartInteractionParams {
   bisectDate: (
     data: Record<string, unknown>[],
     date: Date,
-    lo: number
+    lo: number,
   ) => number;
   canInteract: boolean;
 }
@@ -70,7 +70,7 @@ function resolveYPositions(
   lines: LineConfig[],
   bands: BandConfig[] | undefined,
   yScales: Record<string, ScaleLinear>,
-  yScale: ScaleLinear
+  yScale: ScaleLinear,
 ): Record<string, number> {
   const yPositions: Record<string, number> = {};
   const place = (key: string, yAxisId: string | number | undefined) => {
@@ -143,7 +143,7 @@ export function useChartInteraction({
         yPositions: resolveYPositions(d, lines, bands, yScales, yScale),
       };
     },
-    [xScale, yScale, yScales, data, lines, bands, xAccessor, bisectDate]
+    [xScale, yScale, yScales, data, lines, bands, xAccessor, bisectDate],
   );
 
   const resolveIndexFromX = useCallback(
@@ -164,13 +164,13 @@ export function useChartInteraction({
       }
       return index - 1;
     },
-    [xScale, data, xAccessor, bisectDate]
+    [xScale, data, xAccessor, bisectDate],
   );
 
   const getChartX = useCallback(
     (
       event: React.MouseEvent<SVGGElement> | React.TouchEvent<SVGGElement>,
-      touchIndex = 0
+      touchIndex = 0,
     ): number | null => {
       let point: { x: number; y: number } | null = null;
 
@@ -193,7 +193,7 @@ export function useChartInteraction({
       }
       return point.x - margin.left;
     },
-    [margin.left]
+    [margin.left],
   );
 
   const handleMouseMove = useCallback(
@@ -228,7 +228,7 @@ export function useChartInteraction({
       resolveIndexFromX,
       scheduleTooltip,
       setSelection,
-    ]
+    ],
   );
 
   const handleMouseLeave = useCallback(() => {
@@ -254,7 +254,7 @@ export function useChartInteraction({
       clearTooltip();
       setSelection(null);
     },
-    [getChartX, clearTooltip, setSelection]
+    [getChartX, clearTooltip, setSelection],
   );
 
   const handleMouseUp = useCallback(() => {
@@ -305,7 +305,7 @@ export function useChartInteraction({
       resetTooltipDedupe,
       clearTooltip,
       setSelection,
-    ]
+    ],
   );
 
   const handleTouchMove = useCallback(
@@ -345,7 +345,7 @@ export function useChartInteraction({
       resolveIndexFromX,
       scheduleTooltip,
       setSelection,
-    ]
+    ],
   );
 
   const handleTouchEnd = useCallback(() => {

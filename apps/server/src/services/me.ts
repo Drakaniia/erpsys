@@ -96,7 +96,12 @@ async function adminOverview() {
     StepModel.listOrdered(),
     AdminActionLogModel.recent(RECENT_LIMIT),
   ]);
-  const roleCounts = { STUDENT: 0, SBO_OFFICER: 0, ENROLLMENT_ADVISER: 0, ADMIN: 0 };
+  const roleCounts = {
+    STUDENT: 0,
+    SBO_OFFICER: 0,
+    ENROLLMENT_ADVISER: 0,
+    ADMIN: 0,
+  };
   for (const user of users) {
     const role = user.role as keyof typeof roleCounts | undefined;
     if (role && role in roleCounts) roleCounts[role] += 1;
@@ -274,9 +279,7 @@ async function officerOverview() {
     profiles.map((p) => {
       const user = userById.get(String(p.userId));
       const name =
-        user?.name?.trim() ||
-        user?.email?.split("@")[0]?.trim() ||
-        "Unknown";
+        user?.name?.trim() || user?.email?.split("@")[0]?.trim() || "Unknown";
       return [String(p._id), name];
     }),
   );
@@ -368,14 +371,19 @@ export async function listNotifications(userId: string) {
 async function launchData(user: SessionUser) {
   switch (landingSurfaceForRole(user.role)) {
     case "student": {
-      const [getMySteps, getMyQueueStatus, notifications, profileStatus, integrations] =
-        await Promise.all([
-          loadStudentSteps(user),
-          myQueueStatus(user.id),
-          listNotifications(user.id),
-          studentProfileStatus(user.id),
-          publicIntegrationPayload(),
-        ]);
+      const [
+        getMySteps,
+        getMyQueueStatus,
+        notifications,
+        profileStatus,
+        integrations,
+      ] = await Promise.all([
+        loadStudentSteps(user),
+        myQueueStatus(user.id),
+        listNotifications(user.id),
+        studentProfileStatus(user.id),
+        publicIntegrationPayload(),
+      ]);
       return {
         getMySteps,
         getMyQueueStatus,
@@ -385,18 +393,20 @@ async function launchData(user: SessionUser) {
       };
     }
     case "officer": {
-      const [getOverview, getBell, getProfilingForm, links] = await Promise.all([
-        overview(user.role),
-        submissionPage(
-          submissionListQuery.parse({
-            status: "PENDING",
-            dir: "desc",
-            pageSize: 20,
-          }),
-        ),
-        readProfilingForm(),
-        listSocialLinks(),
-      ]);
+      const [getOverview, getBell, getProfilingForm, links] = await Promise.all(
+        [
+          overview(user.role),
+          submissionPage(
+            submissionListQuery.parse({
+              status: "PENDING",
+              dir: "desc",
+              pageSize: 20,
+            }),
+          ),
+          readProfilingForm(),
+          listSocialLinks(),
+        ],
+      );
       return {
         getOverview,
         getBell,

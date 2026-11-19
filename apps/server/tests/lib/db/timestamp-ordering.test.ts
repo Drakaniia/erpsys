@@ -49,9 +49,13 @@ describe("timestamp ordering", () => {
       },
     }));
     const guarded = guardDb(db as unknown as Db);
-    await expect(inTx(ts, "PATCH", () => guarded.collection("things").updateOne(
-      { _id: "x" } as never, { $set: { value: 1 } },
-    ))).rejects.toMatchObject({ status: 409, data: { code: TS_ABORTED } });
+    await expect(
+      inTx(ts, "PATCH", () =>
+        guarded
+          .collection("things")
+          .updateOne({ _id: "x" } as never, { $set: { value: 1 } }),
+      ),
+    ).rejects.toMatchObject({ status: 409, data: { code: TS_ABORTED } });
     expect(store.things[0].value).toBe(0);
     vi.restoreAllMocks();
   });
@@ -110,17 +114,20 @@ describe("timestamp ordering", () => {
   it("restarts an aborted server-anchored transaction with a newer TS", async () => {
     const { things, stored } = setup();
     let calls = 0;
-    await inTx(undefined, "POST", () =>
-      new Promise<void>((resolve, reject) => {
-        const handler = catchAsync(async () => {
-          calls += 1;
-          // A younger transaction reads X between our start and our write.
-          if (calls === 1) stored().readTs = nextTs();
-          await things().updateOne({ _id: "x" }, { $set: { v: 1 } });
-          resolve();
-        });
-        handler({} as Request, { headersSent: false } as Response, reject);
-      }),
+    await inTx(
+      undefined,
+      "POST",
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const handler = catchAsync(async () => {
+            calls += 1;
+            // A younger transaction reads X between our start and our write.
+            if (calls === 1) stored().readTs = nextTs();
+            await things().updateOne({ _id: "x" }, { $set: { v: 1 } });
+            resolve();
+          });
+          handler({} as Request, { headersSent: false } as Response, reject);
+        }),
     );
     expect(calls).toBe(2);
     expect(stored().v).toBe(1);
@@ -129,14 +136,17 @@ describe("timestamp ordering", () => {
   it("gives up with 409 TS_ABORTED after three restarts", async () => {
     const { things } = setup({ _id: "x", v: 0, readTs: 9e15 });
     let calls = 0;
-    const error = await inTx(undefined, "POST", () =>
-      new Promise((resolve) => {
-        const handler = catchAsync(async () => {
-          calls += 1;
-          await things().updateOne({ _id: "x" }, { $set: { v: 1 } });
-        });
-        handler({} as Request, { headersSent: false } as Response, resolve);
-      }),
+    const error = await inTx(
+      undefined,
+      "POST",
+      () =>
+        new Promise((resolve) => {
+          const handler = catchAsync(async () => {
+            calls += 1;
+            await things().updateOne({ _id: "x" }, { $set: { v: 1 } });
+          });
+          handler({} as Request, { headersSent: false } as Response, resolve);
+        }),
     );
     expect(calls).toBe(4);
     expect(error).toMatchObject({ status: 409, data: { code: TS_ABORTED } });
@@ -145,11 +155,15 @@ describe("timestamp ordering", () => {
   it("rejects a client ts the server never issued and strips ts from the body", () => {
     const outcomes: unknown[] = [];
     const future = { body: { ts: Date.now() + 60_000, name: "a" } };
-    timestampOrdering(future as Request, {} as Response, (e) => outcomes.push(e));
+    timestampOrdering(future as Request, {} as Response, (e) =>
+      outcomes.push(e),
+    );
     expect(outcomes[0]).toMatchObject({ status: 400 });
 
     const issued = { body: { ts: nextTs(), name: "a" } };
-    timestampOrdering(issued as Request, {} as Response, (e) => outcomes.push(e));
+    timestampOrdering(issued as Request, {} as Response, (e) =>
+      outcomes.push(e),
+    );
     expect(outcomes[1]).toBeUndefined();
     expect(issued.body).toEqual({ name: "a" });
   });

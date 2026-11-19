@@ -86,6 +86,7 @@ export const requireStepUp: RequestHandler = async (req, _res, next) => {
 
 export const googleSignInGuard: RequestHandler = async (_req, _res, next) => {
   if (await integrationEnabled("googleAuth")) return next();
-  throw new ApiError("PRECONDITION_FAILED", { message: "Google sign-in is off." });
+  throw new ApiError("PRECONDITION_FAILED", {
+    message: "Google sign-in is off.",
+  });
 };
-

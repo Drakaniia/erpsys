@@ -1,10 +1,27 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ConsoleOnboarding, { OnboardingHelp } from "./ConsoleOnboarding";
 
 const tips = [
-  { id: "queue", title: "Queue tip", body: "Switch queues here.", context: "Open a department." },
-  { id: "confirm", title: "Confirm tip", body: "Review the student's record.", context: "Open confirmation." },
+  {
+    id: "queue",
+    title: "Queue tip",
+    body: "Switch queues here.",
+    context: "Open a department.",
+  },
+  {
+    id: "confirm",
+    title: "Confirm tip",
+    body: "Review the student's record.",
+    context: "Open confirmation.",
+  },
 ];
 
 class IntersectionMock {
@@ -15,31 +32,61 @@ class IntersectionMock {
     this.callback = callback;
     IntersectionMock.instances.push(this);
   }
-  observe(node: Element) { this.observed.add(node); }
-  unobserve(node: Element) { this.observed.delete(node); }
-  disconnect() { this.observed.clear(); }
+  observe(node: Element) {
+    this.observed.add(node);
+  }
+  unobserve(node: Element) {
+    this.observed.delete(node);
+  }
+  disconnect() {
+    this.observed.clear();
+  }
   update(node: Element, isIntersecting: boolean) {
-    this.callback([
-      { target: node, isIntersecting, intersectionRatio: Number(isIntersecting) } as IntersectionObserverEntry,
-    ], this as unknown as IntersectionObserver);
+    this.callback(
+      [
+        {
+          target: node,
+          isIntersecting,
+          intersectionRatio: Number(isIntersecting),
+        } as IntersectionObserverEntry,
+      ],
+      this as unknown as IntersectionObserver,
+    );
   }
 }
 
 async function show(node: Element) {
-  await waitFor(() => expect(IntersectionMock.instances.at(-1)?.observed.has(node)).toBe(true));
+  await waitFor(() =>
+    expect(IntersectionMock.instances.at(-1)?.observed.has(node)).toBe(true),
+  );
   act(() => IntersectionMock.instances.at(-1)?.update(node, true));
 }
 
-function Console({ dialog = false, account = "adviser", onAction }: {
+function Console({
+  dialog = false,
+  account = "adviser",
+  onAction,
+}: {
   dialog?: boolean;
   account?: string;
   onAction?: () => void;
 }) {
   return (
-    <ConsoleOnboarding key={account} surface="instructor" accountId={account} tips={tips}>
+    <ConsoleOnboarding
+      key={account}
+      surface="instructor"
+      accountId={account}
+      tips={tips}
+    >
       <OnboardingHelp />
       <p id="existing">Existing description</p>
-      <button data-onboarding-tip="queue" aria-describedby="existing" onClick={onAction}>Queue</button>
+      <button
+        data-onboarding-tip="queue"
+        aria-describedby="existing"
+        onClick={onAction}
+      >
+        Queue
+      </button>
       {dialog && (
         <div role="dialog" aria-label="Confirmation" aria-modal="true">
           <button data-onboarding-tip="confirm">Confirm</button>
@@ -53,7 +100,13 @@ beforeEach(() => {
   localStorage.clear();
   IntersectionMock.instances = [];
   vi.stubGlobal("IntersectionObserver", IntersectionMock);
-  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
 });
 
 afterEach(() => vi.unstubAllGlobals());
@@ -72,7 +125,9 @@ describe("Console onboarding", () => {
     expect(queue).toHaveAccessibleDescription(/Existing description Queue tip/);
     fireEvent.click(queue);
     expect(onAction).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getByRole("button", { name: "Dismiss tip: Queue tip" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dismiss tip: Queue tip" }),
+    );
     expect(queue).toHaveAccessibleDescription("Existing description");
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
@@ -96,11 +151,18 @@ describe("Console onboarding", () => {
   });
 
   it("can replay a tip from Help when its control becomes available later", async () => {
-    localStorage.setItem('erpsys:onboarding:v1:instructor:adviser', JSON.stringify(['confirm']));
+    localStorage.setItem(
+      "erpsys:onboarding:v1:instructor:adviser",
+      JSON.stringify(["confirm"]),
+    );
     const { rerender } = render(<Console />);
     fireEvent.click(screen.getByRole("button", { name: "Help" }));
     fireEvent.click(screen.getByText("Confirm tip"));
-    fireEvent.click(screen.getAllByRole("button", { name: "Highlight when available" }).at(-1)!);
+    fireEvent.click(
+      screen
+        .getAllByRole("button", { name: "Highlight when available" })
+        .at(-1)!,
+    );
     rerender(<Console dialog />);
     const dialog = screen.getByRole("dialog");
     await show(within(dialog).getByRole("button", { name: "Confirm" }));

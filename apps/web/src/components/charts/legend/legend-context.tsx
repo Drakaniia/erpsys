@@ -85,7 +85,7 @@ export function useLegendItem(): LegendItemContextValue {
   const context = useContext(LegendItemContext);
   if (!context) {
     throw new Error(
-      "useLegendItem must be used within a <LegendItem> component."
+      "useLegendItem must be used within a <LegendItem> component.",
     );
   }
   return context;

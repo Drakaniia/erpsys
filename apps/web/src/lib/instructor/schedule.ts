@@ -101,7 +101,12 @@ export function useSaveSchedule() {
     mutationFn: (input) =>
       api.instructor.saveMySchedule.call(input) as Promise<ScheduleView>,
     onSuccess: (saved, input) => {
-      queryClient.setQueryData(api.instructor.getMySchedule.queryKey({ departmentId: input.departmentId }), saved);
+      queryClient.setQueryData(
+        api.instructor.getMySchedule.queryKey({
+          departmentId: input.departmentId,
+        }),
+        saved,
+      );
       void queryClient.invalidateQueries({
         queryKey: ["instructor"],
         predicate: (query) => query.queryKey[1] !== "getMySchedule",
@@ -120,7 +125,9 @@ export function useCalendarStatus() {
 export function useCalendarActions() {
   const queryClient = useQueryClient();
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: ["instructor", "getMyCalendar"] });
+    queryClient.invalidateQueries({
+      queryKey: ["instructor", "getMyCalendar"],
+    });
   return {
     connect: async () => {
       const { url } = (await api.instructor.connectCalendar.call()) as {

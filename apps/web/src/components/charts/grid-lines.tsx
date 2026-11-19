@@ -22,7 +22,7 @@ export interface GridScale<Value> {
 export function gridTickValues<Value>(
   scale: GridScale<Value>,
   numTicks: number | undefined = 10,
-  tickValues?: Value[]
+  tickValues?: Value[],
 ): Value[] {
   if (tickValues) {
     return tickValues;
@@ -36,7 +36,7 @@ export function gridTickValues<Value>(
       (_, index, all) =>
         numTicks == null ||
         all.length <= numTicks ||
-        index % Math.round((all.length - 1) / numTicks) === 0
+        index % Math.round((all.length - 1) / numTicks) === 0,
     );
 }
 
@@ -50,7 +50,7 @@ export function gridLinePositions<Value>(
     numTicks,
     offset,
     tickValues,
-  }: { numTicks?: number; offset?: number; tickValues?: Value[] } = {}
+  }: { numTicks?: number; offset?: number; tickValues?: Value[] } = {},
 ): number[] {
   const bandOffset =
     "bandwidth" in scale && scale.bandwidth ? scale.bandwidth() / 2 : 0;
@@ -117,7 +117,7 @@ function gridLine(
     strokeDasharray?: string;
     lineStyle?: CSSProperties;
     rest: GridLineSvgProps;
-  }
+  },
 ) {
   const rectilinear = x1 === x2 || y1 === y2;
   // An object, not JSX attributes, so the formatter can't re-sort them.
@@ -143,7 +143,7 @@ function gridLine(
  */
 function wrapGridLines(
   lines: ReactElement[],
-  { className, left, top }: { className?: string; left: number; top: number }
+  { className, left, top }: { className?: string; left: number; top: number },
 ) {
   if (left === 0 && top === 0 && !className) {
     return <>{lines}</>;
@@ -178,7 +178,7 @@ export function GridRows<Value>({
       strokeDasharray,
       lineStyle,
       rest,
-    })
+    }),
   );
   return wrapGridLines(lines, { className, left, top });
 }
@@ -206,7 +206,7 @@ export function GridColumns<Value>({
       strokeDasharray,
       lineStyle,
       rest,
-    })
+    }),
   );
   return wrapGridLines(lines, { className, left, top });
 }

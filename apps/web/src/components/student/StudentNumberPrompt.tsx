@@ -13,7 +13,6 @@ export default function StudentNumberPrompt({
   onsave: (value: string) => void;
   ondismiss: () => void;
 }) {
-
   const [value, setValue] = useState("");
   const [touched, setTouched] = useState(false);
 
@@ -30,7 +29,6 @@ export default function StudentNumberPrompt({
 
   return (
     <div className="rounded-2xl border border-border bg-surface-raised p-4">
-
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[15px] font-semibold text-ink">

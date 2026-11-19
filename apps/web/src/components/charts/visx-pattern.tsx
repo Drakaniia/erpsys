@@ -16,7 +16,7 @@ PatternLines.displayName = "PatternLines";
 
 /** @deprecated Use `PatternPreset` (Nucleo-based presets) instead. */
 export function PatternCircles(
-  props: ComponentProps<typeof VisxPatternCircles>
+  props: ComponentProps<typeof VisxPatternCircles>,
 ) {
   return <VisxPatternCircles {...props} />;
 }
@@ -30,7 +30,7 @@ PatternWaves.displayName = "PatternWaves";
 
 /** @deprecated Use `PatternPreset` (Nucleo-based presets) instead. */
 export function PatternHexagons(
-  props: ComponentProps<typeof VisxPatternHexagons>
+  props: ComponentProps<typeof VisxPatternHexagons>,
 ) {
   return <VisxPatternHexagons {...props} />;
 }
