@@ -197,7 +197,7 @@ export function InstructorPage() {
                 ? "Students"
                 : s.activeDeptId === "manage"
                   ? "Departments"
-                  : (s.queue.activeDept?.name ?? "Instructor")}
+                  : (s.queue.activeDept?.name ?? "Enrollment Officer")}
           </h1>
           {s.reportsSelected ? (
             <p className="text-sm text-muted">

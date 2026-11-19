@@ -138,7 +138,7 @@ export default function AssignDepartmentModal({
         </p>
         <p className="mt-2 text-xs text-muted">
           {mode === "transfer"
-            ? "Choose levels held by one instructor. They can accept or decline; unanswered requests transfer automatically."
+            ? "Choose levels held by one enrollment officer. They can accept or decline; unanswered requests transfer automatically."
             : "Switching departments closes your previous queue. Changing levels returns any student you are serving to the line."}
         </p>
         <div className="mt-4">

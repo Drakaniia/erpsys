@@ -7,8 +7,8 @@ import { markLaunch } from "$lib/perf/launch-metrics";
 const TITLES: Record<string, string> = {
   "/student": "Your Progress",
   "/queue": "Enrollment Queue",
-  "/officer": "Officer Console",
-  "/instructor": "Instructor Console",
+  "/officer": "SBO Officer Console",
+  "/instructor": "Enrollment Officer Console",
   "/admin": "Admin Console",
 };
 

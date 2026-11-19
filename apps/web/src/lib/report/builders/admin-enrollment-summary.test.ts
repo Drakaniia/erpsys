@@ -148,7 +148,7 @@ describe("Users by role", () => {
     expect(dataRows(table).map((r) => r[0])).toEqual([
       "Student",
       "SBO Officer",
-      "Instructor",
+      "Enrollment Officer",
       "Admin",
     ]);
   });

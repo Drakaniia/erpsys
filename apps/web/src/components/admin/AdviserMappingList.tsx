@@ -87,20 +87,19 @@ export default function AdviserMappingList({
             <circle cx="12" cy="7" r="4" />
           </svg>
           <p className="text-sm font-medium text-ink">
-            No instructors have signed in yet
+            No enrollment officers have signed in yet
           </p>
           <p className="max-w-sm text-xs text-muted">
-            Instructors appear here after their first login with a @buksu.edu.ph
-            account.
+            Enrollment officers appear here after their first sign-in with a
+            @buksu.edu.ph account.
           </p>
         </div>
       ) : (
         <>
           <div className="flex flex-col gap-2">
             <p className="text-sm leading-5 tracking-[0.01em] text-muted">
-              Advisers derive their role from the @buksu.edu.ph domain. Assign
-              their departments here — the instructor page picks the mapping up
-              on its next poll.
+              Assign departments to enrollment officers here. Their console
+              picks up changes automatically.
             </p>
             <div
               className="flex items-start gap-2.5 rounded-xl border border-border bg-surface-raised px-3.5 py-2.5"
@@ -306,7 +305,7 @@ export default function AdviserMappingList({
       <ConfirmDialog
         open={clearing !== null}
         title={clearing ? `Remove all departments from ${clearing.name}?` : ""}
-        body="They keep their instructor role — their page just shows the no-departments state until departments are assigned."
+        body="They keep their Enrollment Officer role, but their console won't show any departments until you assign one."
         confirmLabel="Remove all"
         destructive
         busy={savePending}

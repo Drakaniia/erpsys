@@ -154,7 +154,7 @@ describe("shaping for charts", () => {
     expect(slices.map((s) => [s.label, s.value])).toEqual([
       ["Student", 1],
       ["SBO Officer", 0],
-      ["Instructor", 0],
+      ["Enrollment Officer", 0],
       ["Admin", 1],
     ]);
   });

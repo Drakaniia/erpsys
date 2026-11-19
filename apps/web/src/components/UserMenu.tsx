@@ -109,7 +109,7 @@ export default function UserMenu() {
   }
 
   async function handleSignOut() {
-    if (role !== "ENROLLMENT_ADVISER" && role !== "ADMIN") {
+    if (!canEnterSurface(role, "instructor")) {
       await executeSignOut();
       return;
     }

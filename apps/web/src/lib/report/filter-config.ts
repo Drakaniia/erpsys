@@ -223,7 +223,7 @@ export const ROLE_OPTIONS: readonly Option[] = [
   { value: "ALL", label: "All roles" },
   { value: "STUDENT", label: "Student" },
   { value: "SBO_OFFICER", label: "SBO Officer" },
-  { value: "ENROLLMENT_ADVISER", label: "Instructor" },
+  { value: "ENROLLMENT_ADVISER", label: "Enrollment Officer" },
   { value: "ADMIN", label: "Admin" },
 ];
 

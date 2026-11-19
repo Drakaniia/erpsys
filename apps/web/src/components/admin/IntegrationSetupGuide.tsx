@@ -246,7 +246,7 @@ function setupGuides(origin: string): Record<IntegrationKey, SetupGuide> {
     },
     googleCalendar: {
       enables:
-        "Instructors can optionally connect their own Google Calendar. ERPSYS then mirrors their office-hour schedule to a dedicated ERPSYS Office Hours calendar in their account. Students see the schedule inside ERPSYS either way.",
+        "Enrollment officers can optionally connect their own Google Calendar. ERPSYS then mirrors their office-hour schedule to a dedicated ERPSYS Office Hours calendar in their account. Students see the schedule inside ERPSYS either way.",
       steps: [
         {
           title: "Configure the shared Google OAuth client first",
@@ -254,8 +254,8 @@ function setupGuides(origin: string): Record<IntegrationKey, SetupGuide> {
             <>
               Save GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET under Google
               sign-in → Credentials. Calendar uses the same client; each
-              instructor authorizes with their own Google account, so no refresh
-              token is stored here.
+              enrollment officer authorizes with their own Google account, so
+              no refresh token is stored here.
             </>
           ),
         },
@@ -275,8 +275,8 @@ function setupGuides(origin: string): Record<IntegrationKey, SetupGuide> {
               </ul>
               <p className="mt-2">
                 It only lets ERPSYS create and manage its own calendar. For an
-                External app in Testing, add each instructor as a test user and
-                expect tokens to expire after 7 days; complete Google
+                External app in Testing, add each enrollment officer as a test
+                user and expect tokens to expire after 7 days; complete Google
                 verification before wide rollout.
               </p>
             </>
@@ -297,11 +297,11 @@ function setupGuides(origin: string): Record<IntegrationKey, SetupGuide> {
         },
         {
           title: "Save the encryption key and enable",
-          body: "Enter a random secret of 32+ characters as Token encryption key. It encrypts instructors' refresh tokens at rest; changing it disconnects everyone. Save, restart the server and enable Google Calendar.",
+          body: "Enter a random secret of 32+ characters as Token encryption key. It encrypts enrollment officers' refresh tokens at rest; changing it disconnects everyone. Save, restart the server and enable Google Calendar.",
         },
       ],
       verify:
-        "Sign in as an instructor, open a department → Schedule, add a weekly window, choose Connect Google Calendar and approve. Check the ERPSYS Office Hours calendar in Google Calendar shows the window. Turning this integration off stops syncing but keeps schedules visible to students.",
+        "Sign in as an enrollment officer, open a department → Schedule, add a weekly window, choose Connect Google Calendar and approve. Check the ERPSYS Office Hours calendar in Google Calendar shows the window. Turning this integration off stops syncing but keeps schedules visible to students.",
     },
     turnstile: {
       enables:

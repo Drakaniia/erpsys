@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { authClient } from "$lib/auth-client";
 import { homeRouteForRole } from "$lib/auth/redirect";
+import { roleLabel } from "$lib/auth/role-label";
 import {
   SURFACES_FOR_ROLE,
   type Role,
@@ -14,8 +15,8 @@ const SURFACE_DEFS: Record<
   { label: string; route: "/student" | "/officer" | "/instructor" | "/admin" }
 > = {
   student: { label: "Student", route: "/student" },
-  officer: { label: "Officer", route: "/officer" },
-  instructor: { label: "Instructor", route: "/instructor" },
+  officer: { label: "SBO Officer", route: "/officer" },
+  instructor: { label: "Enrollment Officer", route: "/instructor" },
   admin: { label: "Admin", route: "/admin" },
 };
 
@@ -27,14 +28,7 @@ export default function Header() {
   const roleSurfaces = role ? (SURFACES_FOR_ROLE[role as Role] ?? []) : [];
   const hasSwitcher = roleSurfaces.length > 1;
   const currentPath = location.pathname;
-  const homeLabel =
-    role === "SBO_OFFICER"
-      ? "Officer"
-      : role === "ENROLLMENT_ADVISER"
-        ? "Instructor"
-        : role === "ADMIN"
-          ? "Admin"
-          : "Student";
+  const homeLabel = roleLabel(role);
   const activeSurface: SurfaceId | null = currentPath.startsWith("/admin")
     ? "admin"
     : currentPath.startsWith("/officer")
