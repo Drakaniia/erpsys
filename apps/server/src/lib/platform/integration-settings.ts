@@ -143,6 +143,7 @@ export function invalidateIntegrationCache(): void {
 }
 
 export async function integrationEnabled(key: IntegrationKey): Promise<boolean> {
+  if (process.env.CLOUDFLARE_WORKER === "1") return (await loadFlags())[key];
   flagsPromise ??= loadFlags();
   return (await flagsPromise)[key];
 }
@@ -173,6 +174,7 @@ async function loadPayload(): Promise<PublicIntegrationPayload> {
 }
 
 export function publicIntegrationPayload(): Promise<PublicIntegrationPayload> {
+  if (process.env.CLOUDFLARE_WORKER === "1") return loadPayload();
   payloadPromise ??= loadPayload().catch((error) => {
     payloadPromise = null;
     throw error;
