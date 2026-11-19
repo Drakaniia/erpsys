@@ -19,11 +19,12 @@ const integration = vi.hoisted(() => ({
     cloudflareChat: true,
   },
   pending: false,
+  turnstileSiteKey: "runtime-site-key",
 }));
 
-// The root .env ships a real site key, so the widget's presence must not depend
-// on whoever runs the tests. Stamped before the module graph reads it.
-vi.hoisted(() => vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "test-site-key"));
+
+
+
 
 vi.mock("$lib/integrations/use-integrations", () => ({
   useIntegrations: () => integration,
@@ -58,6 +59,7 @@ afterEach(() => {
     cloudflareChat: true,
   };
   integration.pending = false;
+  integration.turnstileSiteKey = "runtime-site-key";
 });
 
 function renderCard() {
@@ -80,6 +82,18 @@ describe("RegisterCard integration flags", () => {
     renderCard();
     expect(googleButton()).toBeTruthy();
     expect(turnstile()).toBeTruthy();
+  });
+
+  it("uses the current server-provided Turnstile key", () => {
+    integration.turnstileSiteKey = "updated-runtime-key";
+    renderCard();
+    expect(turnstile()?.getAttribute("data-sitekey")).toBe("updated-runtime-key");
+  });
+
+  it("does not use a build-time fallback when the runtime key is absent", () => {
+    integration.turnstileSiteKey = "";
+    renderCard();
+    expect(turnstile()).toBeNull();
   });
 
   it("renders no Google button when googleAuth is off", () => {
