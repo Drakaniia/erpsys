@@ -17,7 +17,7 @@ export const timestampOrdering: RequestHandler = (req, _res, next) => {
   const body = req.body as Record<string, unknown> | undefined;
   const clientTs = body?.ts;
   if (body && "ts" in body) delete body.ts;
-  if (process.env.VERCEL === "1") {
+  if (process.env.CLOUDFLARE_WORKER === "1") {
     void beginSharedTransaction(clientTs as number | undefined, req.method, next).catch(next);
     return;
   }

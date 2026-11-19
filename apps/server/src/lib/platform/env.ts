@@ -1,8 +1,10 @@
 import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
 
-dotenv.config({ path: fileURLToPath(new URL("../../../../../.env", import.meta.url)) });
-dotenv.config();
+if (process.env.CLOUDFLARE_WORKER !== "1") {
+  dotenv.config({ path: fileURLToPath(new URL("../../../../../.env", import.meta.url)) });
+  dotenv.config();
+}
 
 const BASE: Record<string, string | undefined> = { ...process.env };
 let overrides: Record<string, string> = {};

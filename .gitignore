@@ -4,7 +4,6 @@ dist/
 apps/web/design/isometric/out/
 .env
 .env.*
-env.vercel
 
 # Logs
 *.log
@@ -22,3 +21,7 @@ pnpm-debug.log*
 *.sln
 *.sw?
 .vercel
+.wrangler/
+dist-worker/
+.vitest/
+apps/server/worker-configuration.d.ts
