@@ -4,7 +4,7 @@ Design docs and runbooks for ERPSYS. Code-level conventions live in `../AGENTS.m
 
 ## Ops
 
-- [ops/collection-simplification.md](ops/collection-simplification.md) — collection consolidation, safe migration, and browser-local notification read markers.
+- [ops/collection-simplification.md](ops/collection-simplification.md) — consolidated collections, migration history, and browser-local notification read markers.
 - [ops/collection-migration-qa.md](ops/collection-migration-qa.md) — applied migration evidence, full-suite results, browser coverage, and remaining QA findings.
 
 - [ops/deployment.md](ops/deployment.md) — deploy to a single Ubuntu server with Nginx, systemd, MongoDB Atlas, and GitHub Actions; also covers releases, incidents, and maintenance.
