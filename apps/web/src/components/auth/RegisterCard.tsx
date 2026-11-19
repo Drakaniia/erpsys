@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { authClient, signUpStudent } from "$lib/auth-client";
 import { googleSignInCallback } from "$lib/auth/google-sign-in";
+import { PASSWORD_REQUIREMENTS } from "$lib/auth/password";
 import { api } from "$lib/api";
 import { YEAR_LEVELS } from "$lib/domain/constants";
 import {
@@ -306,7 +307,7 @@ export default function RegisterCard() {
                 label="Password"
                 type="password"
                 autocomplete="new-password"
-                hint="At least 8 characters"
+                hint={PASSWORD_REQUIREMENTS}
                 onedit={() => setFormError("")}
               />
             )}

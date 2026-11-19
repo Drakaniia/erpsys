@@ -118,6 +118,7 @@ async function loadItems(
       role: row.role ?? "STUDENT",
       isOutsideOrg: Boolean(row.isOutsideOrg),
       blocked: row.blockedAt != null,
+      emailVerified: row.emailVerified === true,
       studentNumber: studentNumbers.get(id) ?? null,
       studentProfileId: profileIdByUser.get(id) ?? null,
       department: placement.get(id)?.department ?? null,

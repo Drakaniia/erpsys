@@ -24,6 +24,8 @@ export const ROUTES = {
   admin: {
     getOverview: { method: "GET", path: "/api/v1/me/overview" },
     listUsers: { method: "GET", path: "/api/v1/users", list: true },
+    inviteAccount: { method: "POST", path: "/api/v1/users/invite" },
+    promoteAdmin: { method: "POST", path: "/api/v1/users/:userId/promote-admin" },
     listAuditLogs: { method: "GET", path: "/api/v1/audit-logs", list: true },
     setRole: { method: "PATCH", path: "/api/v1/users/:userId" },
     setRoleBulk: { method: "PATCH", path: "/api/v1/users" },

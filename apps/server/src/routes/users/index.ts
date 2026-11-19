@@ -1,12 +1,15 @@
 import { hashPassword } from "better-auth/crypto";
 import { Router } from "express";
 import { z } from "zod";
+import { inviteAccount } from "../../config/auth.js";
 import { YEAR_LEVELS } from "../../config/constants.js";
+import { newPasswordSchema } from "../../config/password.js";
 import { ApiError } from "../../config/errors.js";
 import { COLLECTIONS, getDbSync, idIn, refIn } from "../../lib/db/db.js";
 import { purgeUserById } from "../../lib/db/user-purge.js";
 import {
   requireSession,
+  requireStepUp,
   requireSurface,
   sessionUser,
 } from "../../middleware/auth.js";
@@ -46,6 +49,7 @@ type Target = {
   name: string;
   email: string;
   role: string;
+  emailVerified?: boolean;
   blockedAt?: Date | null;
 };
 
@@ -157,6 +161,61 @@ usersRouter.get(
     const input = parseQuery(listQuery, req);
     const { items, total } = await userDirectoryPage(input);
     okList(res, items, input.page, input.pageSize, total);
+  }),
+);
+
+/**
+ * `POST /api/v1/users/invite`
+ * Access: session + admin surface.
+ * Concurrency: duplicate email rejected by unique index; no overwrite.
+ * Use: provision an account and email a one-time setup link — body `{ name, email }`.
+ * Returns: `201` with `{ data: { userId } }`.
+ */
+usersRouter.post(
+  "/users/invite",
+  admin,
+  catchAsync(async (req, res) => {
+    const { name, email } = parseBody(z.object({
+      name: z.string().trim().min(1).max(100),
+      email: z.string().trim().max(254).email().toLowerCase(),
+    }), req);
+    const userId = await inviteAccount(name, email);
+    await AdminActionLogModel.log(sessionUser(req).id, "Invited account", `User:${userId}`);
+    okOne(res, { userId }, 201);
+  }),
+);
+
+/**
+ * `POST /api/v1/users/:userId/promote-admin`
+ * Access: session + admin surface (step-up required).
+ * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
+ * Use: grant admin access to an active account with verified email and revoke its sessions.
+ * Returns: `{ data: { userId, role } }`.
+ */
+usersRouter.post(
+  "/users/:userId/promote-admin",
+  admin,
+  requireStepUp,
+  catchAsync(async (req, res) => {
+    const { userId } = parseQuery(userIdParams, req);
+    const target = await users().findOne(idIn([userId]) as never);
+    if (!target) throw notFound();
+    const eligible = ["STUDENT", "SBO_OFFICER", "ENROLLMENT_ADVISER"];
+    if (!eligible.includes(target.role) || target.blockedAt || target.emailVerified !== true) {
+      throw new ApiError("CONFLICT", {
+        message: "Only active non-admin accounts with a verified email can be promoted to admin.",
+      });
+    }
+    const { matchedCount } = await users().updateOne(
+      { _id: target._id, role: target.role, emailVerified: true, blockedAt: null } as never,
+      { $set: { role: "ADMIN" } },
+    );
+    if (!matchedCount) {
+      throw new ApiError("CONFLICT", { message: "The account changed. Refresh and try again." });
+    }
+    await getDbSync().collection(COLLECTIONS.session).deleteMany({ userId: refIn([userId]) } as never);
+    await AdminActionLogModel.log(sessionUser(req).id, "Promoted to admin", `User:${userId}`);
+    okOne(res, { userId, role: "ADMIN" });
   }),
 );
 
@@ -366,7 +425,7 @@ usersRouter.delete(
  * `POST /api/v1/users/:userId/password-reset`
  * Access: session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
- * Use: set a new password — body `{ newPassword }`, 8–128 characters.
+ * Use: set a new password — body `{ newPassword }`, 12–128 characters, uppercase and lowercase.
  * Returns: `{ data: reset result }`.
  */
 usersRouter.post(
@@ -375,7 +434,7 @@ usersRouter.post(
   catchAsync(async (req, res) => {
     const { userId } = parseQuery(userIdParams, req);
     const { newPassword } = parseBody(
-      z.object({ newPassword: z.string().min(8).max(128) }),
+      z.object({ newPassword: newPasswordSchema }),
       req,
     );
     const actorId = sessionUser(req).id;

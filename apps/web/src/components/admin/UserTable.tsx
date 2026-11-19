@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import UserBulkBar from "./UserBulkBar";
+import InviteAccount from "./InviteAccount";
 import UserRowDialogs from "./UserRowDialogs";
 import UserTableSkeleton from "./UserTableSkeleton";
 import UserFilters from "./UserFilters";
@@ -125,6 +126,7 @@ export default function UserTable({
 
   return (
     <div className="flex flex-col gap-4">
+      <InviteAccount ontoast={ontoast} />
       <UserFilters
         q={q}
         role={role}

@@ -4,7 +4,7 @@ import DeleteAccountDialog from "./DeleteAccountDialog";
 import PurgeAccountDialog from "./PurgeAccountDialog";
 import type { UserItem } from "$lib/admin/types";
 
-type RoleLever = "SBO_OFFICER" | "STUDENT";
+type RoleLever = "SBO_OFFICER" | "STUDENT" | "ADMIN";
 
 /** The role-change, delete, and purge confirmations `UserTable` can raise. */
 export default function UserRowDialogs({

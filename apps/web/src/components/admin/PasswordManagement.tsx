@@ -3,6 +3,7 @@ import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "$lib/api";
+import { newPasswordSchema, PASSWORD_REQUIREMENTS } from "$lib/auth/password";
 import Skeleton from "../ui/Skeleton";
 
 type SelectedUser = {
@@ -44,9 +45,7 @@ export default function PasswordManagement({
     },
     validators: {
       onSubmit: z.object({
-        newPassword: z
-          .string()
-          .min(8, "Password must be at least 8 characters"),
+        newPassword: newPasswordSchema,
       }),
     },
   });
@@ -285,12 +284,14 @@ export default function PasswordManagement({
                       >
                         New Password
                       </label>
+                      <p id="admin-password-rules" className="text-xs text-muted">{PASSWORD_REQUIREMENTS}</p>
                       <input
                         id={field.name}
                         name={field.name}
                         type="password"
                         autoComplete="new-password"
-                        placeholder="Enter new password (min. 8 characters)"
+                        aria-describedby="admin-password-rules"
+                        placeholder="Enter new password"
                         className={`h-11 w-full rounded-md border bg-white px-3 text-[15px] text-auth-ink outline-none placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-auth-blue ${
                           hasError ? "border-error" : "border-auth-border"
                         }`}

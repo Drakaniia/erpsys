@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   } as Record<string, Record<string, unknown>[]>,
   mail: [] as { to: string; text: string }[],
   emailEnabled: true,
+  mailFails: false,
   placementFails: false,
 }));
 
@@ -49,6 +50,7 @@ vi.mock("../../src/lib/platform/integration-settings.js", () => ({
 }));
 vi.mock("../../src/lib/platform/mailer.js", () => ({
   sendMail: async (message: { to: string; text: string }) => {
+    if (state.mailFails) return false;
     state.mail.push(message);
     return true;
   },
@@ -95,12 +97,12 @@ vi.mock("../../src/lib/db/user-purge.js", () => ({
   },
 }));
 
-const { auth } = await import("../../src/config/auth.js");
+const { auth, inviteAccount } = await import("../../src/config/auth.js");
 const origin = "http://localhost:3000";
 const signup = {
   name: "Student",
   email: "student@example.com",
-  password: "test-password-123",
+  password: "Test-password-123",
   studentNumber: "1234567890",
   academicYearId: "year",
   departmentId: "department",
@@ -129,6 +131,7 @@ beforeEach(() => {
   for (const key of Object.keys(state.data)) state.data[key] = [];
   state.mail = [];
   state.emailEnabled = true;
+  state.mailFails = false;
   state.placementFails = false;
 });
 
@@ -320,6 +323,36 @@ describe("Better Auth authentication contract", () => {
     expect(state.mail).toHaveLength(0);
   });
 
+  it("accepts a real invite token once, without creating a session", async () => {
+    const id = await inviteAccount("Invited", "invited@example.com");
+    expect(state.data.user[0]).toMatchObject({ id, role: "STUDENT", emailVerified: false });
+    expect(state.data.account).toHaveLength(0);
+    expect(state.mail[0].to).toBe("invited@example.com");
+    const token = new URL(state.mail[0].text.match(/http[^\s]+/)![0]).searchParams.get("token");
+    expect(state.data.verification[0].identifier).not.toContain(token);
+    expect((state.data.verification[0].expiresAt as Date).getTime() - Date.now()).toBeGreaterThan(3590_000);
+    const reset = async (newPassword: string) => call("/reset-password", { token, newPassword });
+    expect((await reset("lowercase-only-password")).status).toBe(400);
+    expect((await reset(signup.password)).status).toBe(200);
+    expect(state.data.session).toHaveLength(0);
+    expect((await reset(signup.password)).ok).toBe(false);
+    expect((await call("/sign-in/email", { email: "invited@example.com", password: signup.password })).ok).toBe(true);
+  });
+
+  it("rejects expired invitations and cleans up undeliverable invitations", async () => {
+    state.mailFails = true;
+    await expect(inviteAccount("Invited", "invited@example.com")).rejects.toMatchObject({ status: 503 });
+    expect(state.data.user).toHaveLength(0);
+    expect(state.data.verification).toHaveLength(0);
+    state.mailFails = false;
+    await inviteAccount("Invited", "invited@example.com");
+    await expect(inviteAccount("Duplicate", "invited@example.com")).rejects.toMatchObject({ status: 409 });
+    const token = new URL(state.mail[0].text.match(/http[^\s]+/)![0]).searchParams.get("token");
+    state.data.verification[0].expiresAt = new Date(0);
+    expect((await call("/reset-password", { token, newPassword: signup.password })).ok).toBe(false);
+    expect(state.data.account).toHaveLength(0);
+  });
+
   it("revokes all sessions after password reset", async () => {
     await call("/sign-up/student", signup);
     await call("/request-password-reset", { email: signup.email });
@@ -330,7 +363,7 @@ describe("Better Auth authentication contract", () => {
       (
         await call("/reset-password", {
           token,
-          newPassword: "replacement-password-123",
+          newPassword: "Replacement-password-123",
         })
       ).status,
     ).toBe(200);

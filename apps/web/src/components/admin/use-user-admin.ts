@@ -29,6 +29,7 @@ export function useUserAdmin({
   ontoast: (message: string, kind?: "success" | "error") => void;
 }) {
   const setRoleMutation = useMutation(api.admin.setRole.mutationOptions());
+  const promoteAdminMutation = useMutation(api.admin.promoteAdmin.mutationOptions());
   const setRoleBulkMutation = useMutation(
     api.admin.setRoleBulk.mutationOptions(),
   );
@@ -44,7 +45,7 @@ export function useUserAdmin({
   }
 
   const [roleDialog, setRoleDialog] = useState<{
-    role: RoleLever;
+    role: RoleLever | "ADMIN";
     targets: UserItem[];
     excluded: number;
   } | null>(null);
@@ -54,7 +55,7 @@ export function useUserAdmin({
   const [purgeTarget, setPurgeTarget] = useState<UserItem | null>(null);
   const [busy, setBusy] = useState(false);
 
-  function askSingle(item: UserItem, role: RoleLever) {
+  function askSingle(item: UserItem, role: RoleLever | "ADMIN") {
     setRoleDialog({ role, targets: [item], excluded: 0 });
   }
 
@@ -70,7 +71,13 @@ export function useUserAdmin({
     const { role: targetRole, targets } = roleDialog;
     setBusy(true);
     try {
-      if (targets.length === 1) {
+      if (targetRole === "ADMIN") {
+        await promoteAdminMutation.mutateAsync({
+          userId: targets[0].id,
+          ts: timestampOf(targets[0]),
+        });
+        ontoast(`Promoted ${targets[0].name} to admin`);
+      } else if (targets.length === 1) {
         await setRoleMutation.mutateAsync({
           userId: targets[0].id,
           ts: timestampOf(targets[0]),

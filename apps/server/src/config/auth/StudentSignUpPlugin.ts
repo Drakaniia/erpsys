@@ -10,6 +10,7 @@ import {
   type YearLevel,
 } from "../constants.js";
 import { ApiError } from "../errors.js";
+import { newPasswordSchema } from "../password.js";
 import { getDbSync } from "../../lib/db/db.js";
 import { purgeUserById } from "../../lib/db/user-purge.js";
 import { AcademicYearModel } from "../../models/AcademicYearModel.js";
@@ -27,7 +28,7 @@ const bodySchema = z
       .min(1, "Student number is required")
       .regex(STUDENT_NUMBER_PATTERN, "Only numbers are allowed"),
     email: z.email(),
-    password: z.string().min(8).max(128),
+    password: newPasswordSchema,
     academicYearId: z.string().min(1, "Choose an academic year"),
     departmentId: z.string().min(1, "Choose your course"),
     yearLevel: z.enum(YEAR_LEVELS, "Choose your year level"),

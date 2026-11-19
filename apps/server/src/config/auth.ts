@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { emailOTP, twoFactor } from "better-auth/plugins";
@@ -20,6 +21,24 @@ import { sendMail } from "../lib/platform/mailer.js";
 import { verifyTurnstile } from "../lib/platform/turnstile.js";
 import { createAdminGatePlugin } from "./auth/AdminGatePlugin.js";
 import { createStudentSignUpPlugin } from "./auth/StudentSignUpPlugin.js";
+import { ApiError } from "./errors.js";
+import { newPasswordSchema, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, PASSWORD_REQUIREMENTS } from "./password.js";
+
+const PASSWORD_LINK_EXPIRY_SECONDS = 3600;
+const PASSWORD_FIELDS: Record<string, string> = {
+  "/sign-up/email": "password",
+  "/sign-up/student": "password",
+  "/reset-password": "newPassword",
+  "/change-password": "newPassword",
+  "/set-password": "newPassword",
+  "/email-otp/reset-password": "password",
+};
+
+function passwordLink(token: string): URL {
+  const url = new URL("/login/reset-password", env.PUBLIC_SITE_URL || env.BETTER_AUTH_URL);
+  url.searchParams.set("token", token);
+  return url;
+}
 
 const ADMIN_EMAILS = env.ADMIN_EMAILS.split(",")
   .map((email) => email.trim().toLowerCase())
@@ -132,24 +151,22 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
+    minPasswordLength: PASSWORD_MIN_LENGTH,
+    maxPasswordLength: PASSWORD_MAX_LENGTH,
+    resetPasswordTokenExpiresIn: PASSWORD_LINK_EXPIRY_SECONDS,
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ token, user }) => {
-      const url = new URL("/login/reset-password", env.BETTER_AUTH_URL);
-      url.searchParams.set("token", token);
+      const url = passwordLink(token);
       const delivered = await sendMail({
         to: user?.email ?? "",
         subject: "Reset your ERPSYS password",
         text: `Hi ${user?.name ?? "there"},\n\nUse this link to choose a new ERPSYS password. It expires in one hour and works only once:\n\n${url}\n\nIf you did not ask for this, ignore this email — your password stays the same.`,
       });
-      if (delivered) return;
-      if (env.NODE_ENV === "production") {
-        console.warn(
-          `[auth] password reset requested for ${user?.email ?? "unknown"} — no email was delivered. Set BREVO_API_KEY and MAIL_FROM, and keep the email integration on, or self-service resets stay broken.`,
-        );
-        return;
-      }
-      console.log(`[auth] password reset link for ${user?.email}: ${url}`);
+      if (!delivered) console.warn("[auth] Password reset email was not delivered.");
     },
+  },
+  verification: {
+    storeIdentifier: { default: "plain", overrides: { "reset-password:": "hashed" } },
   },
   emailVerification: {
     beforeEmailVerification: async (user): Promise<void> => {
@@ -217,6 +234,10 @@ export const auth = betterAuth({
           });
         }
       }
+      const passwordField = PASSWORD_FIELDS[ctx.path];
+      if (passwordField && !newPasswordSchema.safeParse(ctx.body?.[passwordField]).success) {
+        throw new APIError("BAD_REQUEST", { message: PASSWORD_REQUIREMENTS });
+      }
       await requireTurnstile(ctx as never);
       if (ctx.path === "/sign-up/email" && ctx.request) {
         throw new APIError("BAD_REQUEST", {
@@ -281,3 +302,49 @@ export const auth = betterAuth({
     },
   },
 });
+
+export async function inviteAccount(name: string, email: string): Promise<string> {
+  const unavailable = () => new ApiError("SERVICE_UNAVAILABLE", {
+    message: "The invitation could not be sent. Check the Email delivery integration and try again.",
+  });
+  if (!integrationConfigured("email") || !(await integrationEnabled("email")))
+    throw unavailable();
+
+  const { internalAdapter } = await auth.$context;
+  const duplicate = () => new ApiError("CONFLICT", {
+    message: "An account with that email already exists.",
+  });
+  if (await internalAdapter.findUserByEmail(email)) throw duplicate();
+
+  const token = randomBytes(32).toString("base64url");
+  const url = passwordLink(token);
+  const identifier = `reset-password:${token}`;
+  let user: Awaited<ReturnType<typeof internalAdapter.createUser>>;
+  try {
+    user = await internalAdapter.createUser({ name, email, emailVerified: false });
+  } catch (error) {
+    if ((error as { code?: unknown } | null)?.code === 11000) throw duplicate();
+    throw error;
+  }
+
+  try {
+    await internalAdapter.createVerificationValue({
+      identifier,
+      value: user.id,
+      expiresAt: new Date(Date.now() + PASSWORD_LINK_EXPIRY_SECONDS * 1000),
+    });
+    if (!(await sendMail({
+      to: user.email,
+      subject: "Your ERPSYS account invitation",
+      text: `You’ve been invited to ERPSYS. Choose your password with this one-time link. It expires in one hour.\n\n${url}\n\nIf you were not expecting this email, ignore it.`,
+    }))) throw unavailable();
+    return user.id;
+  } catch (error) {
+    try {
+      await internalAdapter.deleteVerificationByIdentifier(identifier);
+    } finally {
+      await internalAdapter.deleteUser(user.id);
+    }
+    throw error;
+  }
+}

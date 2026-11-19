@@ -9,10 +9,12 @@ import { fakeDb, type Row } from "../helpers/fakeDb.js";
 const holder = vi.hoisted(() => ({
   session: null as unknown,
   db: null as unknown,
+  inviteAccount: vi.fn(async (_name: string, _email: string) => "invited-id"),
 }));
 
 vi.mock("../../src/config/auth.js", () => ({
   auth: { api: { getSession: async () => holder.session } },
+  inviteAccount: holder.inviteAccount,
 }));
 vi.mock("../../src/lib/db/db.js", async (importOriginal) => {
   const actual =
@@ -105,7 +107,8 @@ function seed(): Record<string, Row[]> {
       { _id: "dept-1", name: "College of Technologies", isActive: true },
     ],
     [COLLECTIONS.adminActionLog]: [],
-    [COLLECTIONS.session]: [],
+    [COLLECTIONS.session]: [{ _id: "sess1", userId: "stu1" }],
+    [COLLECTIONS.adminStepUp]: [{ _id: "admin1", unlockedUntil: new Date(Date.now() + 60_000) }],
     [COLLECTIONS.account]: [],
     [COLLECTIONS.notification]: [],
     [COLLECTIONS.chatbotKnowledge]: [],
@@ -143,6 +146,7 @@ let server: { url: string; close: () => Promise<void> };
 
 beforeEach(async () => {
   holder.session = ADMIN;
+  holder.inviteAccount.mockClear();
   context = fakeDb(seed());
   holder.db = context.db;
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -170,6 +174,42 @@ describe("GET /api/v1/users", () => {
   it("filters by year level", async () => {
     const body = await (await call("/users?yearLevel=SECOND")).json();
     expect(body.data.map((u: Row) => u.id)).toEqual(["off1"]);
+  });
+});
+
+describe("admin account management", () => {
+  const post = (path: string, body: object = {}) => call(path, { method: "POST", body: JSON.stringify(body) });
+
+  it("validates and normalizes invitation input without sending mail", async () => {
+    expect((await post("/users/invite", { name: " ", email: "invalid" })).status).toBe(400);
+    expect((await post("/users/invite", { name: " Example ", email: " Example@Example.com " })).status).toBe(201);
+    expect(holder.inviteAccount).toHaveBeenCalledExactlyOnceWith("Example", "example@example.com");
+    expect(context.store[COLLECTIONS.adminActionLog]).toHaveLength(1);
+  });
+
+  it("denies invite and promotion to non-admins", async () => {
+    holder.session = { user: { ...ADMIN.user, role: "STUDENT" } };
+    expect((await post("/users/invite", { name: "Example", email: "example@example.com" })).status).toBe(403);
+    expect((await post("/users/stu1/promote-admin")).status).toBe(403);
+    expect(holder.inviteAccount).not.toHaveBeenCalled();
+  });
+
+  it("requires step-up and verified email, then promotes and signs out the account", async () => {
+    const lock = context.store[COLLECTIONS.adminStepUp][0];
+    lock.unlockedUntil = new Date(0);
+    expect((await post("/users/stu1/promote-admin")).status).toBe(403);
+    lock.unlockedUntil = new Date(Date.now() + 60_000);
+    expect((await post("/users/stu1/promote-admin")).status).toBe(409);
+    const student = context.store[COLLECTIONS.user][1];
+    student.emailVerified = true;
+    student.blockedAt = new Date();
+    expect((await post("/users/stu1/promote-admin")).status).toBe(409);
+    student.blockedAt = null;
+    const promoted = await post("/users/stu1/promote-admin");
+    expect(promoted.status).toBe(200);
+    expect((await promoted.json()).data).toEqual({ userId: "stu1", role: "ADMIN" });
+    expect(context.store[COLLECTIONS.session]).toHaveLength(0);
+    expect(context.store[COLLECTIONS.adminActionLog]).toHaveLength(1);
   });
 });
 
@@ -229,7 +269,7 @@ describe("delete and password", () => {
   it("refuses a self password reset", async () => {
     const response = await call("/users/admin1/password-reset", {
       method: "POST",
-      body: JSON.stringify({ newPassword: "longenough" }),
+      body: JSON.stringify({ newPassword: "Long-enough-password" }),
     });
     expect(response.status).toBe(403);
   });
@@ -237,7 +277,7 @@ describe("delete and password", () => {
   it("refuses a password reset for a non-student", async () => {
     const response = await call("/users/off1/password-reset", {
       method: "POST",
-      body: JSON.stringify({ newPassword: "longenough" }),
+      body: JSON.stringify({ newPassword: "Long-enough-password" }),
     });
     expect(response.status).toBe(403);
   });
