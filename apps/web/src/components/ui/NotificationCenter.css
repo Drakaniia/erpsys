@@ -1,0 +1,57 @@
+.notif-panel {
+  opacity: 0;
+  transform: translateY(4px) scale(0.98);
+  transition:
+    opacity 160ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+.notif-panel.is-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* badge pop */
+.notif-badge {
+  animation: badge-pop 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes badge-pop {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Reduced motion: fade, no scale */
+@media (prefers-reduced-motion: reduce) {
+  .notif-panel {
+    transform: none !important;
+    transition: opacity 160ms ease !important;
+  }
+  .notif-panel.is-open {
+    transform: none !important;
+  }
+  .notif-badge {
+    animation: badge-fade 160ms ease both !important;
+  }
+}
+@keyframes badge-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Reduced transparency — solid surface */
+@media (prefers-reduced-transparency: reduce) {
+  .notif-panel {
+    background: var(--color-surface-raised) !important;
+    backdrop-filter: none !important;
+  }
+}

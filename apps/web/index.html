@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      href="/favicon.ico"
+      sizes="16x16 24x24 32x32 48x48 64x64"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1e3a5f" />
+    <meta
+      name="description"
+      content="COT-SBO Enrollment Requirements Processing System — track your six-step enrollment stamps and queue status."
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "ERPSYS",
+        "description": "COT-SBO Enrollment Requirements Processing System — track your six-step enrollment stamps and queue status.",
+        "url": "https://erpsys.buksu.edu.ph",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "PHP" },
+        "provider": { "@type": "Organization", "name": "COT-SBO, BukSU" }
+      }
+    </script>
+    <title>ERPSYS</title>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Boot placeholder: replaced by createRoot. Keeps the first paint from
+           being blank while the entry chunk parses. -->
+      <div
+        role="status"
+        aria-live="polite"
+        style="
+          display: flex;
+          min-height: 100dvh;
+          width: 100%;
+          align-items: center;
+          justify-content: center;
+        "
+      >
+        <span
+          aria-hidden="true"
+          style="
+            width: 28px;
+            height: 28px;
+            border-radius: 9999px;
+            border: 3px solid rgba(30, 58, 95, 0.18);
+            border-top-color: #1e3a5f;
+            animation: erpsys-boot-spin 0.9s linear infinite;
+          "
+        ></span>
+        <span
+          style="
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+          "
+          >Loading</span
+        >
+      </div>
+      <style>
+        @keyframes erpsys-boot-spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          #app > div > span:first-child {
+            animation: none;
+          }
+        }
+      </style>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

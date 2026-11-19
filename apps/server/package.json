@@ -1,0 +1,36 @@
+{
+  "name": "@erpsys/server",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "24.x" },
+  "scripts": {
+    "admin:reset-2fa": "tsx src/scripts/reset-admin-2fa.ts",
+    "build": "tsc",
+    "backfill:timestamps": "tsx src/scripts/backfill-timestamps.ts",
+    "db:simplify": "tsx src/scripts/simplify-collections.ts",
+    "cf:whoami": "wrangler whoami",
+    "check": "tsc --noEmit && tsc -p tsconfig.test.json",
+    "dev": "tsx watch src/index.ts",
+    "preview": "node dist/scripts/preview.js",
+    "r2:info": "tsx src/scripts/r2-setup.ts --info",
+    "r2:setup": "tsx src/scripts/r2-setup.ts",
+    "r2:verify": "tsx src/scripts/r2-setup.ts --verify",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.879.0",
+    "@aws-sdk/s3-request-presigner": "^3.879.0",
+    "better-auth": "1.6.27",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "mongodb": "^7.8.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "latest",
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "wrangler": "4.149.0"
+  }
+}

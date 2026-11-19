@@ -1,0 +1,11 @@
+{
+  "description": "The reasoning fields gpt-oss models emit, in every shape seen so far. None of these may ever surface as a token — `readChatDeltaContent` deliberately reads `choices[0].delta.content` and nothing else.",
+  "frames": [
+    "data: {\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\"First think about the step order.\"},\"finish_reason\":null}]}",
+    "data: {\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"Then check the queue rules.\"},\"finish_reason\":null}]}",
+    "data: {\"choices\":[{\"index\":0,\"delta\":{\"analysis\":\"Finally pick the shortest answer.\"},\"finish_reason\":null}]}",
+    "data: {\"choices\":[{\"index\":0,\"delta\":{},\"message\":{\"reasoning\":\"message-level reasoning\",\"content\":\"\"},\"finish_reason\":null}]}",
+    "data: {\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\"both at once\",\"content\":\"\"},\"finish_reason\":null}]}",
+    "data: [DONE]"
+  ]
+}
