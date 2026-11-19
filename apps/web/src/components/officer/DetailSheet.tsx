@@ -214,7 +214,7 @@ export default function DetailSheet({
             replyOpen={ds.replyOpen}
             replyBusy={ds.replyMutation.isPending}
             captureBusy={ds.captureMutation.isPending}
-            captureDismissed={ds.captureDismissed}
+            cameraOpen={ds.cameraOpen}
             isVerified={ds.isVerified}
             busyAny={ds.busyAny}
             sendBackLabel={ds.sendBackLabel}
@@ -222,8 +222,8 @@ export default function DetailSheet({
             onclose={() => onclose()}
             onopenlightbox={(i) => ds.setLightboxIndex(i)}
             oncapturesave={ds.handleCaptureSave}
-            oncapturecancel={() => ds.setCaptureDismissed(true)}
-            onshowcamera={() => ds.setCaptureDismissed(false)}
+            oncapturecancel={() => ds.setCameraOpen(false)}
+            onshowcamera={() => ds.setCameraOpen(true)}
             onreplyclose={() => ds.setReplyOpen(false)}
             onreplysend={ds.handleReply}
             onstamp={() => ds.setStampOpen(true)}

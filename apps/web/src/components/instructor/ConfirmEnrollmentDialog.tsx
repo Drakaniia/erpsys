@@ -66,6 +66,7 @@ export default function ConfirmEnrollmentDialog({
       >
         <h2
           id="confirm-enroll-title"
+          data-onboarding-tip={open ? "enrollment" : undefined}
           className="text-base font-semibold text-ink"
         >
           Confirm enrollment

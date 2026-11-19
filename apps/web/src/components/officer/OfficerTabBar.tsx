@@ -94,6 +94,7 @@ export default function OfficerTabBar({
                   type="button"
                   role="tab"
                   id={`officer-tab-${tab.id}`}
+                  data-onboarding-tip={tab.id === "overview" ? "step-tabs" : undefined}
                   aria-selected={selected}
                   aria-controls={`officer-tabpanel-${tab.id}`}
                   tabIndex={selected ? 0 : -1}

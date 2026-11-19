@@ -14,7 +14,7 @@ export default function DetailSheetMain({
   replyOpen,
   replyBusy,
   captureBusy,
-  captureDismissed,
+  cameraOpen,
   isVerified,
   busyAny,
   sendBackLabel,
@@ -56,7 +56,7 @@ export default function DetailSheetMain({
   replyOpen: boolean;
   replyBusy: boolean;
   captureBusy: boolean;
-  captureDismissed: boolean;
+  cameraOpen: boolean;
   isVerified: boolean;
   busyAny: boolean;
   sendBackLabel: string;
@@ -97,7 +97,7 @@ export default function DetailSheetMain({
         replyOpen={replyOpen}
         replyBusy={replyBusy}
         captureBusy={captureBusy}
-        captureDismissed={captureDismissed}
+        cameraOpen={cameraOpen}
         onclose={onclose}
         onopenlightbox={onopenlightbox}
         oncapturesave={oncapturesave}

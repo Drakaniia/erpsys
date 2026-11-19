@@ -132,7 +132,15 @@ export default function WebcamCapture({
               </>
             )}
           </div>
-          <div className="flex items-center justify-end gap-2 p-3">
+          <div className="flex flex-wrap items-center justify-end gap-2 p-3">
+            <button
+              type="button"
+              className="press mr-auto rounded-lg px-3 py-1.5 text-sm text-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
+              onClick={oncancel}
+              disabled={busy}
+            >
+              Close camera
+            </button>
             {captured ? (
               <>
                 <button

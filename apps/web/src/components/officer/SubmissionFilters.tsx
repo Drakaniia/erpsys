@@ -101,6 +101,7 @@ export default function SubmissionFilters({
           onChange={(e) => onSearchInput(e.currentTarget.value)}
           placeholder="Search by name or student number"
           aria-label="Search submissions"
+          data-onboarding-tip="submissions"
           className="h-8 w-full rounded-md border border-border bg-surface pl-8 pr-2 text-sm text-ink placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         />
       </div>

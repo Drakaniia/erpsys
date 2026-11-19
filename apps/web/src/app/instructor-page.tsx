@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import ConsoleOnboarding, { OnboardingHelp } from "../components/ui/ConsoleOnboarding";
+import { INSTRUCTOR_TIPS } from "$lib/instructor/onboarding";
 import { shortcutBlocked } from "$lib/ui/shortcut-guard";
 import CalendarBanner from "../components/instructor/CalendarBanner";
 import DepartmentManager from "../components/instructor/DepartmentManager";
@@ -21,7 +23,6 @@ import { getInstructorShortcutAction } from "$lib/instructor/shortcuts";
 import { REPORTS_TAB_ID } from "$lib/instructor/reports";
 import type { EnrolledEntry } from "$lib/instructor/types";
 
-const GUIDE_KEY = "instructor-guide-dismissed-v1";
 
 const SHORTCUTS = [
   { action: "Students tab", keys: ["0"] },
@@ -45,58 +46,6 @@ export function InstructorPage() {
   const s = useInstructorState();
   const incomingTransferRequest = s.incomingTransferRequests[0] ?? null;
 
-  const [guideAutoChecked, setGuideAutoChecked] = useState(false);
-
-  useEffect(() => {
-    if (guideAutoChecked) return;
-    if (guard.isPending) return;
-    if (guard.isRedirecting) return;
-    if (user?.role !== "ENROLLMENT_ADVISER" && user?.role !== "ADMIN") return;
-    if (s.queue.guideOpen) return;
-    if (
-      s.queue.serveEntry ||
-      s.queue.closeConfirmOpen ||
-      s.queue.removeConfirmOpen ||
-      s.enrolled.revertEntry ||
-      s.enrolled.bulkConfirmOpen ||
-      s.queue.stillThereOpen
-    )
-      return;
-    if (s.queue.showValidateDialog) return;
-    let dismissed = false;
-    try {
-      dismissed = localStorage.getItem(GUIDE_KEY) === "1";
-    } catch {
-      /* storage unavailable */
-    }
-    setGuideAutoChecked(true);
-    if (dismissed) return;
-    requestAnimationFrame(() => s.queue.setGuideOpen(true));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    guard.isPending,
-    guard.isRedirecting,
-    user?.role,
-    s.queue.guideOpen,
-    s.queue.serveEntry,
-    s.queue.closeConfirmOpen,
-    s.queue.removeConfirmOpen,
-    s.enrolled.revertEntry,
-    s.enrolled.bulkConfirmOpen,
-    s.queue.stillThereOpen,
-    s.queue.showValidateDialog,
-  ]);
-
-  function handleGuideClose(persist: boolean) {
-    s.queue.setGuideOpen(false);
-    if (persist) {
-      try {
-        localStorage.setItem(GUIDE_KEY, "1");
-      } catch {
-        /* storage unavailable */
-      }
-    }
-  }
 
   const enrolledEntries: EnrolledEntry[] =
     (s.enrolled.enrolledQuery.data as { data?: EnrolledEntry[] } | undefined)
@@ -128,7 +77,7 @@ export function InstructorPage() {
       );
       const action = getInstructorShortcutAction(e.key, {
         isTyping,
-        guideOpen: s.queue.guideOpen,
+
         hasDialog,
         activeView: s.activeView,
         canServeFirst: s.queue.canServeFirst,
@@ -159,10 +108,7 @@ export function InstructorPage() {
       }
     }
     window.addEventListener("keydown", onKeydown);
-    function onOpenGuide() {
-      s.queue.openGuide(1);
-    }
-    window.addEventListener("instructor:open-guide", onOpenGuide);
+
     const onActivity = () => s.queue.noteActivity();
     window.addEventListener("pointerdown", onActivity);
     window.addEventListener("keydown", onActivity);
@@ -188,7 +134,7 @@ export function InstructorPage() {
     }, 30_000);
     return () => {
       window.removeEventListener("keydown", onKeydown);
-      window.removeEventListener("instructor:open-guide", onOpenGuide);
+
       window.removeEventListener("pointerdown", onActivity);
       window.removeEventListener("keydown", onActivity);
       window.removeEventListener("focus", onActivity);
@@ -205,7 +151,7 @@ export function InstructorPage() {
     s.enrolled.bulkConfirmOpen,
     s.queue.showValidateDialog,
     s.queue.stillThereOpen,
-    s.queue.guideOpen,
+
     s.queue.shortcutsOpen,
     s.activeView,
     s.queue.canServeFirst,
@@ -223,7 +169,7 @@ export function InstructorPage() {
       : s.activeDeptId;
 
   return (
-    <div className="flex h-full flex-col">
+    <ConsoleOnboarding key={myAdviserId} surface="instructor" accountId={myAdviserId} tips={INSTRUCTOR_TIPS}>
       <InstructorTabBar
         departments={s.queue.departments}
         activeId={activeId}
@@ -235,7 +181,10 @@ export function InstructorPage() {
       />
       <header className="mx-auto flex w-full max-w-[1200px] items-center justify-between gap-4 px-6 pb-2 pt-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">
+          <h1
+            className="text-xl font-semibold tracking-tight"
+            data-onboarding-tip={s.reportsSelected && s.queue.hasActiveYear ? "reports" : undefined}
+          >
             {s.reportsSelected
               ? "Reports"
               : s.studentsSelected
@@ -282,25 +231,7 @@ export function InstructorPage() {
               <circle cx="12" cy="12" r="9" />
             </svg>
           </button>
-          <button
-            className="text-muted transition-[transform,color] duration-100 ease-out hover:text-ink active:scale-[0.97]"
-            data-guide-trigger
-            aria-label="Show guide"
-            aria-expanded={s.queue.guideOpen}
-            onClick={() => s.queue.openGuide(1)}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              aria-hidden="true"
-            >
-              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-            </svg>
-          </button>
+          <OnboardingHelp />
           <ShortcutsPopover
             open={s.queue.shortcutsOpen}
             onclose={() => s.queue.setShortcutsOpen(false)}
@@ -444,6 +375,7 @@ export function InstructorPage() {
                 type="button"
                 role="tab"
                 aria-selected={s.activeView === "enrolled"}
+                data-onboarding-tip="enrolled-tab"
                 onClick={() => s.selectView("enrolled")}
                 className={`rounded-lg px-3 py-1 text-sm transition-colors ${s.activeView === "enrolled" ? "bg-surface-raised font-medium text-ink shadow-sm" : "text-muted hover:text-ink"}`}
               >
@@ -533,8 +465,7 @@ export function InstructorPage() {
       <InstructorDialogs
         s={s}
         incomingTransferRequest={incomingTransferRequest}
-        onGuideClose={handleGuideClose}
       />
-    </div>
+    </ConsoleOnboarding>
   );
 }

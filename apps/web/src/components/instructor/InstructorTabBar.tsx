@@ -184,6 +184,7 @@ export default function InstructorTabBar({
                 type="button"
                 role="tab"
                 id={`instructor-tab-${tab.id}`}
+                data-onboarding-tip="departments"
                 aria-selected={selected}
                 aria-controls={`instructor-tabpanel-${tab.id}`}
                 tabIndex={selected ? 0 : -1}

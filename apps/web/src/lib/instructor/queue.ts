@@ -6,7 +6,7 @@ import { LAUNCH_STALE_MS } from "$lib/perf/cache-policy";
 import { intervalWhileVisible } from "$lib/polling";
 import type { DepartmentQueue, QueueEntry } from "$lib/instructor/types";
 import { type Toast } from "./queue/constants";
-import { useGuideTour } from "./queue/use-guide-tour";
+
 import { useIdleHeartbeat } from "./queue/use-idle-heartbeat";
 import { useRemoveFlow } from "./queue/use-remove-flow";
 import { useAutoCloseNotices } from "./queue/use-auto-close-notices";
@@ -137,7 +137,7 @@ export function useQueueState(getActiveDeptId: () => string, toast: Toast) {
   }, [closeTarget, activeDept?.id]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const guideTour = useGuideTour();
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const idle = useIdleHeartbeat({
     anyDeptOpen: () => departments.some((d) => d.myOpen),
     sendHeartbeat: async () => {
@@ -386,7 +386,8 @@ export function useQueueState(getActiveDeptId: () => string, toast: Toast) {
     closeConfirmOpen,
     setCloseConfirmOpen,
     ...removeFlow,
-    ...guideTour,
+    shortcutsOpen,
+    setShortcutsOpen,
     selectedId,
     setSelectedId,
     ...idle,

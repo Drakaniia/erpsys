@@ -1,7 +1,7 @@
 import ConfirmDialog from "../components/ConfirmDialog";
 
 import ConfirmEnrollmentDialog from "../components/instructor/ConfirmEnrollmentDialog";
-import InstructorGuideDialog from "../components/instructor/InstructorGuideDialog";
+
 import RevertConfirmDialog from "../components/instructor/RevertConfirmDialog";
 import StillThereDialog from "../components/instructor/StillThereDialog";
 import TransferRequestDialog from "../components/instructor/TransferRequestDialog";
@@ -21,11 +21,11 @@ type Transfer = {
 export default function InstructorDialogs({
   s,
   incomingTransferRequest,
-  onGuideClose,
+
 }: {
   s: S;
   incomingTransferRequest: Transfer;
-  onGuideClose: (persist: boolean) => void;
+
 }) {
   return (
     <>
@@ -118,14 +118,7 @@ export default function InstructorDialogs({
         onhere={s.queue.answerStillThere}
         onclosequeue={s.queue.closeAllQueues}
       />
-      <InstructorGuideDialog
-        open={s.queue.guideOpen}
-        step={s.queue.guideStep}
-        dontShow={s.queue.guideDontShow}
-        onStepChange={(n) => s.queue.setGuideStep(n)}
-        onDontShowChange={(v) => s.queue.setGuideDontShow(v)}
-        onclose={onGuideClose}
-      />
+
     </>
   );
 }
