@@ -224,7 +224,7 @@ async function probeCloudflareChat(
   let response: Response;
   try {
     response = await send(
-      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/models`,
+      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/models/search`,
       {
         method: "GET",
         headers: {

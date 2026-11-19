@@ -142,11 +142,21 @@ describe("r2", () => {
 describe("cloudflareChat", () => {
   const values = { CLOUDFLARE_ACCOUNT_ID: "acct", CLOUDFLARE_API_TOKEN: "tok" };
 
-  it("accepts success:true", async () => {
-    stubFetch(json(200, { success: true }));
+  it("checks credentials against the Workers AI model-search endpoint", async () => {
+    const mock = stubFetch(json(200, { success: true, result: [] }));
     await expect(probeCredentials("cloudflareChat", values)).resolves.toEqual({
       ok: true,
     });
+    expect(mock).toHaveBeenCalledExactlyOnceWith(
+      "https://api.cloudflare.com/client/v4/accounts/acct/ai/models/search",
+      expect.objectContaining({
+        method: "GET",
+        headers: {
+          authorization: "Bearer tok",
+          "content-type": "application/json",
+        },
+      }),
+    );
   });
 
   it("rejects a token and a missing account separately", async () => {
