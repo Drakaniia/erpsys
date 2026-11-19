@@ -37,8 +37,8 @@ const replyBody = z.object({
 /**
  * `GET /api/v1/submissions`
  * Access: session + officer surface.
- * Use: review queue (query `step?`, `page`, `pageSize`, `sort`, `dir`, `q`,
- * `status`, `evidence`, `range`).
+ * Use: pending review queue (query `step?`, `page`, `pageSize`, `sort`, `dir`,
+ * `q`, `evidence`, `range`).
  * Returns: `{ data, page, pageSize, total }`.
  */
 submissionsRouter.get(

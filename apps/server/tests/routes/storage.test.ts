@@ -191,6 +191,24 @@ describe("storage session", () => {
 });
 
 describe("proof upload and submission timestamps", () => {
+  it("attaches only finalized payment proof when applying for assessment", async () => {
+    const mintProof = () => mint({ route: "evidenceImage", stepCode: "ASSESSMENT", mime: "image/jpeg", size: 1000 });
+    const session = await mintProof();
+    expect(session.status).toBe(201);
+    const { data: { uploadId } } = await session.json();
+    expect((await mintProof()).status).toBe(201);
+    const completed = await call("/storage/complete", {
+      method: "POST", body: JSON.stringify({ uploadId }),
+    });
+    expect(completed.status).toBe(200);
+    expect(context.store[COLLECTIONS.stepVerification]).toHaveLength(0);
+    const applied = await call("/me/assessment", { method: "POST", body: "{}" });
+    expect(applied.status).toBe(200);
+    expect(context.store[COLLECTIONS.stepVerification]).toMatchObject([
+      { status: "PENDING", evidence: { uploadIds: [uploadId] }, evidenceCount: 1 },
+    ]);
+  });
+
   it("uses a fresh transaction to review proof uploaded after the sheet opened", async () => {
     const sheetTs = nextTs();
     const session = await mint({

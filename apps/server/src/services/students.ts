@@ -92,7 +92,9 @@ function stepRow(
   const kind = KIND_FOR_STEP[step.code];
   const drafts = [
     ...ctx.draftUploads
-      .filter((u) => kind && u.kind === kind)
+      .filter((u) => kind && u.kind === kind &&
+        (step.code !== "ASSESSMENT" || u.r2Status === "complete"),
+      )
       .map((u) => draftEvidence(u, ctx.now)),
     ...ctx.draftUploads
       .filter(
@@ -132,7 +134,7 @@ function stepRow(
     chip: chipForStatus(status),
     appliedAt: iso(verification?.appliedAt),
     evidence:
-      !verification || verification.status === "RETURNED"
+      !verification || status === "RETURNED" || status === "PENDING"
         ? [...referenced, ...drafts]
         : referenced,
     requirements: requirements.length > 0 ? requirements : null,

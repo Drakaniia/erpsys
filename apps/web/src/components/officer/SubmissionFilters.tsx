@@ -1,17 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import FilterDropdown from "../ui/FilterDropdown";
 
-type Status = "ALL" | "PENDING" | "SUBMITTED" | "VERIFIED" | "RETURNED";
+
 type Evidence = "ALL" | "HAS" | "NONE";
 type Range = "ALL" | "today" | "7d" | "30d" | "year";
 
-const statusOptions = [
-  { value: "ALL", label: "All statuses" },
-  { value: "PENDING", label: "Pending" },
-  { value: "SUBMITTED", label: "Submitted" },
-  { value: "RETURNED", label: "Returned" },
-  { value: "VERIFIED", label: "Verified" },
-] as const;
 
 const evidenceOptions = [
   { value: "ALL", label: "Any evidence" },
@@ -29,25 +22,25 @@ const rangeOptions = [
 
 export default function SubmissionFilters({
   q = "",
-  status = "ALL",
+
   evidence = "ALL",
   range = "ALL",
   unreadOnly = false,
   showEvidence = true,
   onqchange,
-  onstatuschange,
+
   onevidencechange,
   onrangechange,
   onunreadtoggle,
 }: {
   q?: string;
-  status?: Status;
+
   evidence?: Evidence;
   range?: Range;
   unreadOnly?: boolean;
   showEvidence?: boolean;
   onqchange: (q: string) => void;
-  onstatuschange: (s: Status) => void;
+
   onevidencechange: (e: Evidence) => void;
   onrangechange: (r: Range) => void;
   onunreadtoggle: () => void;
@@ -105,12 +98,7 @@ export default function SubmissionFilters({
           className="h-8 w-full rounded-md border border-border bg-surface pl-8 pr-2 text-sm text-ink placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         />
       </div>
-      <FilterDropdown
-        value={status}
-        options={[...statusOptions]}
-        ariaLabel="Filter by status"
-        onchange={(v) => onstatuschange(v as Status)}
-      />
+
       {showEvidence && (
         <FilterDropdown
           value={evidence}

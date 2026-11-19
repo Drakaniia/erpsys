@@ -241,7 +241,7 @@ describe("launch", () => {
     const { data } = (await launch()).data;
     expect(data.getOverview.hasActiveYear).toBe(true);
     expect(data.getBell).toMatchObject({ total: 1 });
-    expect(data.getBell.data[0]).toMatchObject({ status: "PENDING" });
+    expect(data.getBell.data[0]).toMatchObject({ status: "SUBMITTED" });
     expect(data.getProfilingForm).toBeNull();
     expect(data.listSocialMediaLinks).toEqual({
       data: [],

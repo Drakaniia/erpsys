@@ -2,6 +2,7 @@ import { z } from "zod";
 import { UPLOAD_STEP_CODES } from "./constants.js";
 
 export const KIND_FOR_STEP: Record<string, string> = {
+  ASSESSMENT: "PAYMENT_PROOF",
   SOCIAL_MEDIA: "SOCIAL_SCREENSHOT",
   PROFILING: "PROFILING_SCREENSHOT",
   MUGSHOT: "MUGSHOT",

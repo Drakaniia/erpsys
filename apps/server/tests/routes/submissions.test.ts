@@ -220,12 +220,12 @@ describe("submission review", () => {
     const response = await call("/submissions");
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body).toMatchObject({ page: 1, pageSize: 50, total: 2 });
+    expect(body).toMatchObject({ page: 1, pageSize: 50, total: 1 });
     expect(
       body.data
         .map((row: { verificationId: string }) => row.verificationId)
         .sort(),
-    ).toEqual(["ver-1", "ver-2"]);
+    ).toEqual(["ver-1"]);
     expect(body.data[0]).toMatchObject({
       stepCode: "MUGSHOT",
       stepName: "Mugshot",
@@ -235,16 +235,51 @@ describe("submission review", () => {
     });
   });
 
-  it("filters by status and by student number", async () => {
-    const verified = await (await call("/submissions?status=VERIFIED")).json();
-    expect(
-      verified.data.map(
-        (row: { verificationId: string }) => row.verificationId,
-      ),
-    ).toEqual(["ver-2"]);
+  it("keeps returned and verified rows out even with a legacy status query", async () => {
+    await call("/submissions/ver-1/replies", {
+      method: "POST",
+      body: JSON.stringify({ chips: ["Retake it"] }),
+    });
+    const queue = await (await call("/submissions?status=RETURNED")).json();
+    expect(queue).toMatchObject({ total: 0, data: [] });
+  });
+
+  it("filters by student number", async () => {
 
     const noMatch = await (await call("/submissions?q=99999")).json();
     expect(noMatch.data).toEqual([]);
+  });
+
+  it("lists a revoked assessment again only after the student reapplies", async () => {
+    context.store[COLLECTIONS.step].push({
+      _id: "step-ASSESSMENT", code: "ASSESSMENT", name: "Assessment", order: 1,
+    });
+    const row = verification("ver-2");
+    row.stepId = "step-ASSESSMENT";
+    row.appliedAt = new Date("2025-07-01");
+    expect((await call("/submissions/ver-2/verification", { method: "DELETE" })).status).toBe(200);
+    const queue = () => call("/submissions?step=ASSESSMENT").then((response) => response.json());
+    expect(await queue()).toMatchObject({ total: 0, data: [] });
+    holder.session = { user: { id: "stud1", email: "12345@student.buksu.edu.ph", role: "STUDENT" } };
+    const applied = await call("/me/assessment", { method: "POST", body: "{}" });
+    expect(applied.status).toBe(200);
+    holder.session = OFFICER;
+    expect(await queue()).toMatchObject({
+      total: 1, data: [{ verificationId: "ver-2", status: "PENDING", evidence: [] }],
+    });
+    expect(verification("ver-2").appliedAt).not.toEqual(new Date("2025-07-01"));
+  });
+
+  it("identifies an imported Google Forms response without exposing its answers in the list", async () => {
+    context.store[COLLECTIONS.step].push({
+      _id: "step-PROFILING", code: "PROFILING", name: "Profiling", order: 3,
+    });
+    const row = verification();
+    row.stepId = "step-PROFILING";
+    row.answers = [];
+    const { data } = await (await call("/submissions?step=PROFILING")).json();
+    expect(data[0]).toMatchObject({ hasGoogleFormsResponse: true, evidence: [] });
+    expect(data[0]).not.toHaveProperty("answers");
   });
 
   it("re-sorts the page by student name", async () => {

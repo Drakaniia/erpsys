@@ -5,7 +5,9 @@ import {
   STEP_CODES,
   STUDENT_NUMBER_PATTERN,
 } from "../../config/constants.js";
+import { isDraftExpired } from "../../config/evidence.js";
 import { ApiError } from "../../config/errors.js";
+import { evidenceUploadIds, KIND_FOR_STEP } from "../../config/steps.js";
 import { genId } from "../../lib/db/ids.js";
 import {
   requireSession,
@@ -22,6 +24,7 @@ import { StepModel } from "../../models/StepModel.js";
 import { StepVerificationModel } from "../../models/StepVerificationModel.js";
 import { StudentEnrollmentModel } from "../../models/StudentEnrollmentModel.js";
 import { StudentProfileModel } from "../../models/StudentProfileModel.js";
+import { UploadModel } from "../../models/UploadModel.js";
 import { resolveYear } from "../../services/academic-years.js";
 import {
   listStudents,
@@ -409,7 +412,7 @@ studentsRouter.get(
  * `POST /api/v1/me/assessment`
  * Access: session + student surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
- * Use: apply for assessment.
+ * Use: apply or reapply for assessment with any completed payment proof uploads.
  * Returns: `{ data: assessment }`.
  */
 studentsRouter.post(
@@ -429,22 +432,36 @@ studentsRouter.post(
       academicYearId: String(year._id),
     };
     const existing = await StepVerificationModel.findByStep(key);
+    if (existing?.status === "VERIFIED") {
+      okOne(res, { status: "VERIFIED" });
+      return;
+    }
+    const now = new Date();
+    const retained = new Set(evidenceUploadIds(existing?.evidence));
+    const proofs = await UploadModel.listByProfileAndKind(
+      profile._id,
+      KIND_FOR_STEP.ASSESSMENT,
+    );
+    const uploadIds = proofs
+      .filter((proof) => proof.r2Status === "complete" && Boolean(proof.fileKey) &&
+        (retained.has(String(proof._id)) || !isDraftExpired(proof, now.getTime())),
+      )
+      .map((proof) => String(proof._id));
+    const evidence = { evidence: { uploadIds }, evidenceCount: uploadIds.length };
     if (!existing) {
-      const now = new Date();
       await StepVerificationModel.insert({
+        ...evidence,
         _id: genId("verification"),
         ...key,
         status: "PENDING",
         appliedAt: now,
         createdAt: now,
       });
-    } else if (existing.status === "VERIFIED") {
-      okOne(res, { status: "VERIFIED" });
-      return;
     } else if (!existing.appliedAt || existing.status === "RETURNED") {
       await StepVerificationModel.updateById(existing._id, {
+        ...evidence,
         status: "PENDING",
-        appliedAt: existing.appliedAt ?? new Date(),
+        appliedAt: now,
       });
     }
     okOne(res, { status: "APPLIED" });

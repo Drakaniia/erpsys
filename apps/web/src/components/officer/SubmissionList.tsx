@@ -5,7 +5,7 @@ import Pagination from "../ui/Pagination";
 import SubmissionRow from "./SubmissionRow";
 import type { ListByStepData, ListItem, StepCode } from "$lib/officer/types";
 
-type Status = "ALL" | "PENDING" | "SUBMITTED" | "VERIFIED" | "RETURNED";
+
 type Evidence = "ALL" | "HAS" | "NONE";
 type Range = "ALL" | "today" | "7d" | "30d" | "year";
 
@@ -22,13 +22,13 @@ export default function SubmissionList({
   unreadIds,
   selectedId = null,
   q = "",
-  status = "ALL",
+
   evidence = "ALL",
   range = "ALL",
   unreadOnly = false,
   filterActive = false,
   onqchange,
-  onstatuschange,
+
   onevidencechange,
   onrangechange,
   onunreadtoggle,
@@ -56,13 +56,13 @@ export default function SubmissionList({
   unreadIds: Set<string>;
   selectedId?: string | null;
   q?: string;
-  status?: Status;
+
   evidence?: Evidence;
   range?: Range;
   unreadOnly?: boolean;
   filterActive?: boolean;
   onqchange: (q: string) => void;
-  onstatuschange: (s: Status) => void;
+
   onevidencechange: (e: Evidence) => void;
   onrangechange: (r: Range) => void;
   onunreadtoggle: () => void;
@@ -81,7 +81,7 @@ export default function SubmissionList({
   onnewseend?: () => void;
   onopen: (verificationId: string) => void;
 }) {
-  const showEvidence = step !== "PROFILING";
+
   const totalPages = data
     ? Math.max(1, Math.ceil(data.total / data.pageSize))
     : 1;
@@ -102,7 +102,7 @@ export default function SubmissionList({
         <p className="flex items-center gap-2 text-sm text-muted tabular-nums">
           {data && (
             <>
-              {data.unverifiedCount} unverified · {data.verifiedCount} verified
+              {data.total} pending review
             </>
           )}
           {newCount > 0 && (
@@ -169,13 +169,12 @@ export default function SubmissionList({
 
       <SubmissionFilters
         q={q}
-        status={status}
+
         evidence={evidence}
         range={range}
         unreadOnly={unreadOnly}
-        showEvidence={showEvidence}
+        showEvidence={step !== "PROFILING"}
         onqchange={onqchange}
-        onstatuschange={onstatuschange}
         onevidencechange={onevidencechange}
         onrangechange={onrangechange}
         onunreadtoggle={onunreadtoggle}
@@ -244,9 +243,7 @@ export default function SubmissionList({
                         Submitted {sortIndicator("submittedAt")}
                       </button>
                     </th>
-                    {showEvidence && (
-                      <th className="px-4 py-2.5 font-medium">Evidence</th>
-                    )}
+                    <th className="px-4 py-2.5 font-medium">Evidence</th>
                     <th className="px-4 py-2.5 font-medium">
                       <button
                         onClick={() => toggleSort("status")}
@@ -269,7 +266,7 @@ export default function SubmissionList({
                       view={view}
                       unread={unreadIds.has(item.verificationId)}
                       selected={selectedId === item.verificationId}
-                      showEvidence={showEvidence}
+
                       onselect={onselect}
                       onopen={onopen}
                     />
@@ -286,7 +283,7 @@ export default function SubmissionList({
                   view={view}
                   unread={unreadIds.has(item.verificationId)}
                   selected={selectedId === item.verificationId}
-                  showEvidence={showEvidence}
+
                   onselect={onselect}
                   onopen={onopen}
                 />

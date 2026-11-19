@@ -7,7 +7,7 @@ export default function SubmissionRow({
   view,
   unread,
   selected = false,
-  showEvidence = true,
+
   onopen,
   onselect,
 }: {
@@ -15,7 +15,7 @@ export default function SubmissionRow({
   view: "table" | "cards";
   unread: boolean;
   selected?: boolean;
-  showEvidence?: boolean;
+
   onopen: (verificationId: string) => void;
   onselect?: (id: string) => void;
 }) {
@@ -96,7 +96,10 @@ export default function SubmissionRow({
   }
 
   function thumbs(tile: string, chipTile: string) {
-    if (!showEvidence || item.evidence.length === 0) return null;
+    if (item.hasGoogleFormsResponse) {
+      return <span className="text-xs font-medium text-ink">Google Forms response on file</span>;
+    }
+    if (item.evidence.length === 0) return null;
     return (
       <div className="flex items-center gap-1.5">
         {item.evidence
@@ -170,9 +173,7 @@ export default function SubmissionRow({
             {relativeTime(item.submittedAt)}
           </span>
         </td>
-        {showEvidence && (
-          <td className="px-4">{thumbs("h-14 w-14", "h-14 w-8")}</td>
-        )}
+        <td className="px-4">{thumbs("h-14 w-14", "h-14 w-8")}</td>
         <td className="px-4">{statusChip()}</td>
         <td className="px-4 text-right">
           <button
