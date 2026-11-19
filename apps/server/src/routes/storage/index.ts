@@ -25,7 +25,7 @@ import {
  */
 export const storageRouter = Router();
 
-const sessionBudget = createRateLimitBudget({ windowMs: 60_000, max: 20 });
+const sessionBudget = createRateLimitBudget({ name: "storage-session", windowMs: 60_000, max: 20 });
 
 const sessionBody = z.object({
   route: z.enum(["evidenceImage", "mugshotCapture", "stampImage"]),
@@ -62,7 +62,7 @@ storageRouter.post(
     if (!canEnterSurface(caller.role, storageSurfaceForRoute(input.route))) {
       throw new ApiError("FORBIDDEN", { message: "Forbidden." });
     }
-    const decision = sessionBudget.check(
+    const decision = await sessionBudget.checkAsync(
       `user:${caller.id}|ip:${clientIp(req)}`,
     );
     if (!decision.allowed) {

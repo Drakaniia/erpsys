@@ -2,6 +2,7 @@ import type { RequestHandler } from "express";
 import { ApiError } from "../config/errors.js";
 import {
   beginTransaction,
+  beginSharedTransaction,
   isIssuedTs,
 } from "../lib/db/timestamp-ordering.js";
 
@@ -16,6 +17,10 @@ export const timestampOrdering: RequestHandler = (req, _res, next) => {
   const body = req.body as Record<string, unknown> | undefined;
   const clientTs = body?.ts;
   if (body && "ts" in body) delete body.ts;
+  if (process.env.VERCEL === "1") {
+    void beginSharedTransaction(clientTs as number | undefined, req.method, next).catch(next);
+    return;
+  }
   if (clientTs !== undefined && !isIssuedTs(clientTs)) {
     next(
       new ApiError("BAD_REQUEST", {

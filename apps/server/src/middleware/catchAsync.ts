@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { restartAborted } from "../lib/db/timestamp-ordering.js";
+import { restartSharedAborted } from "../lib/db/timestamp-ordering.js";
 
 type AsyncHandler = (
   req: Request,
@@ -16,11 +16,11 @@ type AsyncHandler = (
 export function catchAsync(handler: AsyncHandler) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const attempt = (n: number): Promise<unknown> =>
-      handler(req, res, next).catch((error: unknown) =>
-        !res.headersSent && restartAborted(error, n)
+      handler(req, res, next).catch(async (error: unknown) =>
+        !res.headersSent && await restartSharedAborted(error, n)
           ? attempt(n + 1)
           : next(error),
       );
-    void attempt(0);
+    void attempt(0).catch(next);
   };
 }
