@@ -249,6 +249,15 @@ export const ROUTES = {
       method: "GET",
       path: "/api/v1/submissions/:verificationId",
     },
+    getActiveEditors: {
+      method: "GET",
+      path: "/api/v1/submissions/:id/active-editors",
+    },
+    renewActiveEditor: {
+      method: "PUT",
+      path: "/api/v1/submissions/:id/active-editors",
+      serverTimestamp: true,
+    },
     verifyStep: {
       method: "POST",
       path: "/api/v1/submissions/:id/verification",

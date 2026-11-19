@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import DetailSheetMain from "./DetailSheetMain";
+import SubmissionActiveEditors from "./SubmissionActiveEditors";
 
 import EvidenceLightbox from "./EvidenceLightbox";
 import Skeleton from "../ui/Skeleton";
@@ -158,6 +159,18 @@ export default function DetailSheet({
         >
           <div className="h-1 w-8 rounded-full bg-border/60"></div>
         </div>
+
+        {verificationId && ds.data && sessionQuery.data?.user.id && (
+          <SubmissionActiveEditors
+            key={`${verificationId}:${sessionQuery.data.user.id}`}
+            id={verificationId}
+            userId={sessionQuery.data.user.id}
+            editing={
+              lastOpenedId.current === verificationId &&
+              (stampOpen || replyOpen || revokeOpen || ds.cameraOpen || ds.busyAny)
+            }
+          />
+        )}
 
         {ds.detailQuery.isPending && !ds.data ? (
           <div className="px-5 py-4" aria-hidden="true">

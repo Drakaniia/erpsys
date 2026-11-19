@@ -1,5 +1,7 @@
 import { COLLECTIONS, getDbSync, idIn } from "../lib/db/db.js";
 
+type ActiveEditor = { userId: string; name: string; expiresAt: Date };
+
 export type StepVerificationRow = {
   _id: string;
   studentProfileId: string;
@@ -20,6 +22,7 @@ export type StepVerificationRow = {
   evidenceCount?: number;
   answers?: { label: string; value: string }[];
   updatedAt?: Date | null;
+  activeEditors?: ActiveEditor[];
 };
 
 type StepKey = {
@@ -236,6 +239,61 @@ export class StepVerificationModel {
     return getDbSync()
       .collection<StepVerificationRow>(COLLECTIONS.stepVerification)
       .findOne(idIn([id]) as never);
+  }
+
+  static async reviewEditors(
+    id: string,
+    academicYearId: string,
+    stepIds: string[],
+    editor?: Pick<ActiveEditor, "userId" | "name">,
+  ): Promise<ActiveEditor[] | null> {
+    const now = new Date();
+    const collection = getDbSync().collection<StepVerificationRow>(
+      COLLECTIONS.stepVerification,
+    );
+    const filter = {
+      ...idIn([id]),
+      academicYearId,
+      stepId: { $in: stepIds },
+    } as never;
+    const projection = { activeEditors: 1, _id: 0 };
+    const row = editor
+      ? await collection.findOneAndUpdate(
+          filter,
+          [
+            {
+              $set: {
+                activeEditors: {
+                  $concatArrays: [
+                    {
+                      $filter: {
+                        input: { $ifNull: ["$activeEditors", []] },
+                        as: "editor",
+                        cond: {
+                          $and: [
+                            { $gt: ["$$editor.expiresAt", now] },
+                            {
+                              $ne: ["$$editor.userId", { $literal: editor.userId }],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                    {
+                      $literal: [
+                        { ...editor, expiresAt: new Date(now.getTime() + 30_000) },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+          { projection, returnDocument: "after" },
+        )
+      : await collection.findOne(filter, { projection });
+    if (!row) return null;
+    return (row.activeEditors ?? []).filter((item) => item.expiresAt > now);
   }
 
   static async upsertSubmission(

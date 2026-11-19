@@ -108,8 +108,7 @@ export async function restartSharedAborted(
 /**
  * Concurrency: timestamp ordering — the TS oracle.
  * Rule: every TS(T) is unique and strictly increasing: `max(last + 1, Date.now())`.
- * Ceiling: an in-process counter, correct for the single systemd process
- * (docs/ops/deployment.md); move it to a Mongo counter before running a second instance.
+ * Rule: the synchronous oracle is scoped to a single server process.
  */
 export function nextTs(): number {
   last = Math.max(last + 1, Date.now());
@@ -153,8 +152,7 @@ export function beginTransaction<T>(
 
 /**
  * Concurrency: timestamp ordering — the current transaction.
- * Returns: T for the running request, or `undefined` outside `/api/v1`
- * (sweeps, scripts, Better Auth), where no rule applies.
+ * Rule: apply timestamp checks only while a request has a transaction.
  */
 export function currentTransaction(): Transaction | undefined {
   return store.getStore();
@@ -180,12 +178,6 @@ export function stampWriterReads(): void {
   if (tx) tx.stampReads = true;
 }
 
-/**
- * Concurrency: timestamp ordering — record timestamps.
- * Rule: every guarded write stamps `updatedAt`, and `createdAt` too on an insert or
- * an upsert that creates the document; Better Auth's four schema collections are
- * left alone. These are wall-clock dates, deliberately not TS values.
- */
 function stampInsert(docs: Row[]): void {
   const at = new Date();
   for (const doc of docs) {
@@ -208,6 +200,10 @@ function stampReplace(doc: Row): Row {
   return { ...doc, createdAt: doc.createdAt ?? at, updatedAt: at };
 }
 
+/**
+ * Concurrency: timestamp ordering — abort.
+ * Abort: `409` `TS_ABORTED` unless the server can restart the transaction.
+ */
 function aborted(tx: Transaction): ApiError {
   return new ApiError("CONFLICT", {
     message: "This record changed since you loaded it. Reload and try again.",
@@ -220,8 +216,7 @@ function aborted(tx: Transaction): ApiError {
  * Rule: an aborted server-anchored T that has not written yet restarts with a new
  * TS, at most `TS_MAX_RESTARTS` times.
  * Abort: a client-anchored T, or one that already wrote, surfaces as `409`
- * `TS_ABORTED`. Ceiling: no multi-document rollback, so writes made before the
- * abort stay; wrap the request in a Mongo transaction if that ever bites.
+ * `TS_ABORTED`; writes already made are not rolled back.
  */
 export function restartAborted(error: unknown, attempt: number): boolean {
   const tx = store.getStore();
@@ -254,17 +249,17 @@ async function readRule(
   if (rows.some((row) => Number(row.writeTs ?? 0) > tx.ts)) throw aborted(tx);
   const ids = rows.map((row) => row._id).filter((id) => id !== undefined);
   if (!tx.stampReads || ids.length === 0) return;
-  await raw.updateMany(
-    { _id: { $in: ids } } as never,
+  const { matchedCount } = await raw.updateMany(
+    { _id: { $in: ids }, writeTs: { $not: { $gt: tx.ts } } } as never,
     { $max: { readTs: tx.ts } } as never,
   );
+  if (matchedCount !== ids.length) throw aborted(tx);
 }
 
 /**
  * Concurrency: timestamp ordering — write rule.
  * Rule: abort when TS(T) < readTs(X) or TS(T) < writeTs(X) for any X the filter matches.
- * Pass: writeTs(X) = TS(T); the write itself re-asserts the rule in its filter, so a
- * racing newer T makes it match nothing instead of overwriting.
+ * Pass: writeTs(X) = TS(T). Non-upserts recheck the rule in the write filter.
  * Abort: `TS_ABORTED`, restarted or `409` per `restartAborted`.
  */
 function writeRule(
@@ -422,9 +417,6 @@ function guardCollection(
  * Rule: every collection handed out by `getDbSync()` applies the read, write and
  * insert rules while a request transaction is running; the collections in
  * `EXEMPT` (Better Auth state, logs, usage counters) are never guarded.
- * Use: the guarded writes also stamp `createdAt` on insert and `updatedAt` on
- * every insert, update and upsert; `STAMP_FREE` holds the Better Auth schema,
- * whose field names that library owns.
  */
 export function guardDb(db: Db): Db {
   return new Proxy(db, {

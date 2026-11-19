@@ -78,9 +78,13 @@ The comment rules are in `AGENTS.md` → "Comments".
 | `TS_ABORTED`      | 13   | Same abort code as the server.                                              |
 | `tsById`          | 17   | Map of record id → the `ts` it was last read at.                            |
 | `rememberTs()`    | 19   | Records the envelope `ts` for every `_id`/`id` in a response.               |
-| `request()` catch | 138  | On `409 TS_ABORTED`: invalidates all queries, shows a toast, rethrows.      |
+| `request()` catch |      | On `409 TS_ABORTED`: shows a toast and rethrows without discarding the draft. |
 | `send()`          | 163  | On PUT/PATCH/DELETE, adds the remembered `ts` for the URL's id to the body. |
 | `send()`          | 199  | Calls `rememberTs()` for every successful JSON response.                    |
+
+## Active review editors
+
+Officer review presence uses a short lease per staff member on the existing verification document. Renewals use one atomic write outside the review transaction. They never authorize a save or advance `readTs` or `writeTs`. Other staff can keep editing, but an old anchored save remains subject to the timestamp rules.
 
 ## Tests
 

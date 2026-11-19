@@ -131,7 +131,55 @@ function unsetPath(row: Row, path: string): void {
   delete target[parts[parts.length - 1]];
 }
 
-function applyUpdate(row: Row, update: Row): void {
+function evaluate(expr: unknown, row: Row, vars: Row = {}): unknown {
+  if (typeof expr === "string" && expr.startsWith("$$")) {
+    const [name, field] = expr.slice(2).split(".");
+    return field ? (vars[name] as Row)?.[field] : vars[name];
+  }
+  if (typeof expr === "string" && expr.startsWith("$")) return row[expr.slice(1)];
+  if (expr === null || typeof expr !== "object" || expr instanceof Date) return expr;
+  if (Array.isArray(expr)) return expr.map((value) => evaluate(value, row, vars));
+  const [[op, arg]] = Object.entries(expr);
+  if (op === "$literal") return arg;
+  const values = () => (arg as unknown[]).map((value) => evaluate(value, row, vars));
+  switch (op) {
+    case "$ifNull": {
+      const [a, b] = values();
+      return a ?? b;
+    }
+    case "$concatArrays":
+      return values().flat();
+    case "$filter": {
+      const { input, as, cond } = arg as { input: unknown; as: string; cond: unknown };
+      return (evaluate(input, row, vars) as unknown[]).filter((value) =>
+        evaluate(cond, row, { ...vars, [as]: value }),
+      );
+    }
+    case "$and":
+      return values().every(Boolean);
+    case "$gt": {
+      const [a, b] = values();
+      return asTime(a) > asTime(b);
+    }
+    case "$ne": {
+      const [a, b] = values();
+      return a !== b;
+    }
+    default:
+      throw new Error(`Unsupported update pipeline expression: ${op}`);
+  }
+}
+
+function applyUpdate(row: Row, update: Row | Row[]): void {
+  if (Array.isArray(update)) {
+    for (const stage of update) {
+      const before = { ...row };
+      for (const [path, expr] of Object.entries(stage.$set as Row)) {
+        setPath(row, path, evaluate(expr, before));
+      }
+    }
+    return;
+  }
   for (const [path, value] of Object.entries((update.$set ?? {}) as Row)) {
     setPath(row, path, value);
   }
@@ -170,7 +218,7 @@ export function fakeDb(seed: Record<string, Row[]>) {
           return row ? { ...row } : null;
         },
         countDocuments: async (filter?: Row) => match(filter).length,
-        findOneAndUpdate: async (filter: Row, update: Row) => {
+        findOneAndUpdate: async (filter: Row, update: Row | Row[]) => {
           const row = match(filter)[0];
           if (!row) return null;
           applyUpdate(row, update);

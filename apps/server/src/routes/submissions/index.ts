@@ -1,5 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
+import { PRE_ENROLLMENT_STEP_CODES } from "../../config/constants.js";
+import { ApiError } from "../../config/errors.js";
+import { outsideTransaction } from "../../lib/db/timestamp-ordering.js";
 import {
   requireSession,
   requireSurface,
@@ -7,6 +10,9 @@ import {
 } from "../../middleware/auth.js";
 import { catchAsync } from "../../middleware/catchAsync.js";
 import { okList, okOne, parseBody, parseQuery } from "../../middleware/http.js";
+import { StepModel } from "../../models/StepModel.js";
+import { StepVerificationModel } from "../../models/StepVerificationModel.js";
+import { activeYearOrThrow } from "../../services/academic-years.js";
 import {
   replyToSubmission,
   revokeSubmission,
@@ -116,4 +122,66 @@ submissionsRouter.post(
       ),
     );
   }),
+);
+
+async function activeSubmissionEditors(
+  id: string,
+  editor?: { userId: string; name: string },
+) {
+  const [year, steps] = await Promise.all([
+    activeYearOrThrow(),
+    StepModel.listByCodes([...PRE_ENROLLMENT_STEP_CODES]),
+  ]);
+  const entries = await StepVerificationModel.reviewEditors(
+    id,
+    String(year._id),
+    steps.map((step) => String(step._id)),
+    editor,
+  );
+  if (!entries) {
+    throw new ApiError("NOT_FOUND", { message: "Reviewable submission not found." });
+  }
+  return entries.map(({ userId, name }) => ({ userId, name }));
+}
+
+/**
+ * `GET /api/v1/submissions/:id/active-editors`
+ * Access: session + officer surface.
+ * Use: list unexpired editors of an active-year review submission without joining them.
+ * Returns: `{ data: [{ userId, name }] }`.
+ */
+submissionsRouter.get(
+  "/submissions/:id/active-editors",
+  officer,
+  catchAsync((req, res) =>
+    outsideTransaction(async () => {
+      res.set("Cache-Control", "no-store");
+      okOne(res, await activeSubmissionEditors(String(req.params.id)));
+    }),
+  ),
+);
+
+/**
+ * `PUT /api/v1/submissions/:id/active-editors`
+ * Access: session + officer surface.
+ * Concurrency: one atomic presence update; does not participate in review timestamp ordering.
+ * Use: renew the session user's 30-second lease on an active-year review submission (no body).
+ * Returns: `{ data: [{ userId, name }] }`.
+ */
+submissionsRouter.put(
+  "/submissions/:id/active-editors",
+  officer,
+  catchAsync((req, res) =>
+    outsideTransaction(async () => {
+      const user = sessionUser(req);
+      res.set("Cache-Control", "no-store");
+      okOne(
+        res,
+        await activeSubmissionEditors(String(req.params.id), {
+          userId: user.id,
+          name: user.name?.trim() || "Staff member",
+        }),
+      );
+    }),
+  ),
 );

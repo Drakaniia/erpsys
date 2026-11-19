@@ -93,6 +93,29 @@ describe("timestamp ordering", () => {
     expect(abortCode(read)).toBe(TS_ABORTED);
   });
 
+  it("aborts when a newer write races the read stamp", async () => {
+    const { db, store } = fakeDb({ things: [{ _id: "x", writeTs: 1 }] });
+    const raw = db.collection("things");
+    const update = raw.updateMany;
+    const ts = nextTs();
+    vi.spyOn(db, "collection").mockImplementation(() => ({
+      ...raw,
+      updateMany: async (...args: Parameters<typeof update>) => {
+        store.things[0].writeTs = ts + 1;
+        return update(...args);
+      },
+    }));
+    const guarded = guardDb(db as unknown as Db);
+    await expect(
+      inTx(ts, "GET", () => {
+        stampWriterReads();
+        return guarded.collection("things").findOne({ _id: "x" } as never);
+      }),
+    ).rejects.toMatchObject({ data: { code: TS_ABORTED } });
+    expect(store.things[0].readTs).toBeUndefined();
+    vi.restoreAllMocks();
+  });
+
   it("stamps reads only for writer surfaces on GET", async () => {
     const { things, stored } = setup();
     await inTx(undefined, "GET", () => things().findOne({ _id: "x" }));

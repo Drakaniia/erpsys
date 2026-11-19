@@ -24,7 +24,9 @@ Every `/api/v1` request is one transaction under basic timestamp ordering (`src/
 - GETs by instructor, officer and admin surfaces stamp `readTs`; student-surface GETs do not.
 - Never guarded: Better Auth state (`session`, `account`, `verification`), `audit_log`, `admin_action_log`, `chat_usage`, `storage_usage`, `admin_step_up`, and everything outside `/api/v1`.
 
-Editing forms retain the timestamp of their original read across background refetches. There is no editor-tracking collection, heartbeat, or presence endpoint. Save conflicts still return `409` / `TS_ABORTED`; rejected saves leave drafts intact.
+Editing forms retain the timestamp of their original read across background refetches. Save conflicts return `409` / `TS_ABORTED`; rejected saves leave drafts intact.
+
+Officer review presence uses `GET` and `PUT /api/v1/submissions/:id/active-editors`. GET lists the current editors; PUT renews the caller's 30-second lease using the session identity. Both return `{ data: [{ userId, name }] }` for active-year pre-enrollment reviews. Presence is not a lock, returns no `ts`, and does not change the review's `readTs` or `writeTs`.
 
 ## System (`/api`, `/`)
 
@@ -253,6 +255,8 @@ Notification read markers live in account-scoped browser `localStorage`. The ser
 | Method | Path                                 | Access          | Returns                           |
 | ------ | ------------------------------------ | --------------- | --------------------------------- |
 | GET    | /api/v1/users                        | session + admin | `{ data, page, pageSize, total }` |
+| POST   | /api/v1/users/invite                 | session + admin | `201 { data: { userId } }`; sends a one-time setup link |
+| POST   | /api/v1/users/:userId/promote-admin  | session + admin + step-up | `{ data: { userId, role } }`; revokes existing sessions |
 | PATCH  | /api/v1/users                        | session + admin | `{ data: update result }`         |
 | DELETE | /api/v1/users                        | session + admin | `{ data: delete result }`         |
 | PATCH  | /api/v1/users/:userId                | session + admin | `{ data: user }`                  |
