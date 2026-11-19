@@ -27,6 +27,8 @@ Design docs and runbooks for ERPSYS. Code-level conventions live in `../AGENTS.m
 
 ## Plans
 
+- [plans/2026-11-19-cloudflare-workers.md](plans/2026-11-19-cloudflare-workers.md) — migrate the Express API from Vercel to Workers while preserving Pages, MongoDB and authentication.
+
 - [plans/2026-10-08-svelte-to-react.md](plans/2026-10-08-svelte-to-react.md) — the dated Svelte → React migration plan, including the surfaces still awaiting an RTL port.
 - [plans/2026-11-08-timestamp-concurrency.md](plans/2026-11-08-timestamp-concurrency.md) — basic timestamp-ordering concurrency control for every `/api/v1` write, and what shipped versus the original plan. Code map: [`apps/server/CONCURRENCY.md`](../apps/server/CONCURRENCY.md).
 
