@@ -31,7 +31,7 @@ const DOC_NAV: ReadonlyArray<{ group: string; items: readonly DocItem[] }> = [
     group: "For staff",
     items: [
       { id: "officers", label: "SBO officers" },
-      { id: "advisers", label: "Enrollment advisers" },
+      { id: "advisers", label: "Enrollment officers" },
       { id: "admins", label: "Administrators" },
     ],
   },
@@ -39,6 +39,7 @@ const DOC_NAV: ReadonlyArray<{ group: string; items: readonly DocItem[] }> = [
     group: "Help",
     items: [
       { id: "account-help", label: "Account help" },
+      { id: "security-policy", label: "Security policy" },
       { id: "faq", label: "Frequently asked questions" },
     ],
   },
@@ -112,7 +113,7 @@ const STEP_GUIDE: ReadonlyArray<{
     title: "Assessment",
     summary:
       "Checks the requirements and payments the office lists for your assessment. When everything on the list is settled, you apply from inside the step.",
-    todo: "Review the requirements and payments, then tap Apply for assessment.",
+    todo: "Review the requirements and payments. Attach proof of payment if available, then select Apply for assessment.",
   },
   {
     number: 2,
@@ -126,7 +127,7 @@ const STEP_GUIDE: ReadonlyArray<{
     title: "Profiling",
     summary:
       "Collects your student profile through the office's own form. The form link opens from the step, and the page shows your email so you can copy it.",
-    todo: "Fill in and submit the form, then upload a screenshot of the “response recorded” page.",
+    todo: "Submit the form with your school Google account, then select ‘I’ve submitted’. ERPSYS checks your Google Forms record.",
   },
   {
     number: 4,
@@ -564,7 +565,7 @@ export function DocsPage() {
                     or returns them, maintains the social media links, the
                     profiling form and their stamp, and generates reports.
                   </RoleCard>
-                  <RoleCard role="Enrollment adviser" door="Instructor door">
+                  <RoleCard role="Enrollment Officer" door="Enrollment Officer door">
                     Opens department availability, serves students in queue
                     order, completes or reverts enrollment, keeps department
                     details, and reviews the student roster and reports.
@@ -815,7 +816,7 @@ export function DocsPage() {
 
               <Section
                 id="advisers"
-                title="For enrollment advisers"
+                title="For enrollment officers"
                 lede="The instructor console runs the department queue and closes out enrollment."
               >
                 <Bullets>
@@ -934,9 +935,9 @@ export function DocsPage() {
                     <span className="font-medium text-ink">
                       Wrong door or wrong account:
                     </span>{" "}
-                    sign out from the user menu and choose the door that matches
-                    your account. ERPSYS never moves a session between account
-                    types on its own.
+                    if you sign in through a door for another role, check the
+                    role shown. Continue to your own portal or choose another
+                    account. Your permissions do not change.
                   </li>
                   <li>
                     <span className="font-medium text-ink">
@@ -957,6 +958,39 @@ export function DocsPage() {
                     <span className="font-medium text-ink">Signing out:</span>{" "}
                     use the user menu. For advisers, signing out also closes any
                     open department availability.
+                  </li>
+                </Bullets>
+              </Section>
+
+              <Section
+                id="security-policy"
+                title="Security policy"
+                lede="Protect your account and share only the information needed for enrollment."
+              >
+                <Bullets>
+                  <li>
+                    Use 12–128 characters, including at least one uppercase A–Z
+                    and one lowercase a–z, when setting a password. Use a unique
+                    password. Never share it or a sign-in or recovery code.
+                  </li>
+                  <li>
+                    Use only invitation and reset links you expected to receive.
+                    Password setup links expire after one hour and can be used
+                    only once. If a message looks suspicious, do not open it.
+                  </li>
+                  <li>
+                    Use your assigned portal. Staff should not share accounts
+                    or forward student records outside approved office channels.
+                    Sign out before leaving a shared device.
+                  </li>
+                  <li>
+                    Upload only what the current step requests. Review images
+                    for unrelated personal information before submitting them.
+                  </li>
+                  <li>
+                    Report suspicious sign-ins or exposed data to the SBO office
+                    through its official contact channel. Include the time and
+                    affected page, but never a password, code, or student file.
                   </li>
                 </Bullets>
               </Section>
