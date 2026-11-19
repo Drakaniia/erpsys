@@ -10,6 +10,7 @@
     "cf:whoami": "wrangler whoami",
     "check": "tsc --noEmit && tsc -p tsconfig.test.json",
     "dev": "tsx watch src/index.ts",
+    "preview": "node dist/scripts/preview.js",
     "r2:info": "tsx src/scripts/r2-setup.ts --info",
     "r2:setup": "tsx src/scripts/r2-setup.ts",
     "r2:verify": "tsx src/scripts/r2-setup.ts --verify",

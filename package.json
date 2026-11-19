@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "pnpm -r --parallel run dev",
     "build": "pnpm -r run build",
+    "preview": "pnpm --filter @erpsys/server preview",
     "bundle:budget": "node scripts/bundle-budget.mjs",
     "check": "pnpm -r run check",
     "test": "vitest run",
