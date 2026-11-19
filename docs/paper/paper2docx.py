@@ -97,6 +97,9 @@ def field(paragraph, instruction, placeholder=""):
 
 
 def build(name):
+    if name == "API_DOCUMENTATION":
+        from api_reference_docx import build as build_api
+        return build_api()
     source = (ROOT / f"{name}.md").read_text(encoding="utf-8")
     doc = Document()
     section = doc.sections[0]

@@ -13,6 +13,35 @@ defaults: at that load, a default that is fine on a laptop is an outage.
 
 ---
 
+## Local build preview
+
+From the repository root, run these as separate commands:
+
+```bash
+pnpm build
+pnpm preview
+```
+
+`pnpm preview` runs the compiled Express backend, which serves both the built
+React app and `/api` on the same origin. It does not rebuild, run Vite, or start
+a file watcher. Rebuild and restart preview after changing code. Stop any dev
+server using the same port first; preview does not pick a different port.
+
+The launcher reads the existing root `.env` and uses `BETTER_AUTH_URL` as the
+preview address (default `http://localhost:5173`), deriving the listening port
+from that URL rather than the development API `PORT`. `PUBLIC_SITE_URL`, when
+set, must use the same origin. Preview requires a local HTTP auth origin.
+It enables `SERVE_WEB` and uses local `NODE_ENV=development` runtime settings
+so HTTP sessions work without weakening the deployed-production checks.
+The frontend is still the optimized production build.
+
+MongoDB must be available. Existing credentials, encrypted database overrides,
+and integration switches are retained; preview uses real configured services,
+not mocks. Google sign-in and Calendar redirect URIs must remain registered
+for this origin, and Turnstile must allow its hostname. For this single-origin
+preview, leave `VITE_API_BASE_URL` unset when building. Do not point preview
+at production data unless you intend to use and potentially modify it.
+
 ## 1. Topology
 
 ```

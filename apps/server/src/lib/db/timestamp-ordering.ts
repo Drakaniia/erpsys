@@ -23,6 +23,7 @@ const EXEMPT = new Set([
   "admin_action_log",
   "storage_usage",
   "admin_step_up",
+  "platform_state",
 ]);
 const STAMP_FREE = new Set(["user", "session", "account", "verification"]);
 const FILTER_WRITES = new Set([
@@ -37,6 +38,45 @@ const FILTER_WRITES = new Set([
 
 const store = new AsyncLocalStorage<Transaction>();
 let last = 0;
+let sharedOracle: (() => Promise<number>) | undefined;
+
+export function configureTimestampOracle(oracle: () => Promise<number>): void {
+  sharedOracle = oracle;
+}
+
+/**
+ * Concurrency: timestamp ordering — distributed TS allocation.
+ * Rule: deployed instances allocate through one atomic Mongo counter; local execution uses nextTs.
+ */
+export async function allocateTs(): Promise<number> {
+  const ts = sharedOracle ? await sharedOracle() : nextTs();
+  last = Math.max(last, ts);
+  return ts;
+}
+
+/**
+ * Concurrency: timestamp ordering — distributed transaction start.
+ * Rule: allocate globally before entering request context; retain client anchoring when supplied.
+ */
+export async function beginSharedTransaction<T>(clientTs: number | undefined, method: string, fn: () => T): Promise<T> {
+  const issued = await allocateTs();
+  if (clientTs !== undefined && (!Number.isSafeInteger(clientTs) || clientTs <= 0 || clientTs > issued)) {
+    throw new ApiError("BAD_REQUEST", { message: "`ts` must be a timestamp this server issued." });
+  }
+  return store.run({ ts: clientTs ?? issued, anchor: clientTs === undefined ? "server" : "client", stampReads: method !== "GET", wrote: false }, fn);
+}
+
+/**
+ * Concurrency: timestamp ordering — distributed restart.
+ * Rule: restart only an unwritten server transaction, at most three times, with a globally allocated TS.
+ */
+export async function restartSharedAborted(error: unknown, attempt: number): Promise<boolean> {
+  const tx = store.getStore();
+  const code = (error as { data?: { code?: unknown } } | null)?.data?.code;
+  if (!tx || code !== TS_ABORTED || tx.anchor !== "server" || tx.wrote || attempt >= TS_MAX_RESTARTS) return false;
+  tx.ts = await allocateTs();
+  return true;
+}
 
 /**
  * Concurrency: timestamp ordering — the TS oracle.

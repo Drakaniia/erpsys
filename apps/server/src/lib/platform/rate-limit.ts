@@ -12,6 +12,7 @@ type RateLimitDecision = {
 
 type RateLimitBudget = {
   check(key: string): RateLimitDecision;
+  checkAsync(key: string): Promise<RateLimitDecision>;
   reset(): void;
   readonly size: number;
 };
@@ -21,6 +22,12 @@ type Store = Map<string, number[]>;
 type Registered = { store: Store; windowMs: number };
 
 const registry = new Set<Registered>();
+let sharedCheck: ((name: string, key: string, windowMs: number, max: number) => Promise<RateLimitDecision>) | undefined;
+let budgetSequence = 0;
+
+export function configureSharedRateLimits(check: NonNullable<typeof sharedCheck>): void {
+  sharedCheck = check;
+}
 
 function compact(times: number[], now: number, windowMs: number): void {
   let write = 0;
@@ -100,6 +107,7 @@ export function createRateLimitBudget(opts: {
   windowMs: number;
   max: number;
   maxKeys?: number;
+  name?: string;
 }): RateLimitBudget {
   const { windowMs, max, maxKeys = RATE_LIMIT_MAX_KEYS } = opts;
   assertPositive("windowMs", windowMs, false);
@@ -107,11 +115,15 @@ export function createRateLimitBudget(opts: {
   assertPositive("maxKeys", maxKeys, true);
 
   const store: Store = new Map();
+  const name = opts.name ?? `budget:${windowMs}:${max}:${++budgetSequence}`;
   registry.add({ store, windowMs });
 
   return {
     check(key) {
       return record(store, key, Date.now(), windowMs, max, maxKeys);
+    },
+    async checkAsync(key) {
+      return sharedCheck ? sharedCheck(name, key, windowMs, max) : this.check(key);
     },
     reset() {
       store.clear();
@@ -129,7 +141,7 @@ export function slidingWindowRateLimit(opts: {
   message?: string;
 }): RequestHandler {
   const { windowMs, max, key, message = DEFAULT_MESSAGE } = opts;
-  const budget = createRateLimitBudget({ windowMs, max });
+  const budget = createRateLimitBudget({ name: `http:${windowMs}:${max}`, windowMs, max });
 
   return function rateLimit(req, res, next) {
     const keyForRequest = key(req);
@@ -137,14 +149,14 @@ export function slidingWindowRateLimit(opts: {
       next();
       return;
     }
-    const decision = budget.check(keyForRequest);
-    if (decision.allowed) {
-      next();
-      return;
-    }
-    res.status(429);
-    res.setHeader("Retry-After", String(decision.retryAfterSeconds));
-    res.json({ error: message });
+    const respond = (decision: RateLimitDecision) => {
+      if (decision.allowed) { next(); return; }
+      res.status(429);
+      res.setHeader("Retry-After", String(decision.retryAfterSeconds));
+      res.json({ error: message });
+    };
+    if (sharedCheck) { void budget.checkAsync(keyForRequest).then(respond, next); }
+    else respond(budget.check(keyForRequest));
   };
 }
 

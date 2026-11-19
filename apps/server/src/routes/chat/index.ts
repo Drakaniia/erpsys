@@ -89,7 +89,7 @@ const DEV_CANNED_REPLY = [
   "Add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to .env for real answers.",
 ].join(" ");
 
-const chatRateLimit = createRateLimitBudget({ windowMs: 60_000, max: 10 });
+const chatRateLimit = createRateLimitBudget({ name: "student-chat", windowMs: 60_000, max: 10 });
 
 configurePacer(env.CLOUDFLARE_RPM);
 
@@ -126,7 +126,7 @@ function formatValidationMessage(
 
 async function streamChat(req: Request, res: ExpressResponse): Promise<void> {
   const user = sessionUser(req);
-  const decision = chatRateLimit.check(`user:${user.id}|ip:${clientIp(req)}`);
+  const decision = await chatRateLimit.checkAsync(`user:${user.id}|ip:${clientIp(req)}`);
   if (!decision.allowed) {
     res.setHeader("Retry-After", String(decision.retryAfterSeconds));
     res.status(429).json({ error: CHAT_RATE_LIMIT_MESSAGE });
