@@ -37,8 +37,8 @@ let close: () => Promise<void>;
 beforeEach(async () => {
   holder.session = admin;
   const fake = fakeDb({
-    [COLLECTIONS.requirementItem]: [
-      { _id: "req-1", label: "Report Card", order: 0, isActive: true },
+    [COLLECTIONS.content]: [
+      { _id: "req-1", kind: "requirement", label: "Report Card", order: 0, isActive: true },
     ],
 
     [COLLECTIONS.auditLog]: [],

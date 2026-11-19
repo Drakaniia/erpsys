@@ -28,13 +28,11 @@ vi.mock("../../src/lib/db/db.js", async (importOriginal) => ({
 it("deduplicates two active editors without changing review timestamp ordering", async () => {
   const { db, store } = fakeDb({
     [COLLECTIONS.academicYear]: [{ _id: "year", isActive: true }],
-    [COLLECTIONS.step]: [
-      { _id: "assessment", code: "ASSESSMENT", name: "Assessment" },
-    ],
+
     [COLLECTIONS.stepVerification]: [
       {
         _id: "review",
-        stepId: "assessment",
+        stepId: "ASSESSMENT",
         studentProfileId: "student",
         academicYearId: "year",
         status: "SUBMITTED",

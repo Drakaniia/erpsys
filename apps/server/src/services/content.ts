@@ -4,9 +4,9 @@ import { integrationEnabled } from "../lib/platform/integration-settings.js";
 import { AcademicYearModel } from "../models/AcademicYearModel.js";
 
 import {
-  SocialMediaLinkModel,
+  ContentModel,
   type SocialLinkRow,
-} from "../models/SocialMediaLinkModel.js";
+} from "../models/ContentModel.js";
 import { UserModel } from "../models/UserModel.js";
 
 export const socialLinkView = (
@@ -19,7 +19,7 @@ export const socialLinkView = (
 });
 
 export async function listSocialLinks() {
-  return (await SocialMediaLinkModel.listActive()).map(socialLinkView);
+  return (await ContentModel.listActiveSocialLinks()).map(socialLinkView);
 }
 
 export async function assertFormsEnabled(message: string) {

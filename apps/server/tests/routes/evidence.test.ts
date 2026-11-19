@@ -54,14 +54,6 @@ const STUDENT = {
   },
 };
 
-const STEP_CODES = [
-  "ASSESSMENT",
-  "SOCIAL_MEDIA",
-  "PROFILING",
-  "MUGSHOT",
-  "CONSENT",
-  "ENROLLMENT",
-];
 
 function seed(): Record<string, Row[]> {
   return {
@@ -74,20 +66,11 @@ function seed(): Record<string, Row[]> {
         createdAt: new Date("2025-06-01"),
       },
     ],
-    [COLLECTIONS.step]: STEP_CODES.map((code, index) => ({
-      _id: `step-${index + 1}`,
-      code,
-      name: code,
-      order: index + 1,
-    })),
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "profile-1",
-        userId: "stud1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-    ],
+
+    [COLLECTIONS.user]: [{
+      _id: "stud1", name: "Ana", email: "12345@student.buksu.edu.ph", role: "STUDENT",
+      studentProfile: { _id: "profile-1", studentNumber: "12345", academicYearId: "ay-1" },
+    }],
     [COLLECTIONS.stepVerification]: [],
     [COLLECTIONS.upload]: [],
     [COLLECTIONS.notification]: [],
@@ -209,7 +192,7 @@ describe("evidence uploads", () => {
     context.store[COLLECTIONS.stepVerification].push({
       _id: "v-4",
       studentProfileId: "profile-1",
-      stepId: "step-4",
+      stepId: "MUGSHOT",
       academicYearId: "ay-1",
       status: "VERIFIED",
       evidence: { uploadIds: [id] },
@@ -228,7 +211,7 @@ describe("evidence uploads", () => {
     context.store[COLLECTIONS.stepVerification].push({
       _id: "v-4",
       studentProfileId: "profile-1",
-      stepId: "step-4",
+      stepId: "MUGSHOT",
       academicYearId: "ay-1",
       status: "VERIFIED",
     });
@@ -270,7 +253,7 @@ describe("external evidence links", () => {
     context.store[COLLECTIONS.stepVerification].push({
       _id: "v-2",
       studentProfileId: "profile-1",
-      stepId: "step-2",
+      stepId: "SOCIAL_MEDIA",
       academicYearId: "ay-1",
       status: "VERIFIED",
     });
@@ -395,7 +378,7 @@ describe("step submission", () => {
     context.store[COLLECTIONS.stepVerification].push({
       _id: "v-4",
       studentProfileId: "profile-1",
-      stepId: "step-4",
+      stepId: "MUGSHOT",
       academicYearId: "ay-1",
       status: "VERIFIED",
     });

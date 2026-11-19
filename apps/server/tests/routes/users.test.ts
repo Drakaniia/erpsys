@@ -1,4 +1,5 @@
 import express from "express";
+import { ObjectId } from "mongodb";
 import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COLLECTIONS } from "../../src/lib/db/db.js";
@@ -40,6 +41,7 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "stu1",
+        studentProfile: { _id: "p-stu1", studentNumber: "123", academicYearId: "ay-1" },
         name: "Student One",
         email: "s1@student.buksu.edu.ph",
         role: "STUDENT",
@@ -48,6 +50,7 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "off1",
+        studentProfile: { _id: "p-off1", studentNumber: "456", academicYearId: "ay-1" },
         name: "Officer",
         email: "s2@student.buksu.edu.ph",
         role: "SBO_OFFICER",
@@ -73,20 +76,7 @@ function seed(): Record<string, Row[]> {
         createdAt: joined(1),
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "p-stu1",
-        userId: "stu1",
-        studentNumber: "123",
-        academicYearId: "ay-1",
-      },
-      {
-        _id: "p-off1",
-        userId: "off1",
-        studentNumber: "456",
-        academicYearId: "ay-1",
-      },
-    ],
+
     [COLLECTIONS.studentEnrollment]: [
       {
         _id: "e1",
@@ -116,8 +106,7 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.stepVerification]: [],
     [COLLECTIONS.upload]: [],
     [COLLECTIONS.enrollmentQueue]: [],
-    [COLLECTIONS.adviserDepartment]: [],
-    [COLLECTIONS.adviserAvailability]: [],
+    [COLLECTIONS.adviserSchedule]: [],
   };
 }
 
@@ -169,6 +158,17 @@ describe("GET /api/v1/users", () => {
       yearLevel: "FIRST",
       department: { name: "College of Technologies", code: "CT" },
     });
+  });
+
+  it("filters historical BSON user IDs by student number and placement", async () => {
+    const student = context.store[COLLECTIONS.user][1];
+    student._id = new ObjectId();
+    for (const path of ["/users?q=123", "/users?yearLevel=FIRST"]) {
+      const response = await call(path);
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.data.map((row: Row) => row.id)).toEqual([String(student._id)]);
+    }
   });
 
   it("filters by year level", async () => {
@@ -264,6 +264,19 @@ describe("delete and password", () => {
         { userId: "blocked1", reason: "BLOCKED" },
       ],
     });
+  });
+
+  it("blocks rather than hard-deletes BSON-linked activity and clears the queue", async () => {
+    const profileId = new ObjectId();
+    context.store[COLLECTIONS.user][1].studentProfile = { _id: profileId, studentNumber: "123", academicYearId: "ay-1" };
+    context.store[COLLECTIONS.stepVerification] = [{ _id: "verification", studentProfileId: profileId }];
+    context.store[COLLECTIONS.enrollmentQueue] = [{ _id: "queue", studentProfileId: profileId }];
+    const response = await call("/users", { method: "DELETE", body: JSON.stringify({ userIds: ["stu1"] }) });
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toMatchObject({ hardDeleted: [], blocked: ["stu1"] });
+    expect(context.store[COLLECTIONS.user].find(row => row._id === "stu1")).toHaveProperty("blockedAt");
+    expect(context.store[COLLECTIONS.stepVerification]).toHaveLength(1);
+    expect(context.store[COLLECTIONS.enrollmentQueue]).toEqual([]);
   });
 
   it("refuses a self password reset", async () => {

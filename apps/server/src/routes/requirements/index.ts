@@ -17,9 +17,9 @@ import {
 } from "../../middleware/http.js";
 import { AdminActionLogModel } from "../../models/AdminActionLogModel.js";
 import {
-  RequirementModel,
+  ContentModel,
   type RequirementRow,
-} from "../../models/RequirementModel.js";
+} from "../../models/ContentModel.js";
 
 /**
  * `/api/v1` — the enrollment requirement list; admin-only.
@@ -40,7 +40,7 @@ const toView = (row: RequirementRow) => ({
 });
 
 async function findOrThrow(id: string): Promise<RequirementRow> {
-  const row = await RequirementModel.findById(id);
+  const row = await ContentModel.findById(id);
   if (!row) throw notFound();
   return row;
 }
@@ -55,7 +55,7 @@ requirementsRouter.get(
   "/requirements",
   admin,
   catchAsync(async (req, res) => {
-    const items = (await RequirementModel.list()).map(toView);
+    const items = (await ContentModel.list()).map(toView);
     const { page, pageSize } = parsePagination(req);
     okList(res, items, page, pageSize, items.length);
   }),
@@ -76,10 +76,10 @@ requirementsRouter.post(
     const row = {
       _id: genId("req"),
       label: input.label,
-      order: (await RequirementModel.lastOrder()) + 1,
+      order: (await ContentModel.lastOrder()) + 1,
       isActive: true,
     };
-    await RequirementModel.insert(row);
+    await ContentModel.insert(row);
     await AdminActionLogModel.log(
       sessionUser(req).id,
       "Added requirement",
@@ -105,14 +105,14 @@ requirementsRouter.put(
       z.object({ orderedIds: z.array(z.string().min(1)).max(500) }),
       req,
     );
-    const ids = (await RequirementModel.list()).map((item) => String(item._id));
+    const ids = (await ContentModel.list()).map((item) => String(item._id));
     if (orderedIds.some((id) => !ids.includes(id))) throw notFound();
     const finalIds = [
       ...orderedIds,
       ...ids.filter((id) => !orderedIds.includes(id)),
     ];
     for (const [index, id] of finalIds.entries()) {
-      await RequirementModel.update(id, { order: index });
+      await ContentModel.update(id, { order: index });
     }
     await AdminActionLogModel.log(
       sessionUser(req).id,
@@ -143,7 +143,7 @@ requirementsRouter.patch(
     const patch: Partial<RequirementRow> = {};
     if (input.label !== undefined) patch.label = input.label;
     if (input.isActive !== undefined) patch.isActive = input.isActive;
-    if (Object.keys(patch).length > 0) await RequirementModel.update(id, patch);
+    if (Object.keys(patch).length > 0) await ContentModel.update(id, patch);
     const updated = { ...existing, ...patch };
     await AdminActionLogModel.log(
       sessionUser(req).id,
@@ -167,7 +167,7 @@ requirementsRouter.delete(
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
     const existing = await findOrThrow(id);
-    await RequirementModel.remove(id);
+    await ContentModel.remove(id);
     await AdminActionLogModel.log(
       sessionUser(req).id,
       "Deleted requirement",

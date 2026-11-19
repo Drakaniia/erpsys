@@ -96,7 +96,7 @@ function seed(): Record<string, Row[]> {
       { _id: "ay-1", label: "2026", semesterLabel: "First", isActive: true },
     ],
     [COLLECTIONS.calendarConnection]: [],
-    [COLLECTIONS.availabilityWindow]: [],
+    [COLLECTIONS.adviserSchedule]: [],
     [COLLECTIONS.adminActionLog]: [],
   };
 }
@@ -292,12 +292,13 @@ describe("disconnecting", () => {
   it("removes the stored token and the mirrored calendar, keeping the schedule", async () => {
     const state = await beginConnect();
     await call(`/calendar/callback?code=abc&state=${state}`);
-    context.store[COLLECTIONS.availabilityWindow].push({
+    context.store[COLLECTIONS.adviserSchedule].push({
       _id: "w1",
       adviserId: "adv1",
       departmentId: "dept-1",
       academicYearId: "ay-1",
-      kind: "WEEKLY",
+      kind: "window",
+      windowKind: "WEEKLY",
       weekday: 1,
       startMinute: 540,
       endMinute: 720,
@@ -311,7 +312,7 @@ describe("disconnecting", () => {
       "gcal-1",
     );
     expect(google.revokeToken).toHaveBeenCalledWith("refresh");
-    expect(context.store[COLLECTIONS.availabilityWindow]).toHaveLength(1);
+    expect(context.store[COLLECTIONS.adviserSchedule].filter(row => row.kind === "window")).toHaveLength(1);
   });
 
   it("still drops our copy when Google cannot be reached", async () => {

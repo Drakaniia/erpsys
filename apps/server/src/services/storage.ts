@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { deriveStudentNumberFromEmail } from "../config/constants.js";
+import {
+  deriveStudentNumberFromEmail,
+  findStepByCode,
+} from "../config/constants.js";
 import { ApiError } from "../config/errors.js";
 import { KIND_FOR_STEP } from "../config/steps.js";
 import { getDbSync } from "../lib/db/db.js";
@@ -38,11 +41,11 @@ import {
   type StorageRoute,
 } from "../lib/storage/storage.js";
 import { AcademicYearModel } from "../models/AcademicYearModel.js";
-import { AdviserDepartmentModel } from "../models/AdviserDepartmentModel.js";
-import { StepModel } from "../models/StepModel.js";
+import { DepartmentModel } from "../models/DepartmentModel.js";
+
 import { StepVerificationModel } from "../models/StepVerificationModel.js";
 import { StudentEnrollmentModel } from "../models/StudentEnrollmentModel.js";
-import { StudentProfileModel } from "../models/StudentProfileModel.js";
+
 import { UploadModel, type UploadRow } from "../models/UploadModel.js";
 import { UserModel } from "../models/UserModel.js";
 import type { SessionUser } from "../middleware/auth.js";
@@ -79,7 +82,7 @@ async function assertCanView(
   if (upload.uploadedById === user.id) return;
   const profileId =
     typeof upload.studentProfileId === "string" ? upload.studentProfileId : "";
-  const callerProfile = await StudentProfileModel.findByUserId(user.id);
+  const callerProfile = await UserModel.findProfileByUserId(user.id);
   if (callerProfile && String(callerProfile._id) === profileId) return;
   if (user.role === "SBO_OFFICER" || user.role === "ADMIN") return;
   if (user.role === "ENROLLMENT_ADVISER") {
@@ -93,7 +96,7 @@ async function assertCanView(
     if (year && !enrollment) return;
     if (
       enrollment &&
-      (await AdviserDepartmentModel.findLink(user.id, enrollment.departmentId))
+      (await DepartmentModel.findAdviserLink(user.id, enrollment.departmentId))
     ) {
       return;
     }
@@ -139,7 +142,7 @@ async function resolveOwner(
       message: "studentProfileId is required.",
     });
   }
-  const profile = await StudentProfileModel.findById(studentProfileId);
+  const profile = await UserModel.findProfileById(studentProfileId);
   if (!profile) {
     throw new ApiError("NOT_FOUND", { message: "Student not found." });
   }
@@ -198,7 +201,7 @@ export async function createSession(
     kindForStep: KIND_FOR_STEP,
   });
   if (input.route === "evidenceImage" && input.stepCode) {
-    const step = await StepModel.findByCode(input.stepCode);
+    const step = findStepByCode(input.stepCode);
     if (!step) {
       throw new ApiError("NOT_FOUND", { message: "Step not configured." });
     }

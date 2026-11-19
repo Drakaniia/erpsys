@@ -5,6 +5,7 @@ import {
   YEAR_LEVEL_LABELS,
   departmentAcceptsLevel,
   normalizeYearLevels,
+  listStepsByCodes,
   type YearLevel,
 } from "../config/constants.js";
 import { ApiError } from "../config/errors.js";
@@ -22,18 +23,18 @@ import { genId } from "../lib/db/ids.js";
 import { env } from "../lib/platform/env.js";
 import { mailUser, siteOrigin } from "../lib/platform/mailer.js";
 import { AcademicYearModel } from "../models/AcademicYearModel.js";
-import { AdviserAvailabilityModel } from "../models/AdviserAvailabilityModel.js";
-import { AdviserDepartmentModel } from "../models/AdviserDepartmentModel.js";
+import { AdviserScheduleModel } from "../models/AdviserScheduleModel.js";
+
 import { DepartmentModel } from "../models/DepartmentModel.js";
 import {
   EnrollmentQueueModel,
   type QueueEntryRow,
 } from "../models/EnrollmentQueueModel.js";
 import { NotificationModel } from "../models/NotificationModel.js";
-import { StepModel } from "../models/StepModel.js";
+
 import { StepVerificationModel } from "../models/StepVerificationModel.js";
 import { StudentEnrollmentModel } from "../models/StudentEnrollmentModel.js";
-import { StudentProfileModel } from "../models/StudentProfileModel.js";
+
 import { UserModel } from "../models/UserModel.js";
 import { activeYearOrThrow } from "./academic-years.js";
 import { requireStudentContext } from "./students.js";
@@ -68,7 +69,7 @@ async function queuePosition(entry: {
 
 export async function myQueueStatus(userId: string) {
   const [profile, year] = await Promise.all([
-    StudentProfileModel.findByUserId(userId),
+    UserModel.findProfileByUserId(userId),
     AcademicYearModel.findActive(),
   ]);
   if (!profile || !year) return null;
@@ -82,7 +83,7 @@ export async function myQueueStatus(userId: string) {
   const [department, availabilities, servingAdviser, position, enrollment] =
     await Promise.all([
       DepartmentModel.findById(entry.departmentId),
-      AdviserAvailabilityModel.listOpenByDepartment(
+      AdviserScheduleModel.listOpenByDepartment(
         entry.departmentId,
         String(year._id),
       ),
@@ -96,7 +97,7 @@ export async function myQueueStatus(userId: string) {
   const assignments =
     availabilities.length === 0
       ? []
-      : await AdviserDepartmentModel.listByDepartment(entry.departmentId);
+      : await DepartmentModel.listAdvisersByDepartment(entry.departmentId);
 
   const servedLevels =
     levelsCoveredByDepartment({
@@ -169,7 +170,7 @@ export async function assertDepartmentAssigned(
   adviserId: string,
   departmentId: string,
 ): Promise<void> {
-  if (!(await AdviserDepartmentModel.findLink(adviserId, departmentId))) {
+  if (!(await DepartmentModel.findAdviserLink(adviserId, departmentId))) {
     throw new ApiError("FORBIDDEN", {
       message: "Department not assigned to you.",
     });
@@ -201,7 +202,7 @@ export async function assertStudentLevelInScope(
   studentProfileId: string,
   academicYearId: string,
 ): Promise<void> {
-  const link = await AdviserDepartmentModel.findLink(adviserId, departmentId);
+  const link = await DepartmentModel.findAdviserLink(adviserId, departmentId);
   if (!link) {
     throw new ApiError("FORBIDDEN", {
       message: "Department not assigned to you.",
@@ -236,7 +237,7 @@ async function firstServable(
   academicYearId: string,
 ): Promise<QueueEntryRow | null> {
   const levels = normalizeYearLevels(
-    (await AdviserDepartmentModel.findLink(adviserId, departmentId))
+    (await DepartmentModel.findAdviserLink(adviserId, departmentId))
       ?.yearLevels ?? [],
   );
   const waiting = await EnrollmentQueueModel.listByStatus(
@@ -305,7 +306,7 @@ export async function join(
 
   const [verifications, stepRows] = await Promise.all([
     StepVerificationModel.listByProfileYear(profile._id, yearId),
-    StepModel.listByCodes([...PRE_ENROLLMENT_STEP_CODES]),
+    listStepsByCodes(PRE_ENROLLMENT_STEP_CODES),
   ]);
   const missing = missingPreEnrollmentCodes(
     verifications,
@@ -319,7 +320,7 @@ export async function join(
   }
 
   const [availabilities, serving] = await Promise.all([
-    AdviserAvailabilityModel.listOpenByDepartment(departmentId, yearId),
+    AdviserScheduleModel.listOpenByDepartment(departmentId, yearId),
     EnrollmentQueueModel.listInProgress(departmentId, yearId),
   ]);
   if (!openByDepartment({ availabilities, serving }).has(departmentId)) {
@@ -329,7 +330,7 @@ export async function join(
   }
 
   const assignments =
-    await AdviserDepartmentModel.listByDepartment(departmentId);
+    await DepartmentModel.listAdvisersByDepartment(departmentId);
   assertLevelServed({
     departmentName: department.name,
     yearLevel: enrollment.yearLevel,
@@ -378,7 +379,7 @@ export async function join(
 }
 
 export async function leave(user: { id: string }): Promise<{ left: true }> {
-  const profile = await StudentProfileModel.findByUserId(user.id);
+  const profile = await UserModel.findProfileByUserId(user.id);
   if (!profile) {
     throw new ApiError("PRECONDITION_FAILED", {
       message: "No student profile found.",
@@ -417,7 +418,7 @@ export async function serve(
 ): Promise<{ entryId: string; status: string }> {
   const yearId = String((await activeYearOrThrow())._id);
   await assertDepartmentAssigned(adviserId, input.departmentId);
-  const availability = await AdviserAvailabilityModel.findOpenFor(
+  const availability = await AdviserScheduleModel.findOpenFor(
     adviserId,
     input.departmentId,
     yearId,
@@ -497,7 +498,7 @@ export async function serve(
   }
 
   const [profile, department] = await Promise.all([
-    StudentProfileModel.findById(entry.studentProfileId),
+    UserModel.findProfileById(entry.studentProfileId),
     DepartmentModel.findById(input.departmentId),
   ]);
   if (profile) {
@@ -618,7 +619,7 @@ export async function moveToEnd(
     )) + 1;
 
   const [profile, department] = await Promise.all([
-    StudentProfileModel.findById(entry.studentProfileId),
+    UserModel.findProfileById(entry.studentProfileId),
     DepartmentModel.findById(input.departmentId),
   ]);
   if (profile) {
@@ -667,7 +668,7 @@ export async function removeEntry(adviserId: string, entryId: string) {
   }
 
   const [profile, department] = await Promise.all([
-    StudentProfileModel.findById(entry.studentProfileId),
+    UserModel.findProfileById(entry.studentProfileId),
     DepartmentModel.findById(entry.departmentId),
   ]);
   const student = profile ? await UserModel.findById(profile.userId) : null;
@@ -750,7 +751,7 @@ export async function restoreEntry(
   if (!department) {
     throw new ApiError("NOT_FOUND", { message: "Department not found." });
   }
-  const profile = await StudentProfileModel.findById(input.studentProfileId);
+  const profile = await UserModel.findProfileById(input.studentProfileId);
   if (!profile) {
     throw new ApiError("NOT_FOUND", { message: "Student profile not found." });
   }

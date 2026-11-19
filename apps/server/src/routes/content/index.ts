@@ -22,7 +22,7 @@ import { AcademicYearModel } from "../../models/AcademicYearModel.js";
 import { AdminActionLogModel } from "../../models/AdminActionLogModel.js";
 import { DepartmentModel } from "../../models/DepartmentModel.js";
 
-import type { SocialLinkRow } from "../../models/SocialMediaLinkModel.js";
+import type { SocialLinkRow } from "../../models/ContentModel.js";
 import { activeYearOrThrow } from "../../services/academic-years.js";
 import {
   assertFormsEnabled,
@@ -52,7 +52,7 @@ const linkBody = {
   url: z.string().url().max(1000),
 };
 const links = () =>
-  getDbSync().collection<SocialLinkRow>(COLLECTIONS.socialMediaLink);
+  getDbSync().collection<SocialLinkRow>(COLLECTIONS.content);
 
 type KnowledgeDoc = {
   _id: string;
@@ -148,12 +148,12 @@ contentRouter.put(
 );
 
 async function rename(id: string, input: { name: string; url: string }) {
-  const existing = await links().findOne(idIn([id]) as never);
+  const existing = await links().findOne({ ...idIn([id]), kind: "socialLink" } as never);
   if (!existing) {
     throw new ApiError("NOT_FOUND", { message: "That link no longer exists." });
   }
   await links().updateOne(
-    idIn([id]) as never,
+    { ...idIn([id]), kind: "socialLink" } as never,
     { $set: { name: input.name, url: input.url } } as never,
   );
   return socialLinkView({ ...existing, name: input.name, url: input.url });
@@ -277,7 +277,7 @@ contentRouter.post(
     );
     if (input.id) return okOne(res, await rename(input.id, input));
     const [highest] = await links()
-      .find({} as never)
+      .find({ kind: "socialLink" } as never)
       .sort({ order: -1 })
       .limit(1)
       .toArray();
@@ -288,7 +288,7 @@ contentRouter.post(
       order: (highest?.order ?? 0) + 1,
       isActive: true,
     };
-    await links().insertOne({ ...row, createdAt: new Date() } as never);
+    await links().insertOne({ ...row, kind: "socialLink", createdAt: new Date() } as never);
     okOne(res, socialLinkView(row), 201);
   }),
 );
@@ -311,7 +311,7 @@ contentRouter.put(
     await Promise.all(
       orderedIds.map((id, index) =>
         links().updateOne(
-          idIn([id]) as never,
+          { ...idIn([id]), kind: "socialLink" } as never,
           { $set: { order: index + 1 } } as never,
         ),
       ),
@@ -348,7 +348,7 @@ contentRouter.delete(
   contentManagers,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
-    await links().deleteOne(idIn([id]) as never);
+    await links().deleteOne({ ...idIn([id]), kind: "socialLink" } as never);
     okOne(res, { ok: true });
   }),
 );

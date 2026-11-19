@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { PRE_ENROLLMENT_STEP_CODES } from "../config/constants.js";
+import {
+  PRE_ENROLLMENT_STEP_CODES,
+  findStepById,
+  listStepsByCodes,
+} from "../config/constants.js";
 import { ApiError } from "../config/errors.js";
 import { escapeQueryRegex } from "../config/queue.js";
 import { REPORT_ROW_CAP } from "../config/report.js";
@@ -8,10 +12,10 @@ import { genId } from "../lib/db/ids.js";
 import { isR2FileKey } from "../lib/storage/storage.js";
 import type { AcademicYearRow } from "../models/AcademicYearModel.js";
 import { NotificationModel } from "../models/NotificationModel.js";
-import { RequirementModel } from "../models/RequirementModel.js";
-import { StepModel } from "../models/StepModel.js";
+import { ContentModel } from "../models/ContentModel.js";
+
 import { StepVerificationModel } from "../models/StepVerificationModel.js";
-import { StudentProfileModel } from "../models/StudentProfileModel.js";
+
 import { UploadModel } from "../models/UploadModel.js";
 import { UserModel } from "../models/UserModel.js";
 import { activeYearOrThrow } from "./academic-years.js";
@@ -68,10 +72,10 @@ async function loadSubmissions(
   if (text) {
     const rx = { $regex: escapeQueryRegex(text), $options: "i" };
     const [byNumber, byName] = await Promise.all([
-      StudentProfileModel.searchByStudentNumber(rx),
+      UserModel.searchProfilesByStudentNumber(rx),
       UserModel.searchByName(rx),
     ]);
-    const viaUser = await StudentProfileModel.listByUserIds(
+    const viaUser = await UserModel.listProfilesByUserIds(
       byName.map((user) => String(user._id)),
     );
     const ids = [
@@ -119,7 +123,7 @@ async function loadSubmissions(
     StepVerificationModel.countWhere(where),
     StepVerificationModel.search(where, sort, skip, limit),
   ]);
-  const profiles = await StudentProfileModel.findByIds([
+  const profiles = await UserModel.findProfilesByIds([
     ...new Set(rows.map((row) => String(row.studentProfileId))),
   ]);
   const users = await UserModel.findByIds(
@@ -158,7 +162,7 @@ export async function submissionRegister(
   stepCode: string,
 ) {
   const year = await activeYearOrThrow();
-  const [step] = await StepModel.listByCodes([stepCode]);
+  const [step] = listStepsByCodes([stepCode]);
   if (!step) {
     throw new ApiError("NOT_FOUND", { message: "Step not configured." });
   }
@@ -207,7 +211,7 @@ export async function submissionPage(
   input: z.infer<typeof submissionListQuery>,
 ) {
   const year = await activeYearOrThrow();
-  const steps = await StepModel.listByCodes(
+  const steps = listStepsByCodes(
     input.step ? [input.step] : [...PRE_ENROLLMENT_STEP_CODES],
   );
   if (input.step && steps.length === 0) {
@@ -285,11 +289,11 @@ async function notify(
   title: (name: string) => string,
   body: (name: string) => string,
 ): Promise<void> {
-  const profile = await StudentProfileModel.findById(
+  const profile = await UserModel.findProfileById(
     String(verification.studentProfileId),
   );
   if (!profile) return;
-  const step = await StepModel.findById(String(verification.stepId));
+  const step = findStepById(String(verification.stepId));
   const name = step?.name ?? "Step";
   await NotificationModel.insert({
     _id: genId("notification"),
@@ -307,15 +311,15 @@ export async function submissionDetail(verificationId: string) {
     throw new ApiError("NOT_FOUND", { message: "Verification not found." });
   }
   const [step, profile, uploads] = await Promise.all([
-    StepModel.findById(String(row.stepId)),
-    StudentProfileModel.findById(String(row.studentProfileId)),
+    findStepById(String(row.stepId)),
+    UserModel.findProfileById(String(row.studentProfileId)),
     UploadModel.findByIds(evidenceUploadIds(row.evidence)),
   ]);
   const code = step?.code ?? "ASSESSMENT";
   const requirements = (
     PRE_ENROLLMENT_STEP_CODES as readonly string[]
   ).includes(code)
-    ? await RequirementModel.listActive()
+    ? await ContentModel.listActive()
     : [];
   const users = await UserModel.findByIds(
     [
@@ -483,7 +487,7 @@ export async function captureMugshot(
   input: { fileKey: string; fileUrl: string },
 ) {
   const existing = await currentCycle(verificationId);
-  const step = await StepModel.findById(String(existing.stepId));
+  const step = findStepById(String(existing.stepId));
   if (step?.code !== "MUGSHOT") {
     throw new ApiError("CONFLICT", {
       message: "Mugshot capture is only for the Mugshot step.",

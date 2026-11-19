@@ -40,12 +40,10 @@ function seed(): Record<string, Row[]> {
         createdAt: new Date("2025-06-01"),
       },
     ],
-    [COLLECTIONS.step]: [
-      { _id: "step-MUGSHOT", code: "MUGSHOT", name: "Mugshot", order: 4 },
-    ],
-    [COLLECTIONS.requirementItem]: [
-      { _id: "req-1", label: "Form 5", isActive: true, order: 1 },
-      { _id: "req-2", label: "Retired form", isActive: false, order: 2 },
+
+    [COLLECTIONS.content]: [
+      { _id: "req-1", kind: "requirement", label: "Form 5", isActive: true, order: 1 },
+      { _id: "req-2", kind: "requirement", label: "Retired form", isActive: false, order: 2 },
     ],
     [COLLECTIONS.upload]: [
       {
@@ -60,6 +58,7 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.user]: [
       {
         _id: "stud1",
+        studentProfile: { _id: "profile-1", studentNumber: "12345", academicYearId: "ay-1" },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         image: "  ",
@@ -71,19 +70,12 @@ function seed(): Record<string, Row[]> {
         stampName: "SBO Stamp",
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "profile-1",
-        userId: "stud1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-    ],
+
     [COLLECTIONS.stepVerification]: [
       {
         _id: "ver-1",
         studentProfileId: "profile-1",
-        stepId: "step-MUGSHOT",
+        stepId: "MUGSHOT",
         academicYearId: "ay-1",
         status: "SUBMITTED",
         appliedAt: new Date("2025-07-01"),
@@ -91,14 +83,14 @@ function seed(): Record<string, Row[]> {
       {
         _id: "ver-2",
         studentProfileId: "profile-1",
-        stepId: "step-MUGSHOT",
+        stepId: "MUGSHOT",
         academicYearId: "ay-1",
         status: "VERIFIED",
       },
       {
         _id: "ver-old",
         studentProfileId: "profile-1",
-        stepId: "step-MUGSHOT",
+        stepId: "MUGSHOT",
         academicYearId: "ay-old",
         status: "SUBMITTED",
       },
@@ -251,11 +243,9 @@ describe("submission review", () => {
   });
 
   it("lists a revoked assessment again only after the student reapplies", async () => {
-    context.store[COLLECTIONS.step].push({
-      _id: "step-ASSESSMENT", code: "ASSESSMENT", name: "Assessment", order: 1,
-    });
+
     const row = verification("ver-2");
-    row.stepId = "step-ASSESSMENT";
+    row.stepId = "ASSESSMENT";
     row.appliedAt = new Date("2025-07-01");
     expect((await call("/submissions/ver-2/verification", { method: "DELETE" })).status).toBe(200);
     const queue = () => call("/submissions?step=ASSESSMENT").then((response) => response.json());
@@ -271,11 +261,9 @@ describe("submission review", () => {
   });
 
   it("identifies an imported Google Forms response without exposing its answers in the list", async () => {
-    context.store[COLLECTIONS.step].push({
-      _id: "step-PROFILING", code: "PROFILING", name: "Profiling", order: 3,
-    });
+
     const row = verification();
-    row.stepId = "step-PROFILING";
+    row.stepId = "PROFILING";
     row.answers = [];
     const { data } = await (await call("/submissions?step=PROFILING")).json();
     expect(data[0]).toMatchObject({ hasGoogleFormsResponse: true, evidence: [] });
@@ -298,7 +286,7 @@ describe("submission review", () => {
     context.store[COLLECTIONS.stepVerification].push({
       _id: "ver-detail",
       studentProfileId: "profile-1",
-      stepId: "step-ASSESSMENT",
+      stepId: "ASSESSMENT",
       academicYearId: "ay-1",
       status: "SUBMITTED",
       appliedAt: new Date("2025-07-03T08:00:00Z"),
@@ -373,16 +361,11 @@ describe("submission review", () => {
   });
 
   it("only captures for the Mugshot step", async () => {
-    context.store[COLLECTIONS.step].push({
-      _id: "step-ASSESSMENT",
-      code: "ASSESSMENT",
-      name: "Assessment",
-      order: 1,
-    });
+
     context.store[COLLECTIONS.stepVerification].push({
       _id: "ver-assessment",
       studentProfileId: "profile-1",
-      stepId: "step-ASSESSMENT",
+      stepId: "ASSESSMENT",
       academicYearId: "ay-1",
       status: "SUBMITTED",
     });

@@ -58,6 +58,10 @@ vi.mock("../../src/lib/platform/mailer.js", () => ({
 }));
 vi.mock("../../src/models/UserModel.js", () => ({
   UserModel: {
+    findProfileByStudentNumber: async () => null,
+    insertProfile: async () => {
+      if (state.placementFails) throw new Error("placement failed");
+    },
     findById: async (id: string) => {
       const user = state.data.user.find((row) => row.id === id);
       return user ? { ...user, _id: id } : null;
@@ -76,14 +80,7 @@ vi.mock("../../src/models/DepartmentModel.js", () => ({
     }),
   },
 }));
-vi.mock("../../src/models/StudentProfileModel.js", () => ({
-  StudentProfileModel: {
-    findByStudentNumber: async () => null,
-    insert: async () => {
-      if (state.placementFails) throw new Error("placement failed");
-    },
-  },
-}));
+
 vi.mock("../../src/models/StudentEnrollmentModel.js", () => ({
   StudentEnrollmentModel: { insert: async () => {} },
 }));
@@ -160,6 +157,20 @@ describe("Better Auth authentication contract", () => {
       expect(state.data.user[0].role).toBe("STUDENT");
     },
   );
+
+  it("rejects client profile injection and never returns embedded identity in auth or session payloads", async () => {
+    const response = await call("/sign-up/student", {
+      ...signup,
+      studentProfile: { _id: "forged", studentNumber: "999999", academicYearId: "forged-year" },
+    });
+    expect(response.status).toBe(200);
+    expect(state.data.user[0].studentProfile).toBeUndefined();
+    expect(await response.json()).not.toHaveProperty("user.studentProfile");
+    state.data.user[0].studentProfile = { _id: "real-profile", studentNumber: "1234567890", academicYearId: "year" };
+    const session = await call("/get-session", undefined, cookieOf(response));
+    expect(session.status).toBe(200);
+    expect(await session.json()).not.toHaveProperty("user.studentProfile");
+  });
 
   it("rolls back credentials and session when placement fails", async () => {
     state.placementFails = true;

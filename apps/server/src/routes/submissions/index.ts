@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
-import { PRE_ENROLLMENT_STEP_CODES } from "../../config/constants.js";
+import {
+  PRE_ENROLLMENT_STEP_CODES,
+  listStepsByCodes,
+} from "../../config/constants.js";
 import { ApiError } from "../../config/errors.js";
 import { outsideTransaction } from "../../lib/db/timestamp-ordering.js";
 import {
@@ -10,7 +13,7 @@ import {
 } from "../../middleware/auth.js";
 import { catchAsync } from "../../middleware/catchAsync.js";
 import { okList, okOne, parseBody, parseQuery } from "../../middleware/http.js";
-import { StepModel } from "../../models/StepModel.js";
+
 import { StepVerificationModel } from "../../models/StepVerificationModel.js";
 import { activeYearOrThrow } from "../../services/academic-years.js";
 import {
@@ -130,7 +133,7 @@ async function activeSubmissionEditors(
 ) {
   const [year, steps] = await Promise.all([
     activeYearOrThrow(),
-    StepModel.listByCodes([...PRE_ENROLLMENT_STEP_CODES]),
+    listStepsByCodes(PRE_ENROLLMENT_STEP_CODES),
   ]);
   const entries = await StepVerificationModel.reviewEditors(
     id,

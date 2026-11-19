@@ -36,59 +36,51 @@ const INDEXES: [CollectionName, IndexDescription[]][] = [
     ],
   ],
   [
-    COLLECTIONS.studentProfile,
+    COLLECTIONS.user,
     [
       ix(
-        "uq_student_profile_student_number",
-        { studentNumber: 1 },
-        { unique: true },
+        "uq_user_student_number",
+        { "studentProfile.studentNumber": 1 },
+        { unique: true, partialFilterExpression: { "studentProfile.studentNumber": { $type: "string" } } },
       ),
-      ix("idx_student_profile_user", { userId: 1 }),
-      ix("idx_student_profile_year", { academicYearId: 1 }),
+      ix(
+        "uq_user_student_profile_id",
+        { "studentProfile._id": 1 },
+        { unique: true, partialFilterExpression: { "studentProfile._id": { $exists: true } } },
+      ),
+      ix("idx_user_student_profile_year", { "studentProfile.academicYearId": 1 }),
     ],
   ],
   [
-    COLLECTIONS.adviserDepartment,
+    COLLECTIONS.department,
+    [ix("idx_department_advisers", { "advisers.adviserId": 1 })],
+  ],
+  [
+    COLLECTIONS.adviserSchedule,
     [
-      ix("idx_adviser_department_adviser_department", {
-        adviserId: 1,
-        departmentId: 1,
+      ix(
+        "uq_adviser_schedule_presence",
+        { adviserId: 1, departmentId: 1, academicYearId: 1 },
+        { unique: true, partialFilterExpression: { kind: "presence" } },
+      ),
+      ix("idx_adviser_schedule_kind_department_year", {
+        kind: 1, departmentId: 1, academicYearId: 1,
       }),
-      ix("idx_adviser_department_department", { departmentId: 1 }),
+      ix("idx_adviser_schedule_kind_adviser_department_year", {
+        kind: 1, adviserId: 1, departmentId: 1, academicYearId: 1,
+      }),
+      ix("idx_adviser_schedule_kind_year_open", {
+        kind: 1, academicYearId: 1, isOpen: 1,
+      }),
+      ix("idx_adviser_schedule_kind_adviser_open", { kind: 1, adviserId: 1, isOpen: 1 }),
+      ix("idx_adviser_schedule_kind_open_last_active", {
+        kind: 1, isOpen: 1, lastActiveAt: 1,
+      }),
     ],
   ],
   [
-    COLLECTIONS.adviserAvailability,
-    [
-      ix("idx_adviser_availability_adviser_department_year", {
-        adviserId: 1,
-        departmentId: 1,
-        academicYearId: 1,
-      }),
-      ix("idx_adviser_availability_year_open", {
-        academicYearId: 1,
-        isOpen: 1,
-      }),
-      ix("idx_adviser_availability_adviser_open", { adviserId: 1, isOpen: 1 }),
-      ix("idx_adviser_availability_open_last_active", {
-        isOpen: 1,
-        lastActiveAt: 1,
-      }),
-    ],
-  ],
-  [
-    COLLECTIONS.availabilityWindow,
-    [
-      ix("idx_availability_window_department_year", {
-        departmentId: 1,
-        academicYearId: 1,
-      }),
-      ix("idx_availability_window_adviser_department_year", {
-        adviserId: 1,
-        departmentId: 1,
-        academicYearId: 1,
-      }),
-    ],
+    COLLECTIONS.content,
+    [ix("idx_content_kind_active_order", { kind: 1, isActive: 1, order: 1 })],
   ],
   [
     COLLECTIONS.calendarConnection,
@@ -195,6 +187,14 @@ export async function ensureIndexes(): Promise<void> {
       await db.collection(name).createIndexes(indexes);
     } catch (error) {
       console.error(`[indexes] ${name}: ${(error as Error).message}`);
+      if (
+        name === COLLECTIONS.user ||
+        name === COLLECTIONS.department ||
+        name === COLLECTIONS.content ||
+        name === COLLECTIONS.adviserSchedule
+      ) {
+        throw error;
+      }
     }
   }
 }

@@ -17,6 +17,12 @@ The current server does not read legacy collections. Before using a legacy backu
 
 Old collections remain backup material until a separate cleanup is approved. After accepting new writes, rollback requires reconciling destination changes; merely restarting the old version would hide new records.
 
-## Further reductions considered
+## Version 2 storage layout
 
-Adviser ownership and availability have different academic-year and lifecycle semantics. Student profiles and enrollments preserve identity versus year-specific history. Requirements and workflow steps are different domain objects. Do not merge them solely to reduce the collection count.
+Version 2 embeds identity in `user.studentProfile` with its stable profile ID, and yearless adviser ownership in `department.advisers[]`. Year-specific enrollment history remains separate. Permanent account deletion may erase related history; it is not archival retention.
+
+`content` contains separate requirement and social-link documents, filtered by `kind` on every operation. `adviser_schedule` contains separate presence and window documents; live heartbeat writes never rewrite schedule documents. Window subtype is stored in `windowKind` and mapped back to the existing API shape.
+
+The six workflow definitions are code-owned in `config/constants.ts`. Verification `stepId` values use the canonical step code after migration; durable verification/evidence records remain in `step_verification`. Requirements and steps are not merged.
+
+See the [offline v2 migration runbook](collection-simplification-migration.md) before deploying on existing data. Startup refuses nonempty obsolete source collections without a verified completion marker. Source collections are not dropped by migration or startup; a separate offline retirement command requires reconciliation, cleanup approval, verified backup/restore, stopped writers and exact database-name acknowledgement. The five conditional legacy collections remain excluded from that command.

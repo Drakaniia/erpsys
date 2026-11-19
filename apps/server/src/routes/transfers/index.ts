@@ -23,8 +23,8 @@ import {
 import { catchAsync } from "../../middleware/catchAsync.js";
 import { okOne, parseBody } from "../../middleware/http.js";
 import { AcademicYearModel } from "../../models/AcademicYearModel.js";
-import { AdviserAvailabilityModel } from "../../models/AdviserAvailabilityModel.js";
-import { AdviserDepartmentModel } from "../../models/AdviserDepartmentModel.js";
+import { AdviserScheduleModel } from "../../models/AdviserScheduleModel.js";
+
 import { DepartmentModel } from "../../models/DepartmentModel.js";
 import { DepartmentTransferModel } from "../../models/DepartmentTransferModel.js";
 import { assertLevelsOffered } from "../../services/advisers.js";
@@ -118,7 +118,7 @@ transfersRouter.post(
     assertLevelsOffered(dept, requested);
 
     const holders = (
-      await AdviserDepartmentModel.listOtherHolders(
+      await DepartmentModel.listOtherAdviserHolders(
         input.departmentId,
         requester.id,
       )
@@ -139,7 +139,7 @@ transfersRouter.post(
     }
 
     const now = new Date();
-    const ownerActive = await AdviserAvailabilityModel.isActive(
+    const ownerActive = await AdviserScheduleModel.isActive(
       owner.adviserId,
       String(year._id),
       now,
@@ -232,7 +232,7 @@ transfersRouter.patch(
 
     const dept = await assignableDepartment(row.departmentId);
     assertLevelsOffered(dept, normalizeYearLevels(row.yearLevels ?? []));
-    const ownerLink = await AdviserDepartmentModel.findLink(
+    const ownerLink = await DepartmentModel.findAdviserLink(
       userId,
       row.departmentId,
     );
@@ -245,7 +245,7 @@ transfersRouter.patch(
       });
     }
     const currentOwners = (
-      await AdviserDepartmentModel.listOtherHolders(
+      await DepartmentModel.listOtherAdviserHolders(
         row.departmentId,
         row.requesterId,
       )
@@ -335,7 +335,7 @@ transfersRouter.post(
     const requested = normalizeYearLevels(input.yearLevels);
     const dept = await assignableDepartment(departmentId);
     assertLevelsOffered(dept, requested);
-    const holders = await AdviserDepartmentModel.listOtherHolders(
+    const holders = await DepartmentModel.listOtherAdviserHolders(
       departmentId,
       adviser.id,
     );

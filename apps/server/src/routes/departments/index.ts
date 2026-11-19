@@ -21,9 +21,9 @@ import {
   parseQuery,
 } from "../../middleware/http.js";
 import { AdminActionLogModel } from "../../models/AdminActionLogModel.js";
-import { AdviserAvailabilityModel } from "../../models/AdviserAvailabilityModel.js";
-import { AdviserDepartmentModel } from "../../models/AdviserDepartmentModel.js";
-import { AvailabilityWindowModel } from "../../models/AvailabilityWindowModel.js";
+import { AdviserScheduleModel } from "../../models/AdviserScheduleModel.js";
+
+
 import { DepartmentModel } from "../../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../../models/EnrollmentQueueModel.js";
 import { activeYearOrThrow } from "../../services/academic-years.js";
@@ -92,7 +92,7 @@ async function requireAssigned(
   verb: string,
 ): Promise<void> {
   if (isAdmin) return;
-  if (!(await AdviserDepartmentModel.findLink(callerId, departmentId))) {
+  if (!(await DepartmentModel.findAdviserLink(callerId, departmentId))) {
     throw new ApiError("FORBIDDEN", {
       message: `Only this department's adviser (or an admin) can ${verb} it.`,
     });
@@ -192,9 +192,9 @@ departmentsRouter.post(
       return okOne(res, view, 201);
     }
     const assigned =
-      (await AdviserDepartmentModel.listForAdviser(callerId)).length === 0;
+      (await DepartmentModel.listAssignmentsForAdviser(callerId)).length === 0;
     if (assigned) {
-      await AdviserDepartmentModel.insert({
+      await DepartmentModel.insertAdviser({
         _id: genId("adviser-dept"),
         adviserId: callerId,
         departmentId: row._id,
@@ -328,9 +328,9 @@ departmentsRouter.delete(
         message: "Cannot delete a department with active queue entries.",
       });
     }
-    await AdviserAvailabilityModel.deleteByDepartment(id);
-    await AdviserDepartmentModel.deleteByDepartment(id);
-    const scheduled = await AvailabilityWindowModel.deleteByDepartment(id);
+    await AdviserScheduleModel.deleteByDepartment(id);
+    await DepartmentModel.deleteAdvisersByDepartment(id);
+    const scheduled = await AdviserScheduleModel.deleteWindowsByDepartment(id);
     await DepartmentModel.remove(id);
     for (const adviserId of scheduled) {
       await syncAfterScheduleChange(adviserId);

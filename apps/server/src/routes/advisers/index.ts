@@ -18,8 +18,8 @@ import {
   parsePagination,
   parseQuery,
 } from "../../middleware/http.js";
-import { AdviserAvailabilityModel } from "../../models/AdviserAvailabilityModel.js";
-import { AdviserDepartmentModel } from "../../models/AdviserDepartmentModel.js";
+import { AdviserScheduleModel } from "../../models/AdviserScheduleModel.js";
+
 import { DepartmentModel } from "../../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../../models/EnrollmentQueueModel.js";
 import { UserModel } from "../../models/UserModel.js";
@@ -49,7 +49,7 @@ advisersRouter.get(
   admin,
   catchAsync(async (req, res) => {
     const users = await UserModel.listByRole("ENROLLMENT_ADVISER");
-    const links = await AdviserDepartmentModel.listAll();
+    const links = await DepartmentModel.listAllAdviserAssignments();
     const departments = await DepartmentModel.findByIds(
       links.map((link) => link.departmentId),
     );
@@ -140,7 +140,7 @@ advisersRouter.put(
         message: "This department is inactive — it cannot accept students.",
       });
     }
-    await AdviserAvailabilityModel.setOpen({
+    await AdviserScheduleModel.setOpen({
       adviserId,
       departmentId,
       academicYearId,
@@ -162,7 +162,7 @@ advisersRouter.put(
       academicYearId,
     );
 
-    const open = await AdviserAvailabilityModel.listOpenByDepartment(
+    const open = await AdviserScheduleModel.listOpenByDepartment(
       departmentId,
       academicYearId,
     );
@@ -193,7 +193,7 @@ advisersRouter.post(
   instructor,
   catchAsync(async (req, res) => {
     okOne(res, {
-      touched: await AdviserAvailabilityModel.touchOpen(
+      touched: await AdviserScheduleModel.touchOpen(
         sessionUser(req).id,
         new Date(),
       ),

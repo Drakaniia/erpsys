@@ -2,6 +2,8 @@ import {
   NOTIFICATION_PAGE_SIZE,
   PRE_ENROLLMENT_STEP_CODES,
   deriveDepartmentCode,
+  listSteps,
+  listStepsByCodes,
 } from "../config/constants.js";
 import { ApiError } from "../config/errors.js";
 import { landingSurfaceForRole } from "../config/roles.js";
@@ -10,9 +12,9 @@ import { AdminActionLogModel } from "../models/AdminActionLogModel.js";
 import { DepartmentModel } from "../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../models/EnrollmentQueueModel.js";
 import { NotificationModel } from "../models/NotificationModel.js";
-import { StepModel } from "../models/StepModel.js";
+
 import { StepVerificationModel } from "../models/StepVerificationModel.js";
-import { StudentProfileModel } from "../models/StudentProfileModel.js";
+
 import { UserModel } from "../models/UserModel.js";
 import { publicIntegrationPayload } from "../lib/platform/integration-settings.js";
 import type { SessionUser } from "../middleware/auth.js";
@@ -93,7 +95,7 @@ async function adminOverview() {
   const [users, activeYear, steps, logs] = await Promise.all([
     UserModel.listActiveRoles(),
     AcademicYearModel.findActive(),
-    StepModel.listOrdered(),
+    listSteps(),
     AdminActionLogModel.recent(RECENT_LIMIT),
   ]);
   const roleCounts = {
@@ -187,7 +189,7 @@ async function adminOverview() {
 
 async function officerOverview() {
   const [steps, year] = await Promise.all([
-    StepModel.listByCodes([...PRE_ENROLLMENT_STEP_CODES]),
+    listStepsByCodes(PRE_ENROLLMENT_STEP_CODES),
     AcademicYearModel.findActive(),
   ]);
 
@@ -271,7 +273,7 @@ async function officerOverview() {
     )
     .slice(0, OFFICER_RECENT_LIMIT);
 
-  const profiles = await StudentProfileModel.findByIds([
+  const profiles = await UserModel.findProfilesByIds([
     ...new Set(recent.map((row) => String(row.studentProfileId))),
   ]);
   const users = await UserModel.findByIds(

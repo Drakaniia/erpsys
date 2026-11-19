@@ -1,7 +1,7 @@
-import { STEP_CODES } from "../../config/constants.js";
+import { STEP_CODES, listStepCodeMap } from "../../config/constants.js";
 import { COLLECTIONS, getDbSync } from "../db/db.js";
 import { AcademicYearModel } from "../../models/AcademicYearModel.js";
-import { StudentProfileModel } from "../../models/StudentProfileModel.js";
+import { UserModel } from "../../models/UserModel.js";
 
 export type StudentChatContext = {
   name: string | null;
@@ -75,7 +75,7 @@ export async function getStudentChatContext(
   userName?: string | null,
 ): Promise<StudentChatContext | null> {
   try {
-    const profile = await StudentProfileModel.findByUserId(userId);
+    const profile = await UserModel.findProfileByUserId(userId);
     if (!profile) return null;
     const name = userName ?? null;
     const year = await AcademicYearModel.findActive();
@@ -90,10 +90,7 @@ export async function getStudentChatContext(
     const yearId = String(year._id);
     const db = getDbSync();
     const [steps, verifications, queue] = await Promise.all([
-      db
-        .collection<{ _id: string; code: string }>(COLLECTIONS.step)
-        .find({} as never, { projection: { code: 1 } })
-        .toArray(),
+      listStepCodeMap(),
       db
         .collection<{ stepId: string; status?: string | null }>(
           COLLECTIONS.stepVerification,
@@ -113,11 +110,10 @@ export async function getStudentChatContext(
     const codeById = new Map(
       steps.map((step) => [String(step._id), step.code]),
     );
-    const verifiedSet = new Set(
+    const verifiedSet = new Set<string>(
       verifications
         .filter((row) => row.status === "VERIFIED")
-        .map((row) => codeById.get(String(row.stepId)))
-        .filter((code): code is string => Boolean(code)),
+        .flatMap((row) => codeById.get(String(row.stepId)) ?? []),
     );
     const order = STEP_CODES as readonly string[];
     return {

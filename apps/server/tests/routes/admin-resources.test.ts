@@ -54,8 +54,9 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.stepVerification]: [],
 
     [COLLECTIONS.adminActionLog]: [],
-    [COLLECTIONS.socialMediaLink]: [
+    [COLLECTIONS.content]: [
       {
+        kind: "socialLink",
         _id: "sml-1",
         name: "Facebook",
         url: "https://fb.test",

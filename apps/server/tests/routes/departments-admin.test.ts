@@ -59,32 +59,23 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.department]: [
       {
         _id: "dept-1",
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: ["FIRST"] }],
         name: "College of Technologies",
         isActive: true,
         yearLevels: ["FIRST"],
       },
       {
         _id: "dept-2",
+        advisers: [{ _id: "link-2", adviserId: "adv2", yearLevels: [] }],
         name: "College of Arts",
         isActive: true,
         yearLevels: [],
       },
     ],
-    [COLLECTIONS.adviserDepartment]: [
-      {
-        _id: "link-1",
-        adviserId: "adv1",
-        departmentId: "dept-1",
-        yearLevels: ["FIRST"],
-      },
-      {
-        _id: "link-2",
-        adviserId: "adv2",
-        departmentId: "dept-2",
-        yearLevels: [],
-      },
-    ],
+
     [COLLECTIONS.user]: [
+      { _id: "u-p1", name: "Ana", email: "12345@student.buksu.edu.ph", role: "STUDENT",
+        studentProfile: { _id: "p1", studentNumber: "12345", academicYearId: "ay-1" } },
       {
         _id: "adm1",
         name: "Admin",
@@ -104,14 +95,7 @@ function seed(): Record<string, Row[]> {
         role: "ENROLLMENT_ADVISER",
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "p1",
-        userId: "u-p1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-    ],
+
     [COLLECTIONS.enrollmentQueue]: [
       {
         _id: "q-1",
@@ -278,7 +262,7 @@ describe("department writes", () => {
   it("deletes an empty department and its assignments", async () => {
     const { body } = await call("/departments/dept-2", "DELETE");
     expect(body.data).toEqual({ id: "dept-2", deleted: true });
-    expect(context.store[COLLECTIONS.adviserDepartment]).toHaveLength(1);
+    expect(context.store[COLLECTIONS.department].flatMap(department => department.advisers ?? [])).toHaveLength(1);
   });
 
   it("returns a serving student when the instructor changes assigned levels", async () => {
@@ -298,7 +282,7 @@ describe("department writes", () => {
       servedById: null,
     });
     expect(
-      context.store[COLLECTIONS.adviserDepartment].find(
+      (context.store[COLLECTIONS.department][0].advisers as Row[]).find(
         (row) => row.adviserId === "adv1",
       )?._id,
     ).toBe("link-1");

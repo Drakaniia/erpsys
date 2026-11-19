@@ -19,22 +19,18 @@ import { purgeUserById } from "../lib/db/user-purge.js";
 import type { SessionUser } from "../middleware/auth.js";
 import type { AcademicYearRow } from "../models/AcademicYearModel.js";
 import { AcademicYearModel } from "../models/AcademicYearModel.js";
-import { AdviserDepartmentModel } from "../models/AdviserDepartmentModel.js";
+
 import { DepartmentModel } from "../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../models/EnrollmentQueueModel.js";
 
-import { RequirementModel } from "../models/RequirementModel.js";
-import { SocialMediaLinkModel } from "../models/SocialMediaLinkModel.js";
-import { StepModel, type StepRow } from "../models/StepModel.js";
+import { ContentModel } from "../models/ContentModel.js";
+import { listSteps, listStepCodeMap, type StepDefinition } from "../config/constants.js";
 import {
   StepVerificationModel,
   type StepVerificationRow,
 } from "../models/StepVerificationModel.js";
 import { StudentEnrollmentModel } from "../models/StudentEnrollmentModel.js";
-import {
-  StudentProfileModel,
-  type StudentProfileRow,
-} from "../models/StudentProfileModel.js";
+import type { StudentProfileRow } from "../models/UserModel.js";
 import { UploadModel, type UploadRow } from "../models/UploadModel.js";
 import { UserModel, type UserRow } from "../models/UserModel.js";
 import { resolveYear } from "./academic-years.js";
@@ -78,7 +74,7 @@ const stepStatus = (verification: StepVerificationRow | null | undefined) =>
       : "PENDING";
 
 function stepRow(
-  step: StepRow,
+  step: StepDefinition,
   verification: StepVerificationRow | null,
   ctx: StepContext,
 ) {
@@ -166,7 +162,7 @@ function stepRow(
 
 export async function requireStudentContext(user: { id: string }) {
   const [profile, year] = await Promise.all([
-    StudentProfileModel.findByUserId(user.id),
+    UserModel.findProfileByUserId(user.id),
     AcademicYearModel.findActive(),
   ]);
   if (!year) {
@@ -183,7 +179,7 @@ export async function requireStudentContext(user: { id: string }) {
 }
 
 export async function studentProfileStatus(userId: string) {
-  const profile = await StudentProfileModel.findByUserId(userId);
+  const profile = await UserModel.findProfileByUserId(userId);
   return {
     hasProfile: profile !== null,
     studentNumber: profile?.studentNumber ?? null,
@@ -197,7 +193,7 @@ export async function ensureProfileForYear(params: {
   academicYearId: string;
 }): Promise<StudentProfileRow | null> {
   const { userId, email, academicYearId } = params;
-  const existing = await StudentProfileModel.findByUserId(userId);
+  const existing = await UserModel.findProfileByUserId(userId);
   if (existing) return existing;
 
   const studentNumber =
@@ -211,21 +207,21 @@ export async function ensureProfileForYear(params: {
       studentNumber,
       academicYearId,
     };
-    await StudentProfileModel.insert(doc);
+    await UserModel.insertProfile(doc);
     return doc;
   };
   const inUse = () =>
     new ApiError("CONFLICT", { message: STUDENT_NUMBER_IN_USE_MESSAGE });
 
   const colliding =
-    await StudentProfileModel.findByStudentNumber(studentNumber);
+    await UserModel.findProfileByStudentNumber(studentNumber);
   if (!colliding) {
     try {
       return await createFresh();
     } catch (error) {
       if ((error as { code?: number }).code !== 11000) throw error;
       const retry =
-        await StudentProfileModel.findByStudentNumber(studentNumber);
+        await UserModel.findProfileByStudentNumber(studentNumber);
       if (!retry) throw error;
       if (retry.userId === userId) return retry;
       throw inUse();
@@ -247,14 +243,9 @@ export async function ensureProfileForYear(params: {
         "This student number is already claimed — contact the SBO office.",
     });
   }
-  await StudentProfileModel.assignUser(colliding._id, userId);
-  await purgeUserById(getDbSync(), colliding.userId);
-  return (
-    (await StudentProfileModel.findById(colliding._id)) ?? {
-      ...colliding,
-      userId,
-    }
-  );
+  throw new ApiError("CONFLICT", {
+    message: "This student number is already claimed — contact the SBO office to resolve ownership.",
+  });
 }
 
 export async function listEnrollments(studentProfileId: string): Promise<
@@ -295,8 +286,8 @@ export async function listEnrollments(studentProfileId: string): Promise<
 }
 
 export async function loadStudentSteps(user: SessionUser) {
-  const profile = await StudentProfileModel.findByUserId(user.id);
-  const steps = (await StepModel.listOrdered()).filter((s) =>
+  const profile = await UserModel.findProfileByUserId(user.id);
+  const steps = (await listSteps()).filter((s) =>
     KNOWN_CODES.has(s.code),
   );
   const year = await AcademicYearModel.findActive();
@@ -342,9 +333,9 @@ export async function loadStudentSteps(user: SessionUser) {
       profile
         ? StepVerificationModel.listByProfileYear(profile._id, yearId)
         : [],
-      RequirementModel.listActive(),
+      ContentModel.listActive(),
       AcademicYearModel.profilingForm(yearId),
-      SocialMediaLinkModel.listActive(),
+      ContentModel.listActiveSocialLinks(),
       profile
         ? EnrollmentQueueModel.findByProfileYear(profile._id, yearId)
         : null,
@@ -368,7 +359,7 @@ export async function loadStudentSteps(user: SessionUser) {
   const verificationOf = new Map(
     verifications.map((v) => [String(v.stepId), v]),
   );
-  const verification = (step: StepRow) =>
+  const verification = (step: StepDefinition) =>
     verificationOf.get(String(step._id)) ?? null;
   const statusByCode = new Map(
     steps.map((step) => [step.code, stepStatus(verification(step))]),
@@ -430,14 +421,14 @@ function isoOrEmpty(...candidates: (Date | string | null | undefined)[]) {
 
 async function studentRecord(studentProfileId: string, year: AcademicYearRow) {
   const yearId = String(year._id);
-  const profile = await StudentProfileModel.findById(studentProfileId);
+  const profile = await UserModel.findProfileById(studentProfileId);
   if (!profile) return null;
   const profileId = String(profile._id);
   const [enrollment, verifications, queue, stepRows] = await Promise.all([
     StudentEnrollmentModel.findByProfileYear(profileId, yearId),
     StepVerificationModel.listByProfileYear(profileId, yearId),
     EnrollmentQueueModel.findByProfileYear(profileId, yearId),
-    StepModel.listCodeMap(),
+    listStepCodeMap(),
   ]);
   const actorIds = [
     profile.userId,
@@ -522,7 +513,7 @@ async function studentRecord(studentProfileId: string, year: AcademicYearRow) {
 
 export async function myRecord(userId: string) {
   const year = await AcademicYearModel.findActive();
-  const profile = year && (await StudentProfileModel.findByUserId(userId));
+  const profile = year && (await UserModel.findProfileByUserId(userId));
   const record =
     year && profile ? await studentRecord(profile._id, year) : null;
   const enrollment = record?.steps.find((step) => step.code === "ENROLLMENT");
@@ -549,7 +540,7 @@ async function officerYear(
 async function assertInScope(adviserId: string, departmentId: string) {
   if (
     departmentId &&
-    !(await AdviserDepartmentModel.findLink(adviserId, departmentId))
+    !(await DepartmentModel.findAdviserLink(adviserId, departmentId))
   ) {
     throw new ApiError("FORBIDDEN", {
       message: "This student belongs to another department.",
@@ -589,14 +580,14 @@ export async function officerDetail(
   const year = await officerYear(actor, academicYearId);
   const scope = actor.role === "ENROLLMENT_ADVISER" ? requestedScope : "all";
   const yearId = String(year._id);
-  const profile = await StudentProfileModel.findById(studentProfileId);
+  const profile = await UserModel.findProfileById(studentProfileId);
   if (!profile) {
     throw new ApiError("NOT_FOUND", { message: "Student not found." });
   }
   const pid = String(profile._id);
   const [enrollment, steps, verifications, queue, owner] = await Promise.all([
     StudentEnrollmentModel.findByProfileYear(pid, yearId),
-    StepModel.listOrdered(),
+    listSteps(),
     StepVerificationModel.listByProfileYear(pid, yearId),
     EnrollmentQueueModel.findByProfileYear(pid, yearId),
     UserModel.findById(String(profile.userId)),

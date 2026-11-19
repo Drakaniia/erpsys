@@ -2,6 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import {
   NOTIFICATION_STEPS_REMINDER,
+  findStepByCode,
+  listStepCodeMap,
   STEP_CODES,
   STUDENT_NUMBER_PATTERN,
 } from "../../config/constants.js";
@@ -17,13 +19,12 @@ import {
 import { catchAsync } from "../../middleware/catchAsync.js";
 import { okList, okOne, parseBody, parseQuery } from "../../middleware/http.js";
 import { AcademicYearModel } from "../../models/AcademicYearModel.js";
-import { AdviserDepartmentModel } from "../../models/AdviserDepartmentModel.js";
+import { DepartmentModel } from "../../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../../models/EnrollmentQueueModel.js";
 import { NotificationModel } from "../../models/NotificationModel.js";
-import { StepModel } from "../../models/StepModel.js";
 import { StepVerificationModel } from "../../models/StepVerificationModel.js";
 import { StudentEnrollmentModel } from "../../models/StudentEnrollmentModel.js";
-import { StudentProfileModel } from "../../models/StudentProfileModel.js";
+import { UserModel } from "../../models/UserModel.js";
 import { UploadModel } from "../../models/UploadModel.js";
 import { resolveYear } from "../../services/academic-years.js";
 import {
@@ -202,12 +203,12 @@ studentsRouter.post(
     const ids = [...new Set(input.studentProfileIds)];
     const [links, enrollments, verifications, completed, profiles, steps] =
       await Promise.all([
-        AdviserDepartmentModel.listForAdviser(adviserId),
+        DepartmentModel.listAssignmentsForAdviser(adviserId),
         StudentEnrollmentModel.listByProfiles(ids, yearId),
         StepVerificationModel.listByProfiles(ids, yearId),
         EnrollmentQueueModel.listCompletedProfiles(ids, yearId),
-        StudentProfileModel.findByIds(ids),
-        StepModel.listCodeMap(),
+        UserModel.findProfilesByIds(ids),
+        listStepCodeMap(),
       ]);
     const myDepartments = new Set(links.map((link) => link.departmentId));
     const departmentOf = new Map(
@@ -420,7 +421,7 @@ studentsRouter.post(
   student,
   catchAsync(async (req, res) => {
     const { profile, year } = await requireStudentContext(sessionUser(req));
-    const step = await StepModel.findByCode("ASSESSMENT");
+    const step = findStepByCode("ASSESSMENT");
     if (!step) {
       throw new ApiError("NOT_FOUND", {
         message: "Assessment step not configured.",

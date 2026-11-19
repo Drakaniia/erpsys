@@ -42,9 +42,9 @@ import {
 import { AcademicYearModel } from "../models/AcademicYearModel.js";
 import { AdminActionLogModel } from "../models/AdminActionLogModel.js";
 import {
-  AvailabilityWindowModel,
+  AdviserScheduleModel,
   type AvailabilityWindowRow,
-} from "../models/AvailabilityWindowModel.js";
+} from "../models/AdviserScheduleModel.js";
 import {
   CalendarConnectionModel,
   type CalendarConnectionRow,
@@ -168,7 +168,7 @@ async function reconcile(conn: CalendarConnectionRow): Promise<string> {
 
   const year = await AcademicYearModel.findActive();
   const rows = year
-    ? await AvailabilityWindowModel.listForAdviser(userId, String(year._id))
+    ? await AdviserScheduleModel.listWindowsForAdviser(userId, String(year._id))
     : [];
   const departments = await DepartmentModel.findByIds([
     ...new Set(rows.map((row) => row.departmentId)),
@@ -279,7 +279,7 @@ export async function syncAfterScheduleChange(
 export async function sweepCalendars(now: Date = new Date()): Promise<void> {
   const year = await AcademicYearModel.findActive();
   if (year) {
-    const advisers = await AvailabilityWindowModel.deleteStaleYears(
+    const advisers = await AdviserScheduleModel.deleteStaleWindowYears(
       String(year._id),
     );
     for (const adviserId of advisers) {
@@ -432,5 +432,5 @@ export async function disconnectCalendar(
 
 export async function removeCalendarData(userId: string): Promise<void> {
   await disconnectCalendar(userId);
-  await AvailabilityWindowModel.deleteForAdviser(userId);
+  await AdviserScheduleModel.deleteWindowsForAdviser(userId);
 }

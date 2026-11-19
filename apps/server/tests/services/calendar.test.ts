@@ -71,13 +71,14 @@ function seed(): Record<string, Row[]> {
         nextAttemptAt: new Date("2026-11-10"),
       },
     ],
-    [COLLECTIONS.availabilityWindow]: [
+    [COLLECTIONS.adviserSchedule]: [
       {
         _id: "w1",
         adviserId: "adv1",
         departmentId: "dept-1",
         academicYearId: "ay-1",
-        kind: "WEEKLY",
+        kind: "window",
+        windowKind: "WEEKLY",
         weekday: 1,
         startMinute: 540,
         endMinute: 720,
@@ -87,7 +88,8 @@ function seed(): Record<string, Row[]> {
         adviserId: "adv1",
         departmentId: "dept-1",
         academicYearId: "ay-1",
-        kind: "CANCEL",
+        kind: "window",
+        windowKind: "CANCEL",
         date: "2026-11-23",
       },
       {
@@ -95,7 +97,8 @@ function seed(): Record<string, Row[]> {
         adviserId: "adv1",
         departmentId: "dept-1",
         academicYearId: "ay-1",
-        kind: "EXTRA",
+        kind: "window",
+        windowKind: "EXTRA",
         date: "2026-11-21",
         startMinute: 600,
         endMinute: 660,
@@ -256,12 +259,13 @@ describe("calendar sweep", () => {
   });
 
   it("drops windows from a past academic year and resyncs that instructor", async () => {
-    context.store[COLLECTIONS.availabilityWindow].push({
+    context.store[COLLECTIONS.adviserSchedule].push({
       _id: "old",
       adviserId: "adv1",
       departmentId: "dept-1",
       academicYearId: "ay-0",
-      kind: "WEEKLY",
+      kind: "window",
+      windowKind: "WEEKLY",
       weekday: 2,
       startMinute: 540,
       endMinute: 600,
@@ -270,7 +274,7 @@ describe("calendar sweep", () => {
     connection().nextAttemptAt = null;
     await sweepCalendars(new Date());
     expect(
-      context.store[COLLECTIONS.availabilityWindow].map((w) => w._id),
+      context.store[COLLECTIONS.adviserSchedule].filter(w => w.kind === "window").map((w) => w._id),
     ).not.toContain("old");
     expect(google.listEvents).toHaveBeenCalled();
   });

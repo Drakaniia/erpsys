@@ -21,7 +21,7 @@ import {
 import { catchAsync } from "../../middleware/catchAsync.js";
 import { okOne, parseBody, parseQuery } from "../../middleware/http.js";
 import { AcademicYearModel } from "../../models/AcademicYearModel.js";
-import { StepModel } from "../../models/StepModel.js";
+import { findStepByCode } from "../../config/constants.js";
 import { StepVerificationModel } from "../../models/StepVerificationModel.js";
 import { UploadModel, externalLinkKey } from "../../models/UploadModel.js";
 import {
@@ -43,7 +43,7 @@ const stepCodeParams = z.object({ code: uploadStepCodeSchema });
 
 async function stepContext(req: Request, code: string) {
   const { profile, year } = await requireStudentContext(sessionUser(req));
-  const step = await StepModel.findByCode(code);
+  const step = findStepByCode(code);
   if (!step) {
     throw new ApiError("NOT_FOUND", { message: "Step not configured." });
   }

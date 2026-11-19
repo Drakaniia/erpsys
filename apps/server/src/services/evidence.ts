@@ -12,7 +12,7 @@ import { configuredR2Client } from "../lib/storage/configured-client.js";
 import { addStoredBytes, monthKey } from "../lib/storage/quota.js";
 import { isR2FileKey, parseR2FileKey } from "../lib/storage/storage.js";
 import { NotificationModel } from "../models/NotificationModel.js";
-import { StepModel } from "../models/StepModel.js";
+import { listStepsByCodes } from "../config/constants.js";
 import { StepVerificationModel } from "../models/StepVerificationModel.js";
 import { UploadModel, type UploadRow } from "../models/UploadModel.js";
 
@@ -119,7 +119,7 @@ export async function sweepDrafts(
       toExpire.flatMap((upload) => codeByKind.get(String(upload.kind)) ?? []),
     ),
   ];
-  const steps = await StepModel.listByCodes(codes);
+  const steps = listStepsByCodes(codes);
   const label =
     steps.length > 0
       ? steps.map((step) => step.name).join(", ")

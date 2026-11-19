@@ -3,22 +3,23 @@ import {
   departmentAcceptsLevel,
   deriveDepartmentCode,
   normalizeYearLevels,
+  listStepsByCodes,
   stepLabel,
   type YearLevel,
 } from "../config/constants.js";
 import { liveAvailabilityPairs, openByDepartment } from "../config/queue.js";
-import { AdviserAvailabilityModel } from "../models/AdviserAvailabilityModel.js";
-import { AdviserDepartmentModel } from "../models/AdviserDepartmentModel.js";
+import { AdviserScheduleModel } from "../models/AdviserScheduleModel.js";
+
 import { AcademicYearModel } from "../models/AcademicYearModel.js";
 import { DepartmentModel } from "../models/DepartmentModel.js";
 import {
   EnrollmentQueueModel,
   type QueueEntryRow,
 } from "../models/EnrollmentQueueModel.js";
-import { StepModel } from "../models/StepModel.js";
+
 import { StepVerificationModel } from "../models/StepVerificationModel.js";
 import { StudentEnrollmentModel } from "../models/StudentEnrollmentModel.js";
-import { StudentProfileModel } from "../models/StudentProfileModel.js";
+
 import { UserModel } from "../models/UserModel.js";
 
 const ENTRY_CAP = 200;
@@ -52,7 +53,7 @@ export async function myQueues(adviserId: string) {
     };
   }
   const yearId = String(year._id);
-  const links = await AdviserDepartmentModel.listForAdviser(adviserId);
+  const links = await DepartmentModel.listAssignmentsForAdviser(adviserId);
   const departments = await DepartmentModel.findByIds(
     links.map((link) => link.departmentId),
   );
@@ -73,8 +74,8 @@ export async function myQueues(adviserId: string) {
   if (deptIds.length === 0) return { ...header, departments: [] };
 
   const [openRows, myRows, waiting, serving] = await Promise.all([
-    AdviserAvailabilityModel.listOpenByDepartments(deptIds, yearId),
-    AdviserAvailabilityModel.listMineByDepartments(adviserId, deptIds, yearId),
+    AdviserScheduleModel.listOpenByDepartments(deptIds, yearId),
+    AdviserScheduleModel.listMineByDepartments(adviserId, deptIds, yearId),
     Promise.all(
       deptIds.map((id) =>
         EnrollmentQueueModel.listByStatus([id], yearId, "WAITING", ENTRY_CAP),
@@ -102,10 +103,10 @@ export async function myQueues(adviserId: string) {
     ...new Set(entries.map((entry) => String(entry.studentProfileId))),
   ];
   const [profiles, verifications, enrollments, stepRows] = await Promise.all([
-    StudentProfileModel.findByIds(profileIds),
+    UserModel.findProfilesByIds(profileIds),
     StepVerificationModel.listByProfiles(profileIds, yearId),
     StudentEnrollmentModel.listByProfiles(profileIds, yearId),
-    StepModel.listByCodes([...PRE_ENROLLMENT_STEP_CODES]),
+    listStepsByCodes(PRE_ENROLLMENT_STEP_CODES),
   ]);
 
   const codeByStepId = new Map(stepRows.map((s) => [String(s._id), s.code]));

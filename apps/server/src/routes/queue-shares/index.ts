@@ -16,7 +16,7 @@ import {
 } from "../../middleware/auth.js";
 import { catchAsync } from "../../middleware/catchAsync.js";
 import { okOne, parseBody, parseQuery } from "../../middleware/http.js";
-import { AdviserAvailabilityModel } from "../../models/AdviserAvailabilityModel.js";
+import { AdviserScheduleModel } from "../../models/AdviserScheduleModel.js";
 import { DepartmentModel } from "../../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../../models/EnrollmentQueueModel.js";
 import { UserModel } from "../../models/UserModel.js";
@@ -128,7 +128,7 @@ queueSharesRouter.get(
     if (!department || !department.isActive) return okOne(res, INVALID);
 
     const [availabilities, serving, waitingCount, inviter] = await Promise.all([
-      AdviserAvailabilityModel.listOpenByYear(activeYearId),
+      AdviserScheduleModel.listOpenByYear(activeYearId),
       EnrollmentQueueModel.listInProgressByYear(activeYearId),
       EnrollmentQueueModel.countInLine({
         academicYearId: activeYearId,

@@ -52,16 +52,16 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.department]: [
       {
         _id: "dept-1",
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: [] }],
         name: "College of Technologies",
         isActive: true,
         yearLevels: ["FIRST"],
       },
     ],
-    [COLLECTIONS.adviserDepartment]: [
-      { _id: "link-1", adviserId: "adv1", departmentId: "dept-1" },
-    ],
-    [COLLECTIONS.adviserAvailability]: [
+
+    [COLLECTIONS.adviserSchedule]: [
       {
+        kind: "presence",
         _id: "av-1",
         adviserId: "adv1",
         departmentId: "dept-1",

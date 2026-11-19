@@ -7,8 +7,8 @@ import {
   createAuthMiddleware,
   getSessionFromCtx,
 } from "better-auth/api";
-import { AdviserAvailabilityModel } from "../models/AdviserAvailabilityModel.js";
-import { AdviserDepartmentModel } from "../models/AdviserDepartmentModel.js";
+import { AdviserScheduleModel } from "../models/AdviserScheduleModel.js";
+import { DepartmentModel } from "../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../models/EnrollmentQueueModel.js";
 import { UserModel } from "../models/UserModel.js";
 import { COLLECTIONS, getDbSync, idIn } from "../lib/db/db.js";
@@ -200,6 +200,12 @@ export const auth = betterAuth({
   },
   user: {
     additionalFields: {
+      studentProfile: {
+        type: "json",
+        required: false,
+        input: false,
+        returned: false,
+      },
       role: {
         type: "string",
         required: false,
@@ -248,9 +254,9 @@ export const auth = betterAuth({
       if (ctx.path === "/sign-out") {
         const session = await getSessionFromCtx(ctx);
         if (session?.user?.id) {
-          await AdviserAvailabilityModel.closeOpenForAdviser(session.user.id);
+          await AdviserScheduleModel.closeOpenForAdviser(session.user.id);
           await EnrollmentQueueModel.releaseServingExcept(session.user.id, []);
-          await AdviserDepartmentModel.deleteForAdviser(session.user.id);
+          await DepartmentModel.deleteAssignmentsForAdviser(session.user.id);
         }
       }
     }),

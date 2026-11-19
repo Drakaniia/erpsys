@@ -53,12 +53,14 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.department]: [
       {
         _id: "dept-1",
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: ["FIRST"] }],
         name: "College of Technologies",
         isActive: true,
         yearLevels: ["FIRST"],
       },
       {
         _id: "dept-2",
+        advisers: [{ _id: "link-2", adviserId: "adv2", yearLevels: [] }],
         name: "College of Arts",
         isActive: true,
         yearLevels: [],
@@ -70,20 +72,7 @@ function seed(): Record<string, Row[]> {
         yearLevels: [],
       },
     ],
-    [COLLECTIONS.adviserDepartment]: [
-      {
-        _id: "link-1",
-        adviserId: "adv1",
-        departmentId: "dept-1",
-        yearLevels: ["FIRST"],
-      },
-      {
-        _id: "link-2",
-        adviserId: "adv2",
-        departmentId: "dept-2",
-        yearLevels: [],
-      },
-    ],
+
     [COLLECTIONS.user]: [
       {
         _id: "adm1",
@@ -105,19 +94,13 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p1",
+        studentProfile: { _id: "p1", studentNumber: "12345", academicYearId: "ay-1" },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "p1",
-        userId: "u-p1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-    ],
+
     [COLLECTIONS.enrollmentQueue]: [
       {
         _id: "q-1",
@@ -128,7 +111,7 @@ function seed(): Record<string, Row[]> {
         joinedAt: new Date("2025-07-01"),
       },
     ],
-    [COLLECTIONS.adviserAvailability]: [],
+    [COLLECTIONS.adviserSchedule]: [],
     [COLLECTIONS.notification]: [],
   };
 }
@@ -200,15 +183,10 @@ describe("adviser mapping", () => {
       adviserId: "adv1",
       assignments: [{ departmentId: "dept-3", yearLevels: ["SECOND"] }],
     });
-    const links = context.store[COLLECTIONS.adviserDepartment];
-    expect(links.filter((link) => link.adviserId === "adv1")).toEqual([
-      {
-        _id: expect.any(String),
-        adviserId: "adv1",
-        departmentId: "dept-3",
-        yearLevels: ["SECOND"],
-      },
+    expect(context.store[COLLECTIONS.department].find(department => department._id === "dept-3")?.advisers).toEqual([
+      expect.objectContaining({ adviserId: "adv1", yearLevels: ["SECOND"] }),
     ]);
+    expect(context.store[COLLECTIONS.department].find(department => department._id === "dept-1")?.advisers ?? []).toEqual([]);
     expect(context.store[COLLECTIONS.adminActionLog]).toEqual([
       expect.objectContaining({
         actorId: "adm1",
@@ -240,7 +218,8 @@ describe("adviser mapping", () => {
 describe("backend operation budgets", () => {
   it("preserves availability and the serving student for an unchanged assignment", async () => {
     holder.session = ADVISER;
-    context.store[COLLECTIONS.adviserAvailability].push({
+    context.store[COLLECTIONS.adviserSchedule].push({
+      kind: "presence",
       _id: "open",
       adviserId: "adv1",
       departmentId: "dept-1",
@@ -256,7 +235,7 @@ describe("backend operation budgets", () => {
       yearLevels: ["FIRST"],
     });
     expect(response.status).toBe(200);
-    expect(context.store[COLLECTIONS.adviserAvailability][0].isOpen).toBe(true);
+    expect(context.store[COLLECTIONS.adviserSchedule].find(row => row.kind === "presence")?.isOpen).toBe(true);
     expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
       status: "IN_PROGRESS",
       servedById: "adv1",
@@ -266,7 +245,8 @@ describe("backend operation budgets", () => {
   it("still aborts stale availability writes before changing queue state", async () => {
     holder.session = ADVISER;
     const ts = nextTs();
-    context.store[COLLECTIONS.adviserAvailability].push({
+    context.store[COLLECTIONS.adviserSchedule].push({
+      kind: "presence",
       _id: "open",
       adviserId: "adv1",
       departmentId: "dept-1",
@@ -282,7 +262,7 @@ describe("backend operation budgets", () => {
     });
     expect(response.status).toBe(409);
     expect(response.body.data.code).toBe("TS_ABORTED");
-    expect(context.store[COLLECTIONS.adviserAvailability][0].isOpen).toBe(
+    expect(context.store[COLLECTIONS.adviserSchedule].find(row => row.kind === "presence")?.isOpen).toBe(
       false,
     );
   });
@@ -340,7 +320,7 @@ describe("backend operation budgets", () => {
         expect(
           operations.some(
             (operation) =>
-              operation.startsWith(`${COLLECTIONS.adviserAvailability}.`) ||
+              operation.startsWith(`${COLLECTIONS.adviserSchedule}.`) ||
               operation.startsWith(`${COLLECTIONS.enrollmentQueue}.`),
           ),
         ).toBe(false);
@@ -368,7 +348,7 @@ describe("adviser availability", () => {
       isOpen: true,
       openBy: null,
     });
-    expect(context.store[COLLECTIONS.adviserAvailability]).toHaveLength(1);
+    expect(context.store[COLLECTIONS.adviserSchedule].filter(row => row.kind === "presence")).toHaveLength(1);
   });
 
   it("closing releases only my serving student in the active year", async () => {
@@ -411,9 +391,9 @@ describe("adviser availability", () => {
 
   it("opening does not need to list other availability rows", async () => {
     holder.session = ADVISER;
-    const { AdviserAvailabilityModel } =
-      await import("../../src/models/AdviserAvailabilityModel.js");
-    const list = vi.spyOn(AdviserAvailabilityModel, "listOpenByDepartment");
+    const { AdviserScheduleModel } =
+      await import("../../src/models/AdviserScheduleModel.js");
+    const list = vi.spyOn(AdviserScheduleModel, "listOpenByDepartment");
     const response = await call("/me/availability", "PUT", {
       departmentId: "dept-1",
       isOpen: true,

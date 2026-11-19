@@ -16,7 +16,7 @@ import { purgeUserById } from "../../lib/db/user-purge.js";
 import { AcademicYearModel } from "../../models/AcademicYearModel.js";
 import { DepartmentModel } from "../../models/DepartmentModel.js";
 import { StudentEnrollmentModel } from "../../models/StudentEnrollmentModel.js";
-import { StudentProfileModel } from "../../models/StudentProfileModel.js";
+
 import { UserModel } from "../../models/UserModel.js";
 
 const bodySchema = z
@@ -76,7 +76,7 @@ async function place(input: {
 
   const profileId = crypto.randomUUID();
   try {
-    await StudentProfileModel.insert({
+    await UserModel.insertProfile({
       _id: profileId,
       userId: input.userId,
       studentNumber: input.studentNumber,
@@ -136,7 +136,7 @@ export function createStudentSignUpPlugin() {
             await purgeUserById(db, blocked._id);
           }
 
-          const existingProfile = await StudentProfileModel.findByStudentNumber(
+          const existingProfile = await UserModel.findProfileByStudentNumber(
             input.studentNumber,
           );
           if (existingProfile && existingProfile.userId !== "") {

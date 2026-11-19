@@ -47,14 +47,7 @@ function seed(): Record<string, Row[]> {
         createdAt: new Date("2025-06-01"),
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "profile-1",
-        userId: "stud1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-    ],
+
     [COLLECTIONS.studentEnrollment]: [
       {
         _id: "enr-1",
@@ -67,6 +60,7 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.department]: [
       {
         _id: "dept-1",
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: ["FIRST"] }],
         name: "College of Technologies",
         isActive: true,
         yearLevels: ["FIRST"],
@@ -78,8 +72,9 @@ function seed(): Record<string, Row[]> {
         yearLevels: ["SECOND"],
       },
     ],
-    [COLLECTIONS.adviserAvailability]: [
+    [COLLECTIONS.adviserSchedule]: [
       {
+        kind: "presence",
         _id: "av-1",
         adviserId: "adv1",
         departmentId: "dept-1",
@@ -88,14 +83,7 @@ function seed(): Record<string, Row[]> {
         lastActiveAt: new Date(),
       },
     ],
-    [COLLECTIONS.adviserDepartment]: [
-      {
-        _id: "link-1",
-        adviserId: "adv1",
-        departmentId: "dept-1",
-        yearLevels: ["FIRST"],
-      },
-    ],
+
     [COLLECTIONS.enrollmentQueue]: [
       {
         _id: "q-1",
@@ -109,6 +97,7 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.user]: [
       {
         _id: "stud1",
+        studentProfile: { _id: "profile-1", studentNumber: "12345", academicYearId: "ay-1" },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",

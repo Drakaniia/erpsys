@@ -22,9 +22,9 @@ vi.mock("../../src/lib/db/db.js", async (importOriginal) => {
 
 function seed(): Record<string, Row[]> {
   return {
-    [COLLECTIONS.requirementItem]: [
-      { _id: "req-1", label: "Report Card", order: 0, isActive: true },
-      { _id: "req-2", label: "Birth Certificate", order: 1, isActive: true },
+    [COLLECTIONS.content]: [
+      { _id: "req-1", kind: "requirement", label: "Report Card", order: 0, isActive: true },
+      { _id: "req-2", kind: "requirement", label: "Birth Certificate", order: 1, isActive: true },
     ],
     [COLLECTIONS.adminActionLog]: [],
   };

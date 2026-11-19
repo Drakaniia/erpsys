@@ -3,19 +3,20 @@ import {
   STEP_CODES,
   YEAR_LEVELS,
   deriveDepartmentCode,
+  listStepCodeMap,
   type YearLevel,
 } from "../config/constants.js";
 import { ApiError } from "../config/errors.js";
 import { escapeQueryRegex } from "../config/queue.js";
 import type { SessionUser } from "../middleware/auth.js";
 import type { AcademicYearRow } from "../models/AcademicYearModel.js";
-import { AdviserDepartmentModel } from "../models/AdviserDepartmentModel.js";
+
 import { DepartmentModel } from "../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../models/EnrollmentQueueModel.js";
-import { StepModel } from "../models/StepModel.js";
+
 import { StepVerificationModel } from "../models/StepVerificationModel.js";
 import { StudentEnrollmentModel } from "../models/StudentEnrollmentModel.js";
-import { StudentProfileModel } from "../models/StudentProfileModel.js";
+
 import { UserModel } from "../models/UserModel.js";
 import { resolveYear } from "./academic-years.js";
 import { displayName } from "./submissions.js";
@@ -195,17 +196,17 @@ async function searchProfileIds(q?: string): Promise<string[] | null> {
   if (!term) return null;
   const contains = { $regex: escapeQueryRegex(term), $options: "i" };
   const [byNumber, byName] = await Promise.all([
-    StudentProfileModel.searchByStudentNumber(contains),
+    UserModel.searchProfilesByStudentNumber(contains),
     UserModel.searchByName(contains),
   ]);
-  const viaUser = await StudentProfileModel.listByUserIds(
+  const viaUser = await UserModel.listProfilesByUserIds(
     byName.map((user) => String(user._id)),
   );
   return [...new Set([...byNumber, ...viaUser].map((p) => String(p._id)))];
 }
 
 async function profileInfo(profileIds: string[]) {
-  const profiles = await StudentProfileModel.findByIds(profileIds);
+  const profiles = await UserModel.findProfilesByIds(profileIds);
   const users = await UserModel.findByIds(
     profiles.map((profile) => String(profile.userId)),
   );
@@ -231,7 +232,7 @@ async function loadStudents(
 ): Promise<RosterStudent[]> {
   const qProfileIds = await searchProfileIds(input.q);
   if (input.unassigned) {
-    const profiles = await StudentProfileModel.listUnenrolled(
+    const profiles = await UserModel.listUnenrolledProfiles(
       enrolledIds,
       qProfileIds,
     );
@@ -253,7 +254,7 @@ async function loadStudents(
   const owned =
     input.scope === "all"
       ? (await DepartmentModel.listIds()).map((dept) => String(dept._id))
-      : (await AdviserDepartmentModel.listForAdviser(adviserId)).map(
+      : (await DepartmentModel.listAssignmentsForAdviser(adviserId)).map(
           (link) => link.departmentId,
         );
   const wanted = new Set(input.departmentIds);
@@ -302,14 +303,14 @@ export async function loadRoster(
     (row) => row.studentProfileId,
   );
   const unassignedTotal =
-    await StudentProfileModel.countUnenrolled(enrolledIds);
+    await UserModel.countUnenrolledProfiles(enrolledIds);
   const students = await loadStudents(input, adviserId, yearId, enrolledIds);
 
   const profileIds = students.map((student) => student.studentProfileId);
   const [verifications, queues, codeMap] = await Promise.all([
     StepVerificationModel.listByProfiles(profileIds, yearId),
     EnrollmentQueueModel.listByProfiles(profileIds, yearId),
-    StepModel.listCodeMap(),
+    listStepCodeMap(),
   ]);
   const stepCodeById = new Map(
     codeMap.map((step) => [String(step._id), step.code]),
@@ -562,14 +563,14 @@ export async function listStudents(
   if (!q) return { items: [], total: 0 };
   const rx = { $regex: escapeQueryRegex(q), $options: "i" };
   const [byNumber, byName] = await Promise.all([
-    StudentProfileModel.searchByStudentNumber(rx, input.limit),
+    UserModel.searchProfilesByStudentNumber(rx, input.limit),
     UserModel.searchByName(rx, input.limit),
   ]);
-  const viaUser = await StudentProfileModel.listByUserIds(
+  const viaUser = await UserModel.listProfilesByUserIds(
     byName.map((row) => String(row._id)),
     input.limit,
   );
-  const found = await StudentProfileModel.findByIds(
+  const found = await UserModel.findProfilesByIds(
     [...byNumber, ...viaUser].map((row) => String(row._id)),
   );
   const profiles = [

@@ -19,7 +19,7 @@ import { AcademicYearModel } from "../../models/AcademicYearModel.js";
 import { DepartmentModel } from "../../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../../models/EnrollmentQueueModel.js";
 import { StudentEnrollmentModel } from "../../models/StudentEnrollmentModel.js";
-import { StudentProfileModel } from "../../models/StudentProfileModel.js";
+import { UserModel } from "../../models/UserModel.js";
 import { complete, revert, revertMany } from "../../services/enrollments.js";
 import {
   ensureProfileForYear,
@@ -51,7 +51,7 @@ enrollmentsRouter.get(
   student,
   catchAsync(async (req, res) => {
     const [profile, year] = await Promise.all([
-      StudentProfileModel.findByUserId(sessionUser(req).id),
+      UserModel.findProfileByUserId(sessionUser(req).id),
       AcademicYearModel.findActive(),
     ]);
     const summaries = profile ? await listEnrollments(profile._id) : [];

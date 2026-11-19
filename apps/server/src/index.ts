@@ -1,5 +1,6 @@
 import { closeDb, getDb } from "./lib/db/db.js";
 import { ensureIndexes } from "./lib/db/indexes.js";
+import { assertCollectionReadiness } from "./lib/db/collection-readiness.js";
 import { startSweeps } from "./lib/db/sweeps.js";
 import {
   loadCredentialOverrides,
@@ -17,7 +18,9 @@ process.on("unhandledRejection", (error) =>
 );
 
 try {
-  await (await getDb()).command({ ping: 1 });
+  const db = await getDb();
+  await db.command({ ping: 1 });
+  await assertCollectionReadiness(db);
   await ensureIndexes();
   const overrides = await loadCredentialOverrides();
   applyEnvOverrides(overrides.values);

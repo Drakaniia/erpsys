@@ -83,42 +83,26 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p1",
+        studentProfile: { _id: "p1", studentNumber: "12345", academicYearId: "ay-1" },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
       },
       {
         _id: "u-p2",
+        studentProfile: { _id: "p2", studentNumber: "12346", academicYearId: "ay-1" },
         name: "Ben",
         email: "12346@student.buksu.edu.ph",
         role: "STUDENT",
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "p1",
-        userId: "u-p1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-      {
-        _id: "p2",
-        userId: "u-p2",
-        studentNumber: "12346",
-        academicYearId: "ay-1",
-      },
-    ],
-    [COLLECTIONS.step]: STEPS.map((code, index) => ({
-      _id: `step-${code}`,
-      code,
-      name: code,
-      order: index + 1,
-    })),
+
+
     [COLLECTIONS.stepVerification]: [
       {
         _id: "v-1",
         studentProfileId: "p1",
-        stepId: "step-ASSESSMENT",
+        stepId: "ASSESSMENT",
         academicYearId: "ay-1",
         status: "VERIFIED",
         verifiedAt: new Date("2025-07-02T10:00:00Z"),
@@ -127,7 +111,7 @@ function seed(): Record<string, Row[]> {
       {
         _id: "v-2",
         studentProfileId: "p2",
-        stepId: "step-ASSESSMENT",
+        stepId: "ASSESSMENT",
         academicYearId: "ay-1",
         status: "RETURNED",
         respondedAt: new Date("2025-07-03T10:00:00Z"),
@@ -136,7 +120,7 @@ function seed(): Record<string, Row[]> {
       {
         _id: "v-3",
         studentProfileId: "p2",
-        stepId: "step-PROFILING",
+        stepId: "PROFILING",
         academicYearId: "ay-1",
         status: "SUBMITTED",
       },
@@ -353,7 +337,7 @@ describe("officer overview", () => {
         id: "v-2",
         studentName: "Ben",
         stepCode: "ASSESSMENT",
-        stepName: "ASSESSMENT",
+        stepName: "Assessment",
         action: "Returned",
         at: "2025-07-03T10:00:00.000Z",
       },
@@ -361,7 +345,7 @@ describe("officer overview", () => {
         id: "v-1",
         studentName: "Ana",
         stepCode: "ASSESSMENT",
-        stepName: "ASSESSMENT",
+        stepName: "Assessment",
         action: "Verified",
         at: "2025-07-02T10:00:00.000Z",
       },
@@ -374,7 +358,7 @@ describe("officer overview", () => {
       {
         _id: "v-4",
         studentProfileId: "p1",
-        stepId: "step-PROFILING",
+        stepId: "PROFILING",
         academicYearId: "ay-1",
         status: "APPLIED",
         appliedAt: new Date("2025-07-05T02:00:00Z"),
@@ -382,7 +366,7 @@ describe("officer overview", () => {
       {
         _id: "v-5",
         studentProfileId: "p2",
-        stepId: "step-MUGSHOT",
+        stepId: "MUGSHOT",
         academicYearId: "ay-1",
         status: "SUBMITTED",
         appliedAt: new Date("2025-07-06T02:00:00Z"),
@@ -419,7 +403,7 @@ describe("officer overview", () => {
     ].map((code) => ({
       _id: `c-${code}`,
       studentProfileId: "p1",
-      stepId: `step-${code}`,
+      stepId: code,
       academicYearId: "ay-1",
       status: "VERIFIED",
       verifiedAt: new Date("2025-07-02T10:00:00Z"),
@@ -435,7 +419,7 @@ describe("officer overview", () => {
     context.store[COLLECTIONS.stepVerification]!.push({
       _id: "v-6",
       studentProfileId: "p1",
-      stepId: "step-CONSENT",
+      stepId: "CONSENT",
       academicYearId: "ay-1",
       status: "SUBMITTED",
       // 18:00Z on Jul 9 is already Jul 10 on campus (UTC+8).

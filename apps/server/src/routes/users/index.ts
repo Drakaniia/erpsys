@@ -58,17 +58,17 @@ const notFound = () =>
   new ApiError("NOT_FOUND", { message: "User not found." });
 
 async function profileIds(actor: unknown): Promise<string[]> {
-  const profiles = await getDbSync()
-    .collection<{ _id: string }>(COLLECTIONS.studentProfile)
-    .find({ userId: actor } as never, { projection: { _id: 1 } })
+  const owners = await getDbSync()
+    .collection<{ studentProfile?: { _id: string } }>(COLLECTIONS.user)
+    .find({ _id: actor } as never, { projection: { studentProfile: 1 } })
     .toArray();
-  return profiles.map((p) => String(p._id));
+  return owners.flatMap(owner => owner.studentProfile ? [String(owner.studentProfile._id)] : []);
 }
 
 async function hasActivity(userId: string): Promise<boolean> {
   const db = getDbSync();
   const actor = refIn([userId]);
-  const inProfiles = { studentProfileId: { $in: await profileIds(actor) } };
+  const inProfiles = { studentProfileId: refIn(await profileIds(actor)) };
   const counts = await Promise.all([
     db.collection(COLLECTIONS.stepVerification).countDocuments({
       $or: [
@@ -84,10 +84,8 @@ async function hasActivity(userId: string): Promise<boolean> {
     db.collection(COLLECTIONS.enrollmentQueue).countDocuments({
       $or: [inProfiles, { servedById: actor }, { movedToEndById: actor }],
     } as never),
-    ...[COLLECTIONS.adviserDepartment, COLLECTIONS.adviserAvailability].map(
-      (name) =>
-        db.collection(name).countDocuments({ adviserId: actor } as never),
-    ),
+    db.collection(COLLECTIONS.department).countDocuments({ advisers: { $elemMatch: { adviserId: actor } } } as never),
+    db.collection(COLLECTIONS.adviserSchedule).countDocuments({ kind: "presence", adviserId: actor } as never),
     db
       .collection(COLLECTIONS.notification)
       .countDocuments({ userId: actor } as never),
@@ -112,10 +110,10 @@ async function disableAccount(target: Target): Promise<void> {
     .collection(COLLECTIONS.session)
     .deleteMany({ userId: actor } as never);
   await db.collection(COLLECTIONS.enrollmentQueue).deleteMany({
-    studentProfileId: { $in: await profileIds(actor) },
+    studentProfileId: refIn(await profileIds(actor)),
   } as never);
-  await db.collection(COLLECTIONS.adviserAvailability).updateMany(
-    { adviserId: actor, isOpen: true } as never,
+  await db.collection(COLLECTIONS.adviserSchedule).updateMany(
+    { kind: "presence", adviserId: actor, isOpen: true } as never,
     {
       $set: { isOpen: false, closedAt: new Date(), autoClosedAt: null },
     } as never,
@@ -140,11 +138,9 @@ async function hardDeleteAccount(target: Target): Promise<void> {
     .collection(COLLECTIONS.verification)
     .deleteMany({ identifier: target.email } as never);
   await db.collection(COLLECTIONS.studentEnrollment).deleteMany({
-    studentProfileId: { $in: await profileIds(actor) },
+    studentProfileId: refIn(await profileIds(actor)),
   } as never);
-  await db
-    .collection(COLLECTIONS.studentProfile)
-    .deleteMany({ userId: actor } as never);
+
   await users().deleteOne({ _id: target._id } as never);
 }
 

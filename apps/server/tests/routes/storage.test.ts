@@ -45,10 +45,6 @@ const STUDENT = {
   },
 };
 
-const STEPS = [
-  { _id: "step-1", code: "ASSESSMENT", name: "Assessment", order: 1 },
-  { _id: "step-4", code: "MUGSHOT", name: "Mugshot", order: 4 },
-];
 
 function seed(): Record<string, Row[]> {
   return {
@@ -61,15 +57,8 @@ function seed(): Record<string, Row[]> {
         createdAt: new Date("2025-06-01"),
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "profile-1",
-        userId: "stud1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-    ],
-    [COLLECTIONS.step]: STEPS,
+
+
     [COLLECTIONS.stepVerification]: [],
     [COLLECTIONS.upload]: [],
     [COLLECTIONS.storageUsage]: [],
@@ -77,6 +66,7 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.user]: [
       {
         _id: "stud1",
+        studentProfile: { _id: "profile-1", studentNumber: "12345", academicYearId: "ay-1" },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
@@ -167,7 +157,7 @@ describe("storage session", () => {
     context.store[COLLECTIONS.stepVerification].push({
       _id: "v-4",
       studentProfileId: "profile-1",
-      stepId: "step-4",
+      stepId: "MUGSHOT",
       academicYearId: "ay-1",
       status: "VERIFIED",
     });

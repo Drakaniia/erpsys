@@ -23,6 +23,39 @@ The relation sketches below show the transformation, not intermediate schemas to
 - **Communication and administration (3):** `notifications` includes the paper's read indicator as a single nullable `read_at` on the recipient's notification; the current app writes read markers locally. This reference design makes the marker durable without a separate receipts table. `audit_events` records important administrative actions, separately from generic HTTP telemetry. `assistant_guidance` is one current, revisioned office-approved document; it excludes chat transcripts and quota counters.
 - **Do not persist twice:** Reports, PDFs, dashboard totals, step progress, evidence counts, and queue rank are queries or exports. Department codes are authored in the reference design because the paper calls for managing names and codes; the current app derives codes from names. The yearly form link is optional, but there is no second independent source for it. The registry's `adminActionLog` and `auditLog` already name the same collection; distinct action and HTTP events within it are not duplicate data.
 
+## SQL-to-MongoDB mapping
+
+Use joins and foreign keys in the normalized reference; the live app uses references between independently managed records and embeds small values owned by a record. This mapping is not an import procedure.
+
+```mermaid
+flowchart LR
+  subgraph SQL[Normalized SQL]
+    U[users and student_profiles] --> E[student_enrollments]
+    Y[academic_years] --> E
+    E --> S[step_submissions]
+    S --> D[submission events, answers, and evidence]
+    E --> Q[queue_entries]
+  end
+  subgraph Mongo[Live MongoDB]
+    MU[user with embedded studentProfile] --> ME[student_enrollment]
+    MY[academic_year with embedded profiling form] --> ME
+    ME --> MS[step_verification with review state and answers]
+    MS --> MF[upload metadata and private R2 objects]
+    ME --> MQ[queue_entry]
+  end
+  U -. maps to .-> MU
+  Y -. maps to .-> MY
+  E -. maps to .-> ME
+  S -. maps to .-> MS
+  Q -. maps to .-> MQ
+```
+
+- `users` and `student_profiles` map to `user` with embedded `studentProfile`; the stable embedded profile ID remains the enrollment reference. `student_enrollments`, `academic_years` and `departments` map to `student_enrollment`, `academic_year` and `department`. The optional `profiling_forms` child is embedded on `academic_year`. Department offering levels and adviser assignments are embedded on `department`, with assignment scopes in `advisers[]`.
+- `workflow_steps` maps to code-owned definitions in `config/constants.ts`; canonical step codes identify verification references. The live `step_verification` record combines the current submission and decision with answer, feedback and upload references. The SQL attempt/event timeline is more detailed than live state: do not infer historical attempts from the latest record. Uploaded file metadata lives separately and bytes stay in private R2.
+- Requirements and social links are separate typed documents in `content`; live adviser presence and scheduled windows are separate typed documents in `adviser_schedule`. Shared physical storage does not merge their permissions, semantics or write lifecycles. See the [v2 offline migration](../ops/collection-simplification-migration.md) for deployment gates; the SQL reference above remains a distinct normalized design.
+- `queue_entries` maps to `queue_entry`; live availability, office-hours schedules and transfer requests keep separate lifecycles. SQL views derive progress and positions, while MongoDB reads assemble these values from current records.
+- Administrative and HTTP events share `audit_log`. Read markers are browser-local. Active review leases are transient fields on the review record rather than new business tables, and do not replace `readTs` or `writeTs`.
+
 ## Supporting storage not modeled as business tables
 
 - **Better Auth:** Reuse the auth identity when integrating; `users.id` represents that identity in the standalone SQL reference, not a second sign-in account. Keep `user` auth-only fields and the `session`, `account`, `verification`, `twoFactor`, and `admin_step_up` data under auth ownership. Password assistance, lockout session revocation, and authenticator reset use that subsystem.

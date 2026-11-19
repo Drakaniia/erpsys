@@ -1,9 +1,10 @@
 import { deriveDepartmentCode, type YearLevel } from "../config/constants.js";
 import { escapeQueryRegex } from "../config/queue.js";
+import { refIn } from "../lib/db/db.js";
 import type { AcademicYearRow } from "../models/AcademicYearModel.js";
 import { DepartmentModel } from "../models/DepartmentModel.js";
 import { StudentEnrollmentModel } from "../models/StudentEnrollmentModel.js";
-import { StudentProfileModel } from "../models/StudentProfileModel.js";
+
 import { UserModel } from "../models/UserModel.js";
 import { resolveYear } from "./academic-years.js";
 
@@ -24,15 +25,15 @@ async function directoryFilter(
   const q = input.q.trim();
   if (q) {
     const pattern = { $regex: escapeQueryRegex(q), $options: "i" };
-    const profiles = await StudentProfileModel.findByIds(
-      (await StudentProfileModel.searchByStudentNumber(pattern, 1000)).map(
+    const profiles = await UserModel.findProfilesByIds(
+      (await UserModel.searchProfilesByStudentNumber(pattern, 1000)).map(
         (profile) => String(profile._id),
       ),
     );
     filter.$or = [
       { name: pattern },
       { email: pattern },
-      { _id: { $in: profiles.map((profile) => String(profile.userId)) } },
+      { _id: refIn(profiles.map((profile) => String(profile.userId))) },
     ];
   }
   if (input.role !== "ALL") filter.role = input.role;
@@ -44,10 +45,10 @@ async function directoryFilter(
       departmentId: input.departmentId,
       yearLevel: input.yearLevel,
     });
-    const owners = await StudentProfileModel.findByIds(
+    const owners = await UserModel.findProfilesByIds(
       matched.map((row) => row.studentProfileId),
     );
-    filter._id = { $in: owners.map((owner) => String(owner.userId)) };
+    filter._id = refIn(owners.map((owner) => String(owner.userId)));
   }
   return filter;
 }
@@ -56,7 +57,7 @@ async function loadItems(
   rows: Awaited<ReturnType<typeof UserModel.listForDirectory>>,
   year: AcademicYearRow | null,
 ) {
-  const profiles = await StudentProfileModel.listByUserIds(
+  const profiles = await UserModel.listProfilesByUserIds(
     rows.map((row) => String(row._id)),
   );
   const profileIdByUser = new Map(
@@ -66,7 +67,7 @@ async function loadItems(
     profiles.map((profile) => [String(profile._id), String(profile.userId)]),
   );
   const studentNumbers = new Map(
-    (await StudentProfileModel.findByIds([...userByProfile.keys()])).map(
+    (await UserModel.findProfilesByIds([...userByProfile.keys()])).map(
       (profile) => [String(profile.userId), profile.studentNumber ?? null],
     ),
   );
