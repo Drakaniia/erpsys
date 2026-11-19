@@ -4,6 +4,7 @@ dist/
 apps/web/design/isometric/out/
 .env
 .env.*
+env.vercel
 
 # Logs
 *.log
