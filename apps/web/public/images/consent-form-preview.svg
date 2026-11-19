@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220">
+  <rect width="400" height="220" rx="12" fill="#f8fafc"/>
+  <g fill="#1e293b" font-family="system-ui, sans-serif">
+    <text x="20" y="28" font-size="12">ANNEX E · OVPCASSS-F-007</text>
+    <text x="20" y="53" font-size="16" font-weight="bold">General Parental/Guardian Consent Form</text>
+    <text x="20" y="86" font-size="13">Student name and college</text>
+    <text x="20" y="126" font-size="13">Parent/guardian signature and date</text>
+    <text x="20" y="166" font-size="13">Notarial section</text>
+    <text x="20" y="205" font-size="11">Illustrative excerpt — do not submit this sample</text>
+  </g>
+  <path d="M20 95h360M20 135h360M20 175h360" stroke="#94a3b8"/>
+</svg>
