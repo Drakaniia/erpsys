@@ -28,7 +28,7 @@ import FieldErrors from "./FieldErrors";
 import GoogleIcon from "./GoogleIcon";
 import Turnstile, { type TurnstileHandle } from "./Turnstile";
 import { useIntegrations } from "$lib/integrations/use-integrations";
-import { env } from "$lib/env";
+
 
 export default function RegisterCard() {
   const navigate = useNavigate();
@@ -46,8 +46,8 @@ export default function RegisterCard() {
   const [formError, setFormError] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const turnstileRef = useRef<TurnstileHandle | null>(null);
-  const turnstileSiteKey = env.VITE_TURNSTILE_SITE_KEY ?? "";
-  const { flags } = useIntegrations();
+
+  const { flags, turnstileSiteKey } = useIntegrations();
   const showGoogle = flags.googleAuth;
   const turnstileEnabled =
     flags.turnstile && turnstileSiteKey.trim().length > 0;
