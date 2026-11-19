@@ -222,34 +222,19 @@ read through the `env` object, plus
 | `BREVO_API_KEY`                             | `""`                                           | Brevo v3 API key for password reset, turn alerts and enrollment-complete mail. Empty disables delivery — resets are logged in dev and silently dropped in production. Free tier: 300/day. Keep the admin **Email delivery** toggle on as well.                |
 | `MAIL_FROM`                                 | `""`                                           | Sender added under Brevo → Senders & Domains, as `Name <addr>` or a bare address. No DNS or domain verification is needed — confirm the link Brevo emails to that address. Together with `BREVO_API_KEY`, this makes the admin row read "Credentials loaded". |
 
-### ⚠ The application rate limiters are not mounted yet
+### Application and proxy request budgets
 
-`lib/rate-limit/rate-limit.ts` exports two ready-to-mount limiters —
-`authRateLimit` (20 requests per 5 minutes, per IP) and `rpcRateLimit` (300
-per minute, per user) — and its own doc comment gives the intended wiring:
+`apps/server/src/app.ts` mounts an IP budget for the selected email credential
+and OTP paths (20 requests per 5 minutes) and a REST budget for `/api/v1`
+before route handlers (300 requests per minute per IP and session-cookie
+fingerprint). Rejected requests receive `429` and `Retry-After`. The REST
+budget runs after JSON parsing. Counters are process-local by default and
+the cookie fingerprint is not proof of a valid session. These are not
+database-wide overload controls.
 
-```ts
-app.all("/api/auth/*splat", authRateLimit, authHandler);
-app.use("/rpc", rpcRateLimit, rpcHandler);
-```
-
-**Neither is mounted in `apps/server/src/index.ts` as it stands.** Until they
-are, the _only_ rate limiting between the internet and the sign-in endpoint is
-the `erpsys_auth` zone in `deploy/nginx/erpsys.conf` (20r/m, burst 10).
-
-That is survivable but thin, and it is why this row is boot-fatal-adjacent in
-practice: **an empty `TURNSTILE_SECRET_KEY` currently leaves sign-in and
-sign-up with no bot protection and only a coarse per-address throttle.** With
-a campus behind one NAT address, that throttle is per-campus.
-
-Two things to do before enrollment opens, in this order:
-
-1. Mount both limiters in `index.ts` as shown above. This is a code change, not
-   an ops change, and it is outside this runbook's scope — it is called out
-   here because the deployment's security posture depends on it.
-2. Set `TURNSTILE_SECRET_KEY` to a real widget secret. With the limiters
-   mounted the empty-secret case degrades to rate-limit-only; without them it
-   degrades to almost nothing.
+Before opening enrollment, configure Turnstile and check that Nginx applies
+its IP limits before requests reach the app. Account for shared campus NAT
+addresses when tuning burst limits.
 
 Verify the Nginx side is doing what you think it is. `erpsys_auth` is
 `rate=20r/m burst=10 nodelay`: one request every 3 seconds sustained, up to 10
@@ -1260,7 +1245,7 @@ Two more signals:
 # The sweep writes an audit row every time it reclaims a row, so this is the
 # record of AUTOMATIC reclaims — compare it against the manual procedure below.
 mongosh "$URI" --quiet --eval '
-db.admin_action_log.find({ action: "AUTO_RETURN_STALE_SERVING" })
+db.audit_log.find({ kind: "action", action: "AUTO_RETURN_STALE_SERVING" })
   .sort({ at: -1 }).limit(5).forEach(printjson)
 '
 
@@ -1309,7 +1294,7 @@ Interpretation:
 #### Manual reclaim of a stuck `IN_PROGRESS` row
 
 > **This is a manual, audited action.** It writes to `enrollment_queue`,
-> `admin_action_log`, and `notification`. It puts a student back in the queue
+> `audit_log` (`kind: "action"`), and `notification`. It puts a student back in the queue
 > **while an adviser may still have their record open**, and the student will
 > be served by whoever calls `beginServing` next. Do it only when you have
 > confirmed the adviser is not there, and record who did it. Every step below
@@ -1323,8 +1308,8 @@ stuck", but the specific adviser.
 ADVISER="user-…"          # the servedById from the listing above
 mongosh "$URI" --quiet --eval '
 print("now: " + new Date().toISOString());
-db.adviser_availability.find(
-  { adviserId: "'"$ADVISER"'" },
+db.adviser_schedule.find(
+  { kind: "presence", adviserId: "'"$ADVISER"'" },
   { _id: 1, isOpen: 1, lastActiveAt: 1, autoClosedAt: 1 }
 ).forEach(printjson)
 '
@@ -1377,7 +1362,7 @@ step 4 on a `null`.
 A returned document means the row is back in the queue and the department's
 partial-index slot is free.
 
-**Step 4 — write the audit row.** `admin_action_log` is what makes this
+**Step 4 — write the audit row.** `audit_log` (`kind: "action"`) is what makes this
 action accountable. `actorId` is the operator, not the adviser.
 
 > `MANUAL_RETURN_STALE_SERVING` is a **new** action string. The code emits
@@ -1389,8 +1374,10 @@ action accountable. `actorId` is the operator, not the adviser.
 
 ```bash
 mongosh "$URI" --quiet --eval '
-db.admin_action_log.insertOne({
+db.audit_log.insertOne({
   _id: "admin-action-" + ObjectId().toString(),
+  kind: "action",
+  createdAt: new Date(),
   actorId: "operator:<your name or handle>",
   action: "MANUAL_RETURN_STALE_SERVING",
   targetRef: "EnrollmentQueue:queue-…",
@@ -1457,7 +1444,7 @@ db.enrollment_queue.updateOne(
 This will fail with a duplicate-key error (code 11000) if another row has since
 taken the department's serving slot. **That is the correct outcome** — it means
 a real adviser is now serving someone, and forcing the rollback would either
-fail or evict them. Do not force it. Also delete the `admin_action_log` row you
+fail or evict them. Do not force it. Also delete only the `audit_log` action row you
 added in step 4 and the notification from step 5, so the audit trail does not
 record a reclaim that was undone.
 
@@ -1782,7 +1769,7 @@ error that does not name the offending data:
 
 - duplicate `(studentProfileId, academicYearId)` in `enrollment_queue`;
 - a department with more than one `IN_PROGRESS` row for a year;
-- duplicate `studentNumber` in `student_profile`;
+- duplicate `studentProfile.studentNumber` in `user`;
 - an `IN_PROGRESS` row missing `departmentId` or `academicYearId` — Mongo
   requires every document matching a partial index's filter to carry the
   indexed key fields, and such a row fails the _build_ rather than producing a

@@ -1,11 +1,15 @@
 # Documentation
 
-Design docs and runbooks for ERPSYS. Code-level conventions live in `../AGENTS.md`.
+Design docs and runbooks for ERPSYS. Code-level conventions live in `../AGENTS.md`. Track open work in the [implementation checklist](todo.md).
 
 ## Ops
 
+- [ops/database-backup.md](ops/database-backup.md) — MongoDB and R2 backup scope, schedule, and isolated restore drill.
+
 - [ops/collection-simplification.md](ops/collection-simplification.md) — consolidated collections, migration history, and browser-local notification read markers.
+- [ops/collection-simplification-migration.md](ops/collection-simplification-migration.md) — offline v2 migration, embedded identities/assignments, typed content/schedules, canonical step IDs, and release gates.
 - [ops/collection-migration-qa.md](ops/collection-migration-qa.md) — applied migration evidence, full-suite results, browser coverage, and remaining QA findings.
+- [ops/qa-production-readiness-2026-11-20.md](ops/qa-production-readiness-2026-11-20.md) — production-readiness audit, reproduced security/concurrency blockers, live QA coverage, and remaining release gates.
 
 - [ops/deployment.md](ops/deployment.md) — deploy to a single Ubuntu server with Nginx, systemd, MongoDB Atlas, and GitHub Actions; also covers releases, incidents, and maintenance.
 - [ops/admin-step-up.md](ops/admin-step-up.md) — the four-step confirmation (PIN, password, emailed code, authenticator) before integration changes, its env settings, and the lost-device reset.
