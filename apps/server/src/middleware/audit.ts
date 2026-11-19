@@ -7,7 +7,10 @@ export const AUDITED_METHODS = ["POST", "PUT", "PATCH", "DELETE"] as const;
 const audited = new Set<string>(AUDITED_METHODS);
 
 export const auditTrail: RequestHandler = (req, res, next) => {
-  if (!audited.has(req.method)) return next();
+  if (
+    !audited.has(req.method) ||
+    (req.method === "PUT" && /^\/submissions\/[^/]+\/active-editors\/?$/i.test(req.path))
+  ) return next();
   res.on("finish", () => {
     const user = (req as AuthedRequest).session?.user;
     if (!user) return;
