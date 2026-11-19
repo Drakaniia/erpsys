@@ -1,6 +1,14 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 import { ApiError } from "../config/errors.js";
-import { beginSharedTransaction, restartSharedAborted } from "../lib/db/timestamp-ordering.js";
+import {
+  beginSharedTransaction,
+  restartSharedAborted,
+} from "../lib/db/timestamp-ordering.js";
 import {
   SCHEDULE_TZ,
   clock,
@@ -262,7 +270,7 @@ export async function syncAfterScheduleChange(
         await CalendarConnectionModel.markDirty(userId, new Date());
         return await syncCalendar(userId);
       } catch (error) {
-        if (!await restartSharedAborted(error, attempt)) throw error;
+        if (!(await restartSharedAborted(error, attempt))) throw error;
       }
     }
   });
@@ -330,7 +338,9 @@ export async function calendarStatus(userId: string) {
         : "CONNECTED",
     sync: syncStateOf(conn),
     googleEmail: connected ? (conn.googleEmail ?? null) : null,
-    lastSyncAt: conn?.lastSyncAt ? new Date(conn.lastSyncAt).toISOString() : null,
+    lastSyncAt: conn?.lastSyncAt
+      ? new Date(conn.lastSyncAt).toISOString()
+      : null,
     lastError: connected ? (conn.lastError ?? null) : null,
   };
 }

@@ -17,8 +17,10 @@ type Tokens = {
   bg?: string;
 };
 
-export interface ClearanceDeskProps
-  extends Omit<React.SVGProps<SVGSVGElement>, "ref"> {
+export interface ClearanceDeskProps extends Omit<
+  React.SVGProps<SVGSVGElement>,
+  "ref"
+> {
   /** Width in px (or any CSS length). Height follows the aspect ratio. Default: 100% of the container. */
   size?: number | string;
   /** Base colours. Every shade is derived from these. */

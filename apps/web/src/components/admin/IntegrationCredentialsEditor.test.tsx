@@ -103,7 +103,8 @@ function validated(): Response {
 function rejected(failures: { key: string; reason: string }[]): Response {
   return new Response(
     JSON.stringify({
-      error: failures.length === 1 ? failures[0].reason : "Credentials rejected.",
+      error:
+        failures.length === 1 ? failures[0].reason : "Credentials rejected.",
       data: { failures },
     }),
     { status: 422, headers: { "content-type": "application/json" } },
@@ -126,8 +127,9 @@ describe("IntegrationCredentialsEditor", () => {
     expect(screen.getByText("secre••••••••••••")).toBeTruthy();
     expect(screen.getByText("Credential set")).toBeTruthy();
     expect(screen.getByText("Stored")).toBeTruthy();
-    expect(screen.getByText("Standard-class bucket that stores evidence files."))
-      .toBeTruthy();
+    expect(
+      screen.getByText("Standard-class bucket that stores evidence files."),
+    ).toBeTruthy();
 
     expect(
       (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
@@ -220,7 +222,9 @@ describe("IntegrationCredentialsEditor", () => {
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("R2_BUCKET");
     expect(alert.textContent).toContain("bucket not found");
-    expect(notify.error).toHaveBeenCalledWith("Validation failed: bucket not found");
+    expect(notify.error).toHaveBeenCalledWith(
+      "Validation failed: bucket not found",
+    );
     expect(
       (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
         .disabled,
@@ -234,11 +238,15 @@ describe("IntegrationCredentialsEditor", () => {
       "bucket not found",
     );
 
-    expect(mock.mock.calls.every(([url]) => isValidate(String(url)))).toBe(true);
+    expect(mock.mock.calls.every(([url]) => isValidate(String(url)))).toBe(
+      true,
+    );
   });
 
   it("drops a stale failure once the admin edits the field", async () => {
-    stubFetch(() => rejected([{ key: "R2_BUCKET", reason: "bucket not found" }]));
+    stubFetch(() =>
+      rejected([{ key: "R2_BUCKET", reason: "bucket not found" }]),
+    );
     renderEditor();
 
     fireEvent.change(screen.getByDisplayValue("erpsys-prod"), {

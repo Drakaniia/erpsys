@@ -53,8 +53,13 @@ export default function AssignDepartmentModal({
     department && normalizeYearLevels(department.yearLevels).length > 0
       ? normalizeYearLevels(department.yearLevels)
       : [...YEAR_LEVELS];
-  const held = department ? takenYearLevels(department.owners, myAdviserId) : [];
-  const taken = mode === "transfer" ? options.filter((level) => !held.includes(level)) : held;
+  const held = department
+    ? takenYearLevels(department.owners, myAdviserId)
+    : [];
+  const taken =
+    mode === "transfer"
+      ? options.filter((level) => !held.includes(level))
+      : held;
 
   useEffect(() => {
     if (!open || !department) {
@@ -82,7 +87,9 @@ export default function AssignDepartmentModal({
     const panel = panelRef.current;
     if (!panel) return;
     const trap = dialogTrap(panel, {
-      onEscape: () => { if (!busy) onclose(); },
+      onEscape: () => {
+        if (!busy) onclose();
+      },
       initialFocus: "panel",
     });
     return () => trap.destroy();
@@ -116,7 +123,12 @@ export default function AssignDepartmentModal({
           id="assign-level-title"
           className="text-base font-semibold tracking-[-0.01em] text-ink"
         >
-          {mode === "edit" ? "Edit" : mode === "transfer" ? "Request transfer for" : "Assign"} {department.code}
+          {mode === "edit"
+            ? "Edit"
+            : mode === "transfer"
+              ? "Request transfer for"
+              : "Assign"}{" "}
+          {department.code}
         </h2>
         <p id="assign-level-range" className="mt-1 text-sm text-muted">
           {department.name}
@@ -152,11 +164,24 @@ export default function AssignDepartmentModal({
           <button
             type="button"
             onClick={() => onsubmit(selected)}
-            disabled={busy || selected.length === 0 || (mode === "edit" &&
-              JSON.stringify(normalizeYearLevels(selected)) === JSON.stringify(resolveAssignScope(department.myYearLevels, options)))}
+            disabled={
+              busy ||
+              selected.length === 0 ||
+              (mode === "edit" &&
+                JSON.stringify(normalizeYearLevels(selected)) ===
+                  JSON.stringify(
+                    resolveAssignScope(department.myYearLevels, options),
+                  ))
+            }
             className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
           >
-            {busy ? "Saving…" : mode === "edit" ? "Save" : mode === "transfer" ? "Request transfer" : "Assign"}
+            {busy
+              ? "Saving…"
+              : mode === "edit"
+                ? "Save"
+                : mode === "transfer"
+                  ? "Request transfer"
+                  : "Assign"}
           </button>
         </div>
       </div>

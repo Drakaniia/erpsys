@@ -25,7 +25,6 @@ export class NotificationModel {
       .toArray();
   }
 
-
   static async findLatestByType(
     userId: string,
     type: string,
@@ -50,11 +49,14 @@ export class NotificationModel {
       .insertOne({ ...row, updatedAt: row.createdAt } as never);
   }
 
-  static async insertMany(rows: Omit<NotificationRow, "updatedAt">[]): Promise<void> {
+  static async insertMany(
+    rows: Omit<NotificationRow, "updatedAt">[],
+  ): Promise<void> {
     if (rows.length === 0) return;
     await getDbSync()
       .collection<NotificationRow>(COLLECTIONS.notification)
-      .insertMany(rows.map((row) => ({ ...row, updatedAt: row.createdAt })) as never);
+      .insertMany(
+        rows.map((row) => ({ ...row, updatedAt: row.createdAt })) as never,
+      );
   }
 }
-

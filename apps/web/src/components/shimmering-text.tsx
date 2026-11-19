@@ -65,7 +65,7 @@ export function ShimmeringText({
         className={cn(
           "inline-block select-none whitespace-nowrap leading-none",
           "[--color:var(--muted-foreground)] [--shimmering-color:var(--foreground)]",
-          className
+          className,
         )}
         initial={{ backgroundPosition: SWEEP_FROM }}
         style={{

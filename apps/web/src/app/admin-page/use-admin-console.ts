@@ -146,7 +146,10 @@ export function useAdminConsole() {
       void profilingQuery.refetch();
       toast("Google Form created");
     } catch (e) {
-      toast((e as Error).message || "Could not create the Google Form", "error");
+      toast(
+        (e as Error).message || "Could not create the Google Form",
+        "error",
+      );
     }
   }
 

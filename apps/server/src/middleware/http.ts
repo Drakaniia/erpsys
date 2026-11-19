@@ -53,9 +53,7 @@ export function okList(
   pageSize: number,
   total?: number,
 ): void {
-  res.json(
-    withTs({ data: rows, page, pageSize, total: total ?? rows.length }),
-  );
+  res.json(withTs({ data: rows, page, pageSize, total: total ?? rows.length }));
 }
 
 export function okOne(res: Response, data: unknown, status = 200): void {

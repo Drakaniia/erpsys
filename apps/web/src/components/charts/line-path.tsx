@@ -17,7 +17,7 @@ import { fastShapePath } from "./fast-path";
 export type PathAccessor<Datum> = (
   datum: Datum,
   index: number,
-  data: Datum[]
+  data: Datum[],
 ) => number;
 
 export interface LinePathConfig<Datum> {
@@ -37,7 +37,7 @@ export interface AreaClosedConfig<Datum> extends LinePathConfig<Datum> {
 /** `d` of visx `<LinePath data={data} … />`. */
 export function linePathD<Datum>(
   data: Datum[],
-  { x, y, defined, curve }: LinePathConfig<Datum>
+  { x, y, defined, curve }: LinePathConfig<Datum>,
 ): string {
   const path = line<Datum>();
   if (x) {
@@ -58,7 +58,7 @@ export function linePathD<Datum>(
 /** `d` of visx `<AreaClosed data={data} … />`. */
 export function areaClosedD<Datum>(
   data: Datum[],
-  { x, y, y0, yScale, defined, curve }: AreaClosedConfig<Datum>
+  { x, y, y0, yScale, defined, curve }: AreaClosedConfig<Datum>,
 ): string {
   const path = area<Datum>();
   if (x) {

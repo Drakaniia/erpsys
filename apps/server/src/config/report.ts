@@ -6,7 +6,6 @@ type CappedRows<T> = {
   truncated: boolean;
 };
 
-
 export function capRows<T>(rows: T[]): CappedRows<T> {
   if (rows.length <= REPORT_ROW_CAP) {
     return { rows, matchedCount: rows.length, truncated: false };
@@ -17,4 +16,3 @@ export function capRows<T>(rows: T[]): CappedRows<T> {
     truncated: true,
   };
 }
-

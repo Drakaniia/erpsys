@@ -52,8 +52,12 @@ async function clashHolderName(
   levels: YearLevel[],
   adviserId: string,
 ): Promise<string | null> {
-  const clash = holders.find((holder) => holder.departmentId === departmentId &&
-    holder.adviserId !== adviserId && yearLevelsOverlap(holder.yearLevels ?? [], levels));
+  const clash = holders.find(
+    (holder) =>
+      holder.departmentId === departmentId &&
+      holder.adviserId !== adviserId &&
+      yearLevelsOverlap(holder.yearLevels ?? [], levels),
+  );
   if (!clash) return null;
   const [user] = await UserModel.findByIds([clash.adviserId]);
   return user?.name?.trim() || "An instructor";
@@ -66,13 +70,21 @@ async function writeAssignments(
 ): Promise<void> {
   const keep = assignments.map((a) => a.departmentId);
   const removed = previous.filter((link) => !keep.includes(link.departmentId));
-  const unchanged = previous.filter((link) => assignments.some((next) =>
-    next.departmentId === link.departmentId &&
-    JSON.stringify(normalizeYearLevels(link.yearLevels ?? [])) === JSON.stringify(next.yearLevels),
-  ));
-  if (removed.length > 0) await AdviserAvailabilityModel.closeOpenForAdviser(adviserId, keep);
+  const unchanged = previous.filter((link) =>
+    assignments.some(
+      (next) =>
+        next.departmentId === link.departmentId &&
+        JSON.stringify(normalizeYearLevels(link.yearLevels ?? [])) ===
+          JSON.stringify(next.yearLevels),
+    ),
+  );
+  if (removed.length > 0)
+    await AdviserAvailabilityModel.closeOpenForAdviser(adviserId, keep);
   if (removed.length > 0 || unchanged.length !== previous.length) {
-    await EnrollmentQueueModel.releaseServingExcept(adviserId, unchanged.map((link) => link.departmentId));
+    await EnrollmentQueueModel.releaseServingExcept(
+      adviserId,
+      unchanged.map((link) => link.departmentId),
+    );
   }
   if (assignments.length === 0 && previous.length > 0) {
     await AdviserDepartmentModel.deleteForAdviser(adviserId);
@@ -82,14 +94,24 @@ async function writeAssignments(
     const next = assignments.find((a) => a.departmentId === link.departmentId);
     if (!next) {
       await AdviserDepartmentModel.deleteOne(adviserId, link.departmentId);
-    } else if (JSON.stringify(normalizeYearLevels(link.yearLevels ?? [])) !== JSON.stringify(next.yearLevels)) {
-      await AdviserDepartmentModel.setLevels(adviserId, link.departmentId, next.yearLevels);
+    } else if (
+      JSON.stringify(normalizeYearLevels(link.yearLevels ?? [])) !==
+      JSON.stringify(next.yearLevels)
+    ) {
+      await AdviserDepartmentModel.setLevels(
+        adviserId,
+        link.departmentId,
+        next.yearLevels,
+      );
     }
   }
   for (const assignment of assignments) {
-    if (previous.some((link) => link.departmentId === assignment.departmentId)) continue;
+    if (previous.some((link) => link.departmentId === assignment.departmentId))
+      continue;
     await AdviserDepartmentModel.insert({
-      _id: genId("adviser-dept"), adviserId, ...assignment,
+      _id: genId("adviser-dept"),
+      adviserId,
+      ...assignment,
     });
   }
 }
@@ -123,7 +145,10 @@ export async function replaceAssignments(
 
   const [departments, holders] = await Promise.all([
     departmentsByIds(unique.map((u) => u.departmentId)),
-    AdviserDepartmentModel.listForAssignment(adviserId, unique.map((u) => u.departmentId)),
+    AdviserDepartmentModel.listForAssignment(
+      adviserId,
+      unique.map((u) => u.departmentId),
+    ),
   ]);
   const previous = holders.filter((holder) => holder.adviserId === adviserId);
   const departmentOf = (id: string) =>
@@ -182,7 +207,12 @@ export async function assignSelf(
     assertLevelsOffered(department, requested);
   }
   for (const departmentId of departmentIds) {
-    const holder = await clashHolderName(holders, departmentId, requested, adviserId);
+    const holder = await clashHolderName(
+      holders,
+      departmentId,
+      requested,
+      adviserId,
+    );
     if (!holder) continue;
     const department = departments.find((d) => String(d._id) === departmentId)!;
     const scope =

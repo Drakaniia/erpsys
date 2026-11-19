@@ -28,7 +28,9 @@ const FIELD = {
   unreadable: false,
 };
 
-function rows(overrides: Partial<AdminIntegrationRow> = {}): AdminIntegrationRow[] {
+function rows(
+  overrides: Partial<AdminIntegrationRow> = {},
+): AdminIntegrationRow[] {
   return [
     {
       key: "googleAuth",
@@ -127,7 +129,9 @@ describe("credentials", () => {
     await screen.findByRole("heading", { level: 2, name: "Google sign-in" });
 
     // The editor is part of the pane now, not a second disclosure.
-    expect(screen.getByRole("heading", { level: 3, name: "Credentials" })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Credentials" }),
+    ).toBeTruthy();
     expect(screen.getByText("Client ID")).toBeTruthy();
     expect(screen.queryByText("Bucket")).toBeNull();
   });
@@ -156,7 +160,11 @@ describe("setup guidance", () => {
     renderPanel(forms, "/admin?tab=integrations&integration=googleForms");
     await screen.findByRole("heading", { level: 2, name: "Google Forms" });
 
-    expect(screen.getByText(/Uses the Client ID and Client secret saved under Google sign-in/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        /Uses the Client ID and Client secret saved under Google sign-in/,
+      ),
+    ).toBeTruthy();
     // One guide, for the selected integration only.
     expect(screen.getAllByText("Setup guide")).toHaveLength(1);
   });
@@ -181,7 +189,9 @@ describe("restart banner", () => {
     renderPanel(clean);
     await screen.findByRole("navigation", { name: "Integrations" });
 
-    expect(screen.queryByText(/^\d+ credential changes? (is|are) waiting$/)).toBeNull();
+    expect(
+      screen.queryByText(/^\d+ credential changes? (is|are) waiting$/),
+    ).toBeNull();
     expect(screen.queryByText("sudo systemctl restart erpsys")).toBeNull();
   });
 

@@ -13,26 +13,26 @@ An abort becomes `409` with `data.code = "TS_ABORTED"`. This file shows where ea
 
 All of the TO logic is here. Nothing else in the server implements the rules.
 
-| Code | Line | Purpose |
-| --- | --- | --- |
-| `TS_ABORTED`, `TS_MAX_RESTARTS` | 5–6 | Abort code sent to clients; restart limit (3). |
-| `EXEMPT` | 18 | Collections never guarded: Better Auth state, logs, usage counters, step-up. |
-| `FILTER_WRITES` | 28 | The Mongo write methods that go through the write rule. |
-| `store` | 38 | `AsyncLocalStorage` holding the current request's transaction. |
-| `nextTs()` | 47 | TS oracle: unique, increasing `max(last + 1, Date.now())`. In-process; fine for the single production process. |
-| `isIssuedTs()` | 57 | Rejects a client `ts` the server could not have issued (future or not an integer). |
-| `beginTransaction()` | 71 | Opens a transaction. Client `ts` → client-anchored; none → server-anchored with a fresh TS. |
-| `currentTransaction()` | 92 | Returns the running transaction (used to put `ts` in responses). |
-| `outsideTransaction()` | 101 | Runs code with no transaction (session lookup). |
-| `stampWriterReads()` | 111 | Turns on `readTs` stamping for GETs by staff surfaces. |
-| `aborted()` | 116 | Builds the `409 TS_ABORTED` error. |
-| `restartAborted()` | 131 | Decides if an aborted server-anchored transaction that has not written yet may retry with a new TS. |
-| `stale()` / `fresh()` | 140–143 | Mongo filters for "a newer transaction touched this" and its opposite. |
-| `readRule()` | 154 | Read rule: abort on `ts < writeTs`, else stamp `readTs`. |
-| `writeRule()` | 175 | Write rule: pre-check for stale matches, write with a guarded filter, set `writeTs`. |
-| `insertRule()` | 209 | New documents start with `writeTs = ts`. |
-| `guardCollection()` | 218 | Proxy that applies the rules to `find`, `findOne`, inserts, updates and deletes. |
-| `guardDb()` | 260 | Wraps the `Db` so every `collection()` call returns a guarded collection. |
+| Code                            | Line    | Purpose                                                                                                        |
+| ------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------- |
+| `TS_ABORTED`, `TS_MAX_RESTARTS` | 5–6     | Abort code sent to clients; restart limit (3).                                                                 |
+| `EXEMPT`                        | 18      | Collections never guarded: Better Auth state, logs, usage counters, step-up.                                   |
+| `FILTER_WRITES`                 | 28      | The Mongo write methods that go through the write rule.                                                        |
+| `store`                         | 38      | `AsyncLocalStorage` holding the current request's transaction.                                                 |
+| `nextTs()`                      | 47      | TS oracle: unique, increasing `max(last + 1, Date.now())`. In-process; fine for the single production process. |
+| `isIssuedTs()`                  | 57      | Rejects a client `ts` the server could not have issued (future or not an integer).                             |
+| `beginTransaction()`            | 71      | Opens a transaction. Client `ts` → client-anchored; none → server-anchored with a fresh TS.                    |
+| `currentTransaction()`          | 92      | Returns the running transaction (used to put `ts` in responses).                                               |
+| `outsideTransaction()`          | 101     | Runs code with no transaction (session lookup).                                                                |
+| `stampWriterReads()`            | 111     | Turns on `readTs` stamping for GETs by staff surfaces.                                                         |
+| `aborted()`                     | 116     | Builds the `409 TS_ABORTED` error.                                                                             |
+| `restartAborted()`              | 131     | Decides if an aborted server-anchored transaction that has not written yet may retry with a new TS.            |
+| `stale()` / `fresh()`           | 140–143 | Mongo filters for "a newer transaction touched this" and its opposite.                                         |
+| `readRule()`                    | 154     | Read rule: abort on `ts < writeTs`, else stamp `readTs`.                                                       |
+| `writeRule()`                   | 175     | Write rule: pre-check for stale matches, write with a guarded filter, set `writeTs`.                           |
+| `insertRule()`                  | 209     | New documents start with `writeTs = ts`.                                                                       |
+| `guardCollection()`             | 218     | Proxy that applies the rules to `find`, `findOne`, inserts, updates and deletes.                               |
+| `guardDb()`                     | 260     | Wraps the `Db` so every `collection()` call returns a guarded collection.                                      |
 
 ### `src/lib/db/db.ts:80` — the hook
 
@@ -73,14 +73,14 @@ The comment rules are in `AGENTS.md` → "Comments".
 
 ### `apps/web/src/lib/api.ts` — client side
 
-| Code | Line | Purpose |
-| --- | --- | --- |
-| `TS_ABORTED` | 13 | Same abort code as the server. |
-| `tsById` | 17 | Map of record id → the `ts` it was last read at. |
-| `rememberTs()` | 19 | Records the envelope `ts` for every `_id`/`id` in a response. |
-| `request()` catch | 138 | On `409 TS_ABORTED`: invalidates all queries, shows a toast, rethrows. |
-| `send()` | 163 | On PUT/PATCH/DELETE, adds the remembered `ts` for the URL's id to the body. |
-| `send()` | 199 | Calls `rememberTs()` for every successful JSON response. |
+| Code              | Line | Purpose                                                                     |
+| ----------------- | ---- | --------------------------------------------------------------------------- |
+| `TS_ABORTED`      | 13   | Same abort code as the server.                                              |
+| `tsById`          | 17   | Map of record id → the `ts` it was last read at.                            |
+| `rememberTs()`    | 19   | Records the envelope `ts` for every `_id`/`id` in a response.               |
+| `request()` catch | 138  | On `409 TS_ABORTED`: invalidates all queries, shows a toast, rethrows.      |
+| `send()`          | 163  | On PUT/PATCH/DELETE, adds the remembered `ts` for the URL's id to the body. |
+| `send()`          | 199  | Calls `rememberTs()` for every successful JSON response.                    |
 
 ## Tests
 

@@ -23,7 +23,8 @@ export type IntegrationKey = (typeof INTEGRATION_KEYS)[number];
 
 export const LOCKED_INTEGRATIONS: readonly IntegrationKey[] = ["betterAuth"];
 
-export const integrationLocked = (key: IntegrationKey) => LOCKED_INTEGRATIONS.includes(key);
+export const integrationLocked = (key: IntegrationKey) =>
+  LOCKED_INTEGRATIONS.includes(key);
 
 export function lockedError(key: IntegrationKey): ApiError {
   return new ApiError("CONFLICT", {
@@ -46,7 +47,8 @@ export const INTEGRATION_LABEL: Record<IntegrationKey, string> = {
 export const INTEGRATION_CONSEQUENCE: Record<IntegrationKey, string> = {
   betterAuth:
     "It can't be turned off. Every sign-in, session, registration, password reset and admin unlock runs through it.",
-  turnstile: "Sign-in and registration become unchallenged. Bots can reach the form.",
+  turnstile:
+    "Sign-in and registration become unchallenged. Bots can reach the form.",
   r2: "New uploads are refused. Existing files stay readable.",
   googleAuth:
     "Google sign-in stops. Use a password or an emailed sign-in code when email delivery is available.",
@@ -83,13 +85,22 @@ export function integrationConfigured(key: IntegrationKey): boolean {
     case "betterAuth":
       return present(env.BETTER_AUTH_SECRET) && present(env.BETTER_AUTH_URL);
     case "turnstile":
-      return present(env.TURNSTILE_SECRET_KEY) && present(env.VITE_TURNSTILE_SITE_KEY);
+      return (
+        present(env.TURNSTILE_SECRET_KEY) &&
+        present(env.VITE_TURNSTILE_SITE_KEY)
+      );
     case "r2":
-      return present(env.R2_ENDPOINT) && present(env.R2_ACCESS_KEY_ID) && present(env.R2_SECRET_ACCESS_KEY);
+      return (
+        present(env.R2_ENDPOINT) &&
+        present(env.R2_ACCESS_KEY_ID) &&
+        present(env.R2_SECRET_ACCESS_KEY)
+      );
     case "googleAuth":
       return googleClient();
     case "cloudflareChat":
-      return present(env.CLOUDFLARE_ACCOUNT_ID) && present(env.CLOUDFLARE_API_TOKEN);
+      return (
+        present(env.CLOUDFLARE_ACCOUNT_ID) && present(env.CLOUDFLARE_API_TOKEN)
+      );
     case "email":
       return present(env.BREVO_API_KEY) && present(env.MAIL_FROM);
     case "googleForms":
@@ -109,21 +120,25 @@ const settings = () =>
   getDbSync().collection<IntegrationSettingDoc>(COLLECTIONS.integrationSetting);
 
 const computedFlags = () =>
-  Object.fromEntries(INTEGRATION_KEYS.map((key) => [key, defaultEnabled(key)])) as Record<
-    IntegrationKey,
-    boolean
-  >;
+  Object.fromEntries(
+    INTEGRATION_KEYS.map((key) => [key, defaultEnabled(key)]),
+  ) as Record<IntegrationKey, boolean>;
 
 async function loadFlags(): Promise<Record<IntegrationKey, boolean>> {
   try {
     const flags = computedFlags();
-    for (const row of await settings().find({} as never).toArray()) {
+    for (const row of await settings()
+      .find({} as never)
+      .toArray()) {
       if (integrationLocked(row.key)) continue;
       if (typeof row.enabled === "boolean") flags[row.key] = row.enabled;
     }
     return flags;
   } catch (error) {
-    console.error("[integration-settings] flag read failed — falling back to computed defaults", error);
+    console.error(
+      "[integration-settings] flag read failed — falling back to computed defaults",
+      error,
+    );
     flagsPromise = null;
     return computedFlags();
   }
@@ -143,7 +158,9 @@ export function invalidateIntegrationCache(): void {
   payloadPromise = null;
 }
 
-export async function integrationEnabled(key: IntegrationKey): Promise<boolean> {
+export async function integrationEnabled(
+  key: IntegrationKey,
+): Promise<boolean> {
   if (env.LOCAL_ONLY) return key === "betterAuth";
   flagsPromise ??= loadFlags();
   return (await flagsPromise)[key];
@@ -151,10 +168,14 @@ export async function integrationEnabled(key: IntegrationKey): Promise<boolean> 
 
 async function storedTurnstileSiteKey(): Promise<string | null> {
   try {
-    const doc = await credentialCollection().findOne({ key: "turnstile" } as never);
+    const doc = await credentialCollection().findOne({
+      key: "turnstile",
+    } as never);
     if (!doc) return null;
     const decrypted = decryptDocValues(doc);
-    return decrypted.unreadable ? null : (decrypted.values.VITE_TURNSTILE_SITE_KEY ?? null);
+    return decrypted.unreadable
+      ? null
+      : (decrypted.values.VITE_TURNSTILE_SITE_KEY ?? null);
   } catch {
     return null;
   }
@@ -169,13 +190,14 @@ async function loadPayload(): Promise<PublicIntegrationPayload> {
     flags: Object.fromEntries(
       INTEGRATION_KEYS.map((key) => [key, states[key].enabled]),
     ) as Record<IntegrationKey, boolean>,
-    turnstileSiteKey: env.LOCAL_ONLY ? "" : (siteKey ?? env.VITE_TURNSTILE_SITE_KEY).trim(),
+    turnstileSiteKey: env.LOCAL_ONLY
+      ? ""
+      : (siteKey ?? env.VITE_TURNSTILE_SITE_KEY).trim(),
     overridesLoaded: overridesLoaded(),
   };
 }
 
 export function publicIntegrationPayload(): Promise<PublicIntegrationPayload> {
-
   payloadPromise ??= loadPayload().catch((error) => {
     payloadPromise = null;
     throw error;
@@ -183,18 +205,27 @@ export function publicIntegrationPayload(): Promise<PublicIntegrationPayload> {
   return payloadPromise;
 }
 
-export async function allIntegrationStates(): Promise<Record<IntegrationKey, IntegrationState>> {
+export async function allIntegrationStates(): Promise<
+  Record<IntegrationKey, IntegrationState>
+> {
   const db = getDbSync();
-  const rows = await settings().find({} as never).toArray();
+  const rows = await settings()
+    .find({} as never)
+    .toArray();
   const byKey = new Map(rows.map((row) => [row.key, row] as const));
-  const actorIds = [...new Set(rows.flatMap((row) => (row.enabledById ? [row.enabledById] : [])))];
+  const actorIds = [
+    ...new Set(
+      rows.flatMap((row) => (row.enabledById ? [row.enabledById] : [])),
+    ),
+  ];
   const names = new Map<string, string>();
   if (actorIds.length > 0) {
     const users = await db
       .collection<{ _id: unknown; name?: string }>(COLLECTIONS.user)
       .find(idIn(actorIds) as never)
       .toArray();
-    for (const user of users) if (user.name) names.set(String(user._id), user.name);
+    for (const user of users)
+      if (user.name) names.set(String(user._id), user.name);
   }
   return Object.fromEntries(
     INTEGRATION_KEYS.map((key) => {
@@ -202,9 +233,17 @@ export async function allIntegrationStates(): Promise<Record<IntegrationKey, Int
       return [
         key,
         {
-          enabled: env.LOCAL_ONLY ? key === "betterAuth" : typeof row?.enabled === "boolean" && !integrationLocked(key) ? row.enabled : defaultEnabled(key),
-          updatedAt: row?.enabledAt ? new Date(row.enabledAt).toISOString() : null,
-          updatedByName: row?.enabledById ? (names.get(String(row.enabledById)) ?? null) : null,
+          enabled: env.LOCAL_ONLY
+            ? key === "betterAuth"
+            : typeof row?.enabled === "boolean" && !integrationLocked(key)
+              ? row.enabled
+              : defaultEnabled(key),
+          updatedAt: row?.enabledAt
+            ? new Date(row.enabledAt).toISOString()
+            : null,
+          updatedByName: row?.enabledById
+            ? (names.get(String(row.enabledById)) ?? null)
+            : null,
         },
       ];
     }),
@@ -217,25 +256,40 @@ export async function setIntegrationEnabled(args: {
   actorId: string;
 }): Promise<void> {
   if (integrationLocked(args.key)) throw lockedError(args.key);
-  if (env.LOCAL_ONLY && args.enabled) throw new ApiError("CONFLICT", { message: "Online integrations are disabled in local-only mode." });
+  if (env.LOCAL_ONLY && args.enabled)
+    throw new ApiError("CONFLICT", {
+      message: "Online integrations are disabled in local-only mode.",
+    });
   const at = new Date();
   await settings().updateOne(
     { key: args.key } as never,
     {
-      $set: { key: args.key, enabled: args.enabled, enabledById: args.actorId, enabledAt: at },
-      $setOnInsert: { _id: genId("integration"), values: {}, version: 0, createdAt: at },
+      $set: {
+        key: args.key,
+        enabled: args.enabled,
+        enabledById: args.actorId,
+        enabledAt: at,
+      },
+      $setOnInsert: {
+        _id: genId("integration"),
+        values: {},
+        version: 0,
+        createdAt: at,
+      },
     } as never,
     { upsert: true },
   );
   invalidateIntegrationCache();
-  await getDbSync().collection(COLLECTIONS.auditLog).insertOne({
-    _id: genId("admin-action"),
-    kind: "action",
-    actorId: args.actorId,
-    action: `${args.enabled ? "Enabled" : "Disabled"} ${INTEGRATION_LABEL[args.key]}`,
-    targetRef: args.key,
-    at,
-    createdAt: at,
-    updatedAt: at,
-  } as never);
+  await getDbSync()
+    .collection(COLLECTIONS.auditLog)
+    .insertOne({
+      _id: genId("admin-action"),
+      kind: "action",
+      actorId: args.actorId,
+      action: `${args.enabled ? "Enabled" : "Disabled"} ${INTEGRATION_LABEL[args.key]}`,
+      targetRef: args.key,
+      at,
+      createdAt: at,
+      updatedAt: at,
+    } as never);
 }

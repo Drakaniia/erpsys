@@ -79,7 +79,11 @@ export function useEnrolledState(
   }, [deptId, view, range, q]);
 
   const rows: any[] = enrolledQuery.data?.data ?? [];
-  const revertPresence = useEditTimestamp("queue-entry", revertEntry?.enrollmentId, rows.find((row) => row.enrollmentId === revertEntry?.enrollmentId));
+  const revertPresence = useEditTimestamp(
+    "queue-entry",
+    revertEntry?.enrollmentId,
+    rows.find((row) => row.enrollmentId === revertEntry?.enrollmentId),
+  );
   const total: number =
     (enrolledQuery.data as { total?: number } | undefined)?.total ?? 0;
   const hasMore = rows.length < total && limit < 500;

@@ -59,7 +59,7 @@ export function useAnimatedSeriesPath({
 }: UseAnimatedSeriesPathOptions) {
   const reducedMotion = useReducedMotion();
   const [animatedPath, setAnimatedPath] = useState<DisplayedSeriesPath | null>(
-    null
+    null,
   );
   const displayedRef = useRef<DisplayedSeriesPath | null>(null);
   const animatingRef = useRef(false);
@@ -72,12 +72,12 @@ export function useAnimatedSeriesPath({
   const targetPoints = useMemo(
     () =>
       computeSeriesPathPoints(renderData, xAccessor, xScale, yScale, dataKey),
-    [renderData, xAccessor, xScale, yScale, dataKey]
+    [renderData, xAccessor, xScale, yScale, dataKey],
   );
 
   const dataSignature = useMemo(
     () => seriesDataSignature(renderData, xAccessor, dataKey),
-    [renderData, xAccessor, dataKey]
+    [renderData, xAccessor, dataKey],
   );
 
   // Same string `seriesPathTransitionSignature` builds, without walking the
@@ -89,7 +89,7 @@ export function useAnimatedSeriesPath({
         xDomainMin: xScaleDomain[0]?.getTime?.() ?? 0,
         xDomainMax: xScaleDomain[1]?.getTime?.() ?? 0,
       }),
-    [dataSignature, innerWidth, xScaleDomain]
+    [dataSignature, innerWidth, xScaleDomain],
   );
 
   const settledYDomainKey =
@@ -132,7 +132,7 @@ export function useAnimatedSeriesPath({
       latest.xAccessor,
       latest.xScale,
       settled ? latest.settledYScale : latest.yScale,
-      latest.dataKey
+      latest.dataKey,
     );
   };
 
@@ -217,7 +217,7 @@ export function useAnimatedSeriesPath({
       }
       const polyline = flattenSeriesPath(
         computeLatestTarget(true),
-        latest.curve
+        latest.curve,
       );
       targetPolylineCache = { inputs, polyline };
       return polyline;
@@ -231,7 +231,7 @@ export function useAnimatedSeriesPath({
             points: morphSeriesPolylines(
               fromPolyline,
               settledTargetPolyline(),
-              progress
+              progress,
             ),
             polyline: true,
           }
@@ -239,7 +239,7 @@ export function useAnimatedSeriesPath({
             points: interpolateSeriesPathPoints(
               from.points,
               computeLatestTarget(false),
-              progress
+              progress,
             ),
             polyline: false,
           };
@@ -291,10 +291,10 @@ export function useAnimatedSeriesPath({
       animatedPath
         ? seriesPathFromPoints(
             animatedPath.points,
-            animatedPath.polyline ? curveLinear : curve
+            animatedPath.polyline ? curveLinear : curve,
           )
         : seriesPathFromPoints(targetPoints, curve),
-    [animatedPath, targetPoints, curve]
+    [animatedPath, targetPoints, curve],
   );
 
   return {

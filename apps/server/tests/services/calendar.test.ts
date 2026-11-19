@@ -28,13 +28,16 @@ vi.mock("../../src/lib/google/calendar.js", async (importOriginal) => ({
   ...google,
 }));
 
-vi.mock("../../src/lib/platform/integration-settings.js", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("../../src/lib/platform/integration-settings.js")
-  >()),
-  integrationEnabled: async () => holder.available,
-  integrationConfigured: () => true,
-}));
+vi.mock(
+  "../../src/lib/platform/integration-settings.js",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../src/lib/platform/integration-settings.js")
+    >()),
+    integrationEnabled: async () => holder.available,
+    integrationConfigured: () => true,
+  }),
+);
 
 import {
   CalendarAuthError,
@@ -153,7 +156,9 @@ describe("Google Calendar sync", () => {
     await syncCalendar("adv1");
     for (const [, , , event] of google.putEvent.mock.calls) {
       const body = JSON.stringify(event);
-      expect(event.summary).toBe("Enrollment advising – College of Technologies");
+      expect(event.summary).toBe(
+        "Enrollment advising – College of Technologies",
+      );
       expect(event.reminders).toEqual({ useDefault: false });
       expect(body).not.toContain("attendees");
       expect(body).not.toContain("adv1");
@@ -175,7 +180,10 @@ describe("Google Calendar sync", () => {
 
   it("deletes events that no longer belong to a window", async () => {
     google.listEvents.mockResolvedValue([
-      { id: "stale", extendedProperties: { private: { erpsys: "1", sig: "x" } } },
+      {
+        id: "stale",
+        extendedProperties: { private: { erpsys: "1", sig: "x" } },
+      },
     ]);
     await syncCalendar("adv1");
     expect(google.deleteEvent).toHaveBeenCalledWith(

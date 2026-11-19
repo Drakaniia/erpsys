@@ -4,7 +4,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, queryClient } from "$lib/api";
 import { intervalWhileVisible } from "$lib/polling";
 import {
-
   buildStudentQuery,
   hasActiveStudentFilters,
   nextSortFor,
@@ -149,14 +148,21 @@ export default function StudentsTab({
       return;
     }
     if (lastAppended.current.has(cursor)) {
-      const fresh = new Map(data.data.map((row) => [row.studentProfileId, row]));
-      setRows((prev) => prev.map((row) => fresh.get(row.studentProfileId) ?? row));
+      const fresh = new Map(
+        data.data.map((row) => [row.studentProfileId, row]),
+      );
+      setRows((prev) =>
+        prev.map((row) => fresh.get(row.studentProfileId) ?? row),
+      );
       return;
     }
     lastAppended.current.add(cursor);
     setRows((prev) => {
       const seen = new Set(prev.map((row) => row.studentProfileId));
-      return [...prev, ...data.data.filter((row) => !seen.has(row.studentProfileId))];
+      return [
+        ...prev,
+        ...data.data.filter((row) => !seen.has(row.studentProfileId)),
+      ];
     });
   }, [rosterPage, cursor]);
 
@@ -235,10 +241,8 @@ export default function StudentsTab({
     directoryQuery.isSuccess && !directory.some((item) => item.assigned);
   const noDepartmentsState =
     noMappedDepartments && scope === "mine" && !filters.unassigned;
-  const noYear =
-    boardQuery.isSuccess && statsPayload?.year === null;
-  const canRemind =
-    statsPayload?.year !== null && boardQuery.isSuccess;
+  const noYear = boardQuery.isSuccess && statsPayload?.year === null;
+  const canRemind = statsPayload?.year !== null && boardQuery.isSuccess;
 
   return (
     <>

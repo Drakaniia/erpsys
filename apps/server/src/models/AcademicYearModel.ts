@@ -25,15 +25,21 @@ type AcademicYearOption = Pick<
 >;
 
 export class AcademicYearModel {
-  static async profilingForm(academicYearId: string): Promise<ProfilingForm | null> {
+  static async profilingForm(
+    academicYearId: string,
+  ): Promise<ProfilingForm | null> {
     return (await this.findById(academicYearId))?.profilingForm ?? null;
   }
 
-  static async setProfilingForm(academicYearId: string, form: ProfilingForm | null): Promise<void> {
-    await getDbSync().collection<AcademicYearRow>(COLLECTIONS.academicYear).updateOne(
-      idIn([academicYearId]) as never,
-      { $set: { profilingForm: form } },
-    );
+  static async setProfilingForm(
+    academicYearId: string,
+    form: ProfilingForm | null,
+  ): Promise<void> {
+    await getDbSync()
+      .collection<AcademicYearRow>(COLLECTIONS.academicYear)
+      .updateOne(idIn([academicYearId]) as never, {
+        $set: { profilingForm: form },
+      });
   }
 
   static async findActive(): Promise<AcademicYearRow | null> {

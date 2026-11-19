@@ -70,9 +70,13 @@ describe("audit trail", () => {
     });
     expect(response.status).toBe(200);
     await vi.waitFor(() =>
-      expect(holder.store[COLLECTIONS.auditLog].filter((row) => row.kind === "http")).toHaveLength(1),
+      expect(
+        holder.store[COLLECTIONS.auditLog].filter((row) => row.kind === "http"),
+      ).toHaveLength(1),
     );
-    expect(holder.store[COLLECTIONS.auditLog].find((row) => row.kind === "http")).toMatchObject({
+    expect(
+      holder.store[COLLECTIONS.auditLog].find((row) => row.kind === "http"),
+    ).toMatchObject({
       actorId: "admin1",
       actorName: "Ada Admin",
       role: "ADMIN",

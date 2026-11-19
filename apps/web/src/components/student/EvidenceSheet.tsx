@@ -175,7 +175,6 @@ export default function EvidenceSheet({
   return (
     <>
       <div className="flex flex-col gap-4">
-
         {step.reply ? <ReplyNotice reply={step.reply} /> : null}
 
         {step.status === "VERIFIED" ? (

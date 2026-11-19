@@ -5,7 +5,11 @@ import {
   loadCredentialOverrides,
   snapshotAppliedFingerprints,
 } from "./lib/platform/credentials.js";
-import { applyEnvOverrides, assertProductionEnv, env } from "./lib/platform/env.js";
+import {
+  applyEnvOverrides,
+  assertProductionEnv,
+  env,
+} from "./lib/platform/env.js";
 import { sweepCalendars } from "./services/calendar.js";
 
 process.on("unhandledRejection", (error) =>

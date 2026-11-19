@@ -154,7 +154,9 @@ queueSharesRouter.get(
         a.departmentId === departmentId &&
         livePairs.has(availabilityKey(a.adviserId, a.departmentId)),
     );
-    const openByName = live ? (nameById.get(live.adviserId) ?? "Adviser") : null;
+    const openByName = live
+      ? (nameById.get(live.adviserId) ?? "Adviser")
+      : null;
 
     okOne(res, {
       status: "OK",

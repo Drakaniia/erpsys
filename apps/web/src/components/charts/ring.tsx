@@ -84,7 +84,7 @@ export const Ring = memo(function Ring({
   const expandProgress = useMountProgress(
     enterTransition,
     expandDelay,
-    `${animationKey}-expand-${index}`
+    `${animationKey}-expand-${index}`,
   );
   const expandComplete = useEnterComplete(expandProgress);
 
@@ -92,7 +92,7 @@ export const Ring = memo(function Ring({
   const progressMount = useMountProgress(
     enterTransition,
     progressDelay,
-    `${animationKey}-progress-${index}`
+    `${animationKey}-progress-${index}`,
   );
   const progressComplete = useEnterComplete(progressMount);
 
@@ -116,7 +116,7 @@ export const Ring = memo(function Ring({
       radii.outerRadius,
       startAngle,
       currentEndAngle,
-      corner
+      corner,
     );
   });
 
@@ -124,11 +124,11 @@ export const Ring = memo(function Ring({
 
   const handleMouseEnter = useCallback(
     () => setHoveredIndex(index),
-    [index, setHoveredIndex]
+    [index, setHoveredIndex],
   );
   const handleMouseLeave = useCallback(
     () => setHoveredIndex(null),
-    [setHoveredIndex]
+    [setHoveredIndex],
   );
 
   if (!ringData) {
@@ -149,7 +149,7 @@ export const Ring = memo(function Ring({
     outerRadius,
     startAngle,
     endAngle,
-    cornerRadius
+    cornerRadius,
   );
   const progressEndAngle = startAngle + arcRange * progress;
   const progressPath =
@@ -160,7 +160,7 @@ export const Ring = memo(function Ring({
           outerRadius,
           startAngle,
           progressEndAngle,
-          cornerRadius
+          cornerRadius,
         );
 
   const hoverScale = ringHoverScale(isHovered, isPushedOut);
@@ -179,14 +179,14 @@ export const Ring = memo(function Ring({
     index,
     baseInnerRadius,
     strokeWidth,
-    ringGap
+    ringGap,
   );
   const hitboxPath = arcPath(
     hitRadii.innerRadius,
     hitRadii.outerRadius,
     startAngle,
     endAngle,
-    0
+    0,
   );
   const hitbox = (
     // biome-ignore lint/a11y/noStaticElementInteractions: SVG path used as hover hitbox for visualization

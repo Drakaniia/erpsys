@@ -37,10 +37,7 @@ function signaturesMatch(a: string, b: string): boolean {
   return timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 
-function signShareToken(
-  payload: ShareTokenPayload,
-  secret: string,
-): string {
+function signShareToken(payload: ShareTokenPayload, secret: string): string {
   if (!secret) {
     throw new Error("[queue-share] refusing to sign with an empty secret");
   }

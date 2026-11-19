@@ -14,12 +14,25 @@ const dayFmt = new Intl.DateTimeFormat(undefined, {
   day: "numeric",
 });
 
-function Key({ color, label, total }: { color: string; label: string; total: number }) {
+function Key({
+  color,
+  label,
+  total,
+}: {
+  color: string;
+  label: string;
+  total: number;
+}) {
   return (
     <span className="flex items-center gap-2 text-xs text-muted">
-      <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
+      <span
+        className="size-2 rounded-full"
+        style={{ backgroundColor: color }}
+      />
       {label}
-      <span className="font-semibold tabular-nums text-ink">{total.toLocaleString()}</span>
+      <span className="font-semibold tabular-nums text-ink">
+        {total.toLocaleString()}
+      </span>
     </span>
   );
 }
@@ -53,7 +66,11 @@ export function QueueMovement({
           {!loading && (
             <div className="flex flex-wrap gap-x-5 gap-y-1">
               <Key color={JOINED} label="Joined a line" total={joined} />
-              <Key color={COMPLETED} label="Finished enrollment" total={completed} />
+              <Key
+                color={COMPLETED}
+                label="Finished enrollment"
+                total={completed}
+              />
             </div>
           )}
           <AreaChart
@@ -79,7 +96,11 @@ export function QueueMovement({
             <XAxis numTicks={{ base: 4, md: 7 }} />
             <ChartTooltip
               rows={(point) => [
-                { color: JOINED, label: "Joined a line", value: Number(point.joined ?? 0) },
+                {
+                  color: JOINED,
+                  label: "Joined a line",
+                  value: Number(point.joined ?? 0),
+                },
                 {
                   color: COMPLETED,
                   label: "Finished enrollment",

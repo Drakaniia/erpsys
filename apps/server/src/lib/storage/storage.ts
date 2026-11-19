@@ -5,7 +5,6 @@ const STORAGE_ROUTE_SLUGS = [
 ] as const;
 export type StorageRoute = (typeof STORAGE_ROUTE_SLUGS)[number];
 
-
 export const R2_KEY_PREFIX = "r2:";
 
 export function buildR2FileKey(bucket: string, key: string): string {

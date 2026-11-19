@@ -15,7 +15,12 @@ beforeEach(() => {
   holder.db = context.db;
 });
 const notification = (id: string, createdAt: Date) => ({
-  _id: id, userId: "user1", type: "REMINDER", title: "Reminder", body: "Check your record.", createdAt,
+  _id: id,
+  userId: "user1",
+  type: "REMINDER",
+  title: "Reminder",
+  body: "Check your record.",
+  createdAt,
 });
 
 describe("notification insertion timestamps", () => {
@@ -23,7 +28,8 @@ describe("notification insertion timestamps", () => {
     const row = notification("single", new Date("2026-01-01T00:00:00Z"));
     await NotificationModel.insert(row);
     expect(context.store[COLLECTIONS.notification][0]).toMatchObject({
-      ...row, updatedAt: row.createdAt,
+      ...row,
+      updatedAt: row.createdAt,
     });
     expect(row).not.toHaveProperty("updatedAt");
   });
@@ -34,9 +40,12 @@ describe("notification insertion timestamps", () => {
       notification("second", new Date("2026-01-02T00:00:00Z")),
     ];
     await NotificationModel.insertMany(rows);
-    expect(context.store[COLLECTIONS.notification]).toEqual(rows.map((row) => ({
-      ...row, updatedAt: row.createdAt,
-    })));
+    expect(context.store[COLLECTIONS.notification]).toEqual(
+      rows.map((row) => ({
+        ...row,
+        updatedAt: row.createdAt,
+      })),
+    );
     for (const row of rows) expect(row).not.toHaveProperty("updatedAt");
     await NotificationModel.insertMany([]);
     expect(context.store[COLLECTIONS.notification]).toHaveLength(2);

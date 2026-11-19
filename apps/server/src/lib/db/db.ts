@@ -51,7 +51,13 @@ let db: Db | null = null;
 
 export function getDbSync(): Db {
   if (db) return db;
-  client = new MongoClient(env.DATABASE_URL, { appName: "erpsys", maxPoolSize: 25, minPoolSize: 0, maxIdleTimeMS: 60_000, serverSelectionTimeoutMS: 10_000 });
+  client = new MongoClient(env.DATABASE_URL, {
+    appName: "erpsys",
+    maxPoolSize: 25,
+    minPoolSize: 0,
+    maxIdleTimeMS: 60_000,
+    serverSelectionTimeoutMS: 10_000,
+  });
   db = guardDb(client.db());
   return db;
 }

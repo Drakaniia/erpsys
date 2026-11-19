@@ -35,7 +35,11 @@ export function useDetailSheetState(
     }),
   );
 
-  const presence = useEditTimestamp("submission", verificationId, detailQuery.data);
+  const presence = useEditTimestamp(
+    "submission",
+    verificationId,
+    detailQuery.data,
+  );
   const verifyMutation = useMutation(api.officer.verifyStep.mutationOptions());
   const replyMutation = useMutation(api.officer.replyStep.mutationOptions());
   const revokeMutation = useMutation(api.officer.revokeStamp.mutationOptions());
@@ -140,7 +144,10 @@ export function useDetailSheetState(
   async function handleVerify() {
     await doVerify(
       verificationId,
-      { mutateAsync: (input) => verifyMutation.mutateAsync({ ...input, ts: presence.ts }) },
+      {
+        mutateAsync: (input) =>
+          verifyMutation.mutateAsync({ ...input, ts: presence.ts }),
+      },
       stampQuery.data as never,
       (p) => {
         setLocalStatus(p.localStatus as StepStatus);
@@ -157,7 +164,10 @@ export function useDetailSheetState(
   async function handleReply(chips: string[], note: string) {
     await doReply(
       verificationId,
-      { mutateAsync: (input) => replyMutation.mutateAsync({ ...input, ts: presence.ts }) },
+      {
+        mutateAsync: (input) =>
+          replyMutation.mutateAsync({ ...input, ts: presence.ts }),
+      },
       chips,
       note,
       officerName,
@@ -172,7 +182,10 @@ export function useDetailSheetState(
   async function handleRevoke() {
     await doRevoke(
       verificationId,
-      { mutateAsync: (input) => revokeMutation.mutateAsync({ ...input, ts: presence.ts }) },
+      {
+        mutateAsync: (input) =>
+          revokeMutation.mutateAsync({ ...input, ts: presence.ts }),
+      },
       officerName,
       (patch) => {
         if (patch.localStatus) setLocalStatus(patch.localStatus as StepStatus);
@@ -187,7 +200,10 @@ export function useDetailSheetState(
     await doCapture(
       dataUrl,
       verificationId,
-      { mutateAsync: (input) => captureMutation.mutateAsync({ ...input, ts: presence.ts }) },
+      {
+        mutateAsync: (input) =>
+          captureMutation.mutateAsync({ ...input, ts: presence.ts }),
+      },
       {
         uploadFile: async (file: File) => {
           const done = await uploadMugshot(file, {

@@ -32,13 +32,19 @@ describe("URL configuration", () => {
   });
 
   it("uses explicit local URLs", async () => {
-    const loaded = await loadUrls("http://localhost:5173/", "http://localhost:5173");
+    const loaded = await loadUrls(
+      "http://localhost:5173/",
+      "http://localhost:5173",
+    );
     expect(loaded.PUBLIC_SITE_URL).toBe("http://localhost:5173");
   });
 
   it("preserves an explicit deployed URL instead of forcing localhost", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    const loaded = await loadUrls("https://portal.example.org/", "https://portal.example.org");
+    const loaded = await loadUrls(
+      "https://portal.example.org/",
+      "https://portal.example.org",
+    );
     expect(loaded.PUBLIC_SITE_URL).toBe("https://portal.example.org");
     expect(loaded.BETTER_AUTH_URL).toBe("https://portal.example.org");
   });
@@ -65,7 +71,9 @@ const prod = {
 describe("productionEnvProblems", () => {
   it("passes a complete production config and ignores development", () => {
     expect(productionEnvProblems(prod)).toEqual([]);
-    expect(productionEnvProblems({ ...prod, NODE_ENV: "development", SU_PIN: "" })).toEqual([]);
+    expect(
+      productionEnvProblems({ ...prod, NODE_ENV: "development", SU_PIN: "" }),
+    ).toEqual([]);
   });
 
   it("refuses a weak secret, sample PIN, local origin and missing R2 key", () => {

@@ -35,7 +35,7 @@ export function computeSquareColumn({
   if (fit) {
     const count = Math.max(
       1,
-      Math.floor((barLengthPx + gap) / (squareSize + gap))
+      Math.floor((barLengthPx + gap) / (squareSize + gap)),
     );
     const effectiveGap =
       count > 1

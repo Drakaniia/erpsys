@@ -78,13 +78,13 @@ export function fadeGradientStops(sides: FadeSides): FadeGradientStop[] {
  * fade zone) — keeps offsets unique, so they're safe as React keys.
  */
 function dedupeStops<T extends { offset: string | number; opacity: number }>(
-  stops: T[]
+  stops: T[],
 ): T[] {
   return stops.filter(
     (stop, i) =>
       i === 0 ||
       stop.offset !== stops[i - 1]?.offset ||
-      stop.opacity !== stops[i - 1]?.opacity
+      stop.opacity !== stops[i - 1]?.opacity,
   );
 }
 
@@ -149,7 +149,7 @@ export interface PaintGradientStop {
 }
 
 export function resolveStrokeGradientStops(
-  gradient: StrokeGradient | undefined
+  gradient: StrokeGradient | undefined,
 ): StrokeGradientStop[] | null {
   if (!gradient || gradient.length === 0) {
     return null;
@@ -162,7 +162,7 @@ export function resolveStrokeGradientStops(
         : {
             offset: Math.min(1, Math.max(0, stop.offset)),
             color: stop.color,
-          }
+          },
     )
     .sort((a, b) => a.offset - b.offset);
 }

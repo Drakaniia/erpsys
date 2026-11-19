@@ -193,7 +193,7 @@ export function SeriesPointMarker({
         duration: timing.enterDuration * 1000,
         easing: DEFAULT_ANIMATION_EASING,
         fill: "backwards",
-      }
+      },
     );
     return () => animation.cancel();
   }, [revealEpoch]);
@@ -227,7 +227,7 @@ export function getSeriesMarkerVisualExtent(
     | "ringGap"
     | "outlineWidth"
     | "showActiveHighlight"
-  >
+  >,
 ): number {
   const radius = style.radius ?? 5;
   const strokeWidth = style.strokeWidth ?? 2;

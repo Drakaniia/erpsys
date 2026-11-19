@@ -70,7 +70,11 @@ export default function RequirementList({
   }
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const presence = useEditTimestamp("requirement", editingId, items.find((item) => item.id === editingId));
+  const presence = useEditTimestamp(
+    "requirement",
+    editingId,
+    items.find((item) => item.id === editingId),
+  );
   const [editLabel, setEditLabel] = useState("");
 
   function startEdit(item: RequirementItem) {
@@ -153,7 +157,6 @@ export default function RequirementList({
 
   return (
     <div className="flex flex-col gap-4">
-
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted">
           Shown to students at step 1 (Assessment). Edits go live immediately;

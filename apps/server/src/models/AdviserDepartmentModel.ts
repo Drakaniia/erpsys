@@ -27,7 +27,9 @@ export class AdviserDepartmentModel {
   ): Promise<AdviserDepartmentRow[]> {
     return getDbSync()
       .collection<AdviserDepartmentRow>(COLLECTIONS.adviserDepartment)
-      .find({ $or: [{ adviserId }, { departmentId: { $in: departmentIds } }] } as never)
+      .find({
+        $or: [{ adviserId }, { departmentId: { $in: departmentIds } }],
+      } as never)
       .toArray();
   }
 
@@ -115,7 +117,6 @@ export class AdviserDepartmentModel {
       .find({} as never)
       .toArray();
   }
-
 
   static async deleteByDepartment(departmentId: string): Promise<void> {
     await getDbSync()

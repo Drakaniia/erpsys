@@ -44,7 +44,11 @@ export function useAdviserMapping({
   }
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const presence = useEditTimestamp("adviser", editingId, advisers.find((adviser) => adviser.id === editingId));
+  const presence = useEditTimestamp(
+    "adviser",
+    editingId,
+    advisers.find((adviser) => adviser.id === editingId),
+  );
   const [selectedLevels, setSelectedLevels] = useState<
     Map<string, YearLevel[]>
   >(() => new Map());

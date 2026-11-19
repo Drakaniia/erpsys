@@ -36,7 +36,11 @@ export default function ConfirmEnrollmentDialog({
     if (!open || !entry) return;
     const panel = panelRef.current;
     if (!panel) return;
-    const trap = dialogTrap(panel, { onEscape: () => { if (!busy) onreturntoqueue(); } });
+    const trap = dialogTrap(panel, {
+      onEscape: () => {
+        if (!busy) onreturntoqueue();
+      },
+    });
     return () => trap.destroy();
   }, [open, entry, busy, onreturntoqueue]);
 
@@ -55,7 +59,9 @@ export default function ConfirmEnrollmentDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-enroll-title"
-      onClick={() => { if (!busy) onreturntoqueue(); }}
+      onClick={() => {
+        if (!busy) onreturntoqueue();
+      }}
     >
       <div
         ref={panelRef}

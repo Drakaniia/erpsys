@@ -195,7 +195,9 @@ export async function submissionRegister(
   };
 }
 
-export async function submissionPage(input: z.infer<typeof submissionListQuery>) {
+export async function submissionPage(
+  input: z.infer<typeof submissionListQuery>,
+) {
   const year = await activeYearOrThrow();
   const steps = await StepModel.listByCodes(
     input.step ? [input.step] : [...PRE_ENROLLMENT_STEP_CODES],
@@ -228,7 +230,9 @@ export async function submissionPage(input: z.infer<typeof submissionListQuery>)
       },
       status: String(row.status),
       submittedAt: isoOf(row.appliedAt, row.createdAt),
-      verifiedAt: row.verifiedAt ? new Date(row.verifiedAt).toISOString() : null,
+      verifiedAt: row.verifiedAt
+        ? new Date(row.verifiedAt).toISOString()
+        : null,
       evidence: ids
         .map((id) => {
           const upload = uploadById.get(id);
@@ -304,9 +308,12 @@ export async function submissionDetail(verificationId: string) {
     ? await RequirementModel.listActive()
     : [];
   const users = await UserModel.findByIds(
-    [row.verifiedById, row.revokedById, row.respondedById, profile?.userId].filter(
-      (id): id is string => typeof id === "string",
-    ),
+    [
+      row.verifiedById,
+      row.revokedById,
+      row.respondedById,
+      profile?.userId,
+    ].filter((id): id is string => typeof id === "string"),
   );
   const byId = new Map(users.map((user) => [String(user._id), user]));
   const userOf = (id: string | null | undefined) =>

@@ -153,7 +153,6 @@ export default function MultiSelectDropdown({
 
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
-
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -202,62 +201,72 @@ export default function MultiSelectDropdown({
           onKeyDown={onListKeydown}
           className={`dropdown-panel apple-scrollbar ${panelWidth}`}
         >
-          <div id={listId} role="listbox" aria-label={label} aria-multiselectable="true">
-          {options.map((opt, i) => {
-            const checked = selectedSet.has(opt.value);
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                role="option"
-                aria-selected={checked}
-                data-index={i}
-                tabIndex={i === focusedIndex ? 0 : -1}
-                title={opt.description ?? undefined}
-                onClick={() => toggleValue(opt.value)}
-                onPointerDown={(e) => e.preventDefault()}
-                onPointerMove={() => setFocusedIndex(i)}
-                className="dropdown-option"
-                data-focused={i === focusedIndex}
-              >
-                <span
-                  aria-hidden="true"
-                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border-[1.5px] transition-colors ${
-                    checked
-                      ? "border-primary bg-primary text-white"
-                      : "border-border bg-surface-raised"
-                  }`}
+          <div
+            id={listId}
+            role="listbox"
+            aria-label={label}
+            aria-multiselectable="true"
+          >
+            {options.map((opt, i) => {
+              const checked = selectedSet.has(opt.value);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="option"
+                  aria-selected={checked}
+                  data-index={i}
+                  tabIndex={i === focusedIndex ? 0 : -1}
+                  title={opt.description ?? undefined}
+                  onClick={() => toggleValue(opt.value)}
+                  onPointerDown={(e) => e.preventDefault()}
+                  onPointerMove={() => setFocusedIndex(i)}
+                  className="dropdown-option"
+                  data-focused={i === focusedIndex}
                 >
-                  {checked ? (
-                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                      <path
-                        d="M2.5 6.2L4.8 8.5L9.5 3.2"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  ) : null}
-                </span>
-                <span
-                  className={`min-w-0 flex-1 truncate ${opt.muted ? "text-muted/70" : ""}`}
-                >
-                  {opt.label}
-                  {opt.muted ? (
-                    <span className="ml-1 text-[11px] text-muted/60">
-                      · inactive
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border-[1.5px] transition-colors ${
+                      checked
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-surface-raised"
+                    }`}
+                  >
+                    {checked ? (
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                      >
+                        <path
+                          d="M2.5 6.2L4.8 8.5L9.5 3.2"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ) : null}
+                  </span>
+                  <span
+                    className={`min-w-0 flex-1 truncate ${opt.muted ? "text-muted/70" : ""}`}
+                  >
+                    {opt.label}
+                    {opt.muted ? (
+                      <span className="ml-1 text-[11px] text-muted/60">
+                        · inactive
+                      </span>
+                    ) : null}
+                  </span>
+                  {opt.hint ? (
+                    <span className="shrink-0 text-[11px] tabular-nums text-muted/70">
+                      {opt.hint}
                     </span>
                   ) : null}
-                </span>
-                {opt.hint ? (
-                  <span className="shrink-0 text-[11px] tabular-nums text-muted/70">
-                    {opt.hint}
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
           </div>
 
           {selected.length > 0 ? (

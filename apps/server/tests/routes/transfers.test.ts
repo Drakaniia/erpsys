@@ -141,24 +141,31 @@ const ask = (body: Record<string, unknown> = {}) =>
 const links = () => context.store[COLLECTIONS.adviserDepartment];
 
 describe("department transfers", () => {
-  it.each([true, false])("responds with a fresh transaction after staff polling (accept=%s)", async (accept) => {
-    holder.db = guardDb(context.db as never);
-    const created = (await (await ask()).json()).data;
-    holder.session = OWNER;
-    const snapshot = await (await call("/transfers")).json();
-    await call("/departments");
-    await call("/transfers");
-    const stale = await call(`/transfers/${created.id}`, {
-      method: "PATCH", body: JSON.stringify({ accept, ts: snapshot.ts }),
-    });
-    expect(stale.status).toBe(409);
-    expect((await stale.json()).data.code).toBe("TS_ABORTED");
-    const response = await call(`/transfers/${created.id}`, {
-      method: "PATCH", body: JSON.stringify({ accept }),
-    });
-    expect(response.status).toBe(200);
-    expect((await response.json()).data.status).toBe(accept ? "ACCEPTED" : "DECLINED");
-  });
+  it.each([true, false])(
+    "responds with a fresh transaction after staff polling (accept=%s)",
+    async (accept) => {
+      holder.db = guardDb(context.db as never);
+      const created = (await (await ask()).json()).data;
+      holder.session = OWNER;
+      const snapshot = await (await call("/transfers")).json();
+      await call("/departments");
+      await call("/transfers");
+      const stale = await call(`/transfers/${created.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ accept, ts: snapshot.ts }),
+      });
+      expect(stale.status).toBe(409);
+      expect((await stale.json()).data.code).toBe("TS_ABORTED");
+      const response = await call(`/transfers/${created.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ accept }),
+      });
+      expect(response.status).toBe(200);
+      expect((await response.json()).data.status).toBe(
+        accept ? "ACCEPTED" : "DECLINED",
+      );
+    },
+  );
   it("asks the current owner and notifies them", async () => {
     const response = await ask();
     expect(response.status).toBe(201);
@@ -226,7 +233,10 @@ describe("department transfers", () => {
       yearLevels: ["SECOND"],
     });
     // Their queue stays open, but the old serving lock must not strand a transferred level.
-    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "WAITING", servedById: null });
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
+      status: "WAITING",
+      servedById: null,
+    });
     expect(context.store[COLLECTIONS.adviserAvailability][0]).toMatchObject({
       isOpen: true,
     });
@@ -257,7 +267,9 @@ describe("department transfers", () => {
       body: JSON.stringify({ yearLevels: ["FIRST"] }),
     });
     expect(response.status).toBe(409);
-    expect(links().find((row) => row._id === "link-owner")).toMatchObject({ yearLevels: ["FIRST", "SECOND"] });
+    expect(links().find((row) => row._id === "link-owner")).toMatchObject({
+      yearLevels: ["FIRST", "SECOND"],
+    });
     expect(links().some((row) => row.adviserId === "adv3")).toBe(false);
   });
 
@@ -285,16 +297,24 @@ describe("department transfers", () => {
   it("expires a request instead of assigning an inactive department", async () => {
     await ask();
     context.store[COLLECTIONS.department][0].isActive = false;
-    context.store[COLLECTIONS.departmentTransferRequest][0].expiresAt = new Date(0);
+    context.store[COLLECTIONS.departmentTransferRequest][0].expiresAt =
+      new Date(0);
     const response = await call("/transfers");
     expect(response.status).toBe(200);
-    expect(context.store[COLLECTIONS.departmentTransferRequest][0].status).toBe("EXPIRED");
+    expect(context.store[COLLECTIONS.departmentTransferRequest][0].status).toBe(
+      "EXPIRED",
+    );
     expect(links().some((row) => row.adviserId === "adv2")).toBe(false);
   });
 
   it("refuses a transfer spanning multiple owners before changing any assignment", async () => {
     links()[0].yearLevels = ["FIRST"];
-    links().push({ _id: "link-third", adviserId: "adv3", departmentId: "dept-1", yearLevels: ["SECOND"] });
+    links().push({
+      _id: "link-third",
+      adviserId: "adv3",
+      departmentId: "dept-1",
+      yearLevels: ["SECOND"],
+    });
     const response = await ask({ yearLevels: ["FIRST", "SECOND"] });
     expect(response.status).toBe(409);
     expect(links()).toHaveLength(3);

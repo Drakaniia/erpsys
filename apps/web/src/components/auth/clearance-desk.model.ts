@@ -91,7 +91,15 @@ const DY = DESK.y + DESK.h;
 const MON = { x: -3.85, y: DY + 0.34, z: -2.2, w: 3.15, h: 2.28, d: 0.22 };
 const monitorScreen: Decal[] = [
   // Dark display bezel
-  { t: "rect", x: 0.14, y: 0.14, w: MON.w - 0.28, h: MON.h - 0.28, r: 0.08, fill: "ink" },
+  {
+    t: "rect",
+    x: 0.14,
+    y: 0.14,
+    w: MON.w - 0.28,
+    h: MON.h - 0.28,
+    r: 0.08,
+    fill: "ink",
+  },
   // Top window status strip
   { t: "circle", cx: 0.32, cy: 0.31, r: 0.05, fill: "accent" },
   { t: "bar", x: 0.46, y: 0.27, w: 0.88, h: 0.07, fill: "face" },
@@ -170,7 +178,16 @@ const sheetDecals: Decal[] = [
   // Header block: BukSU COT-SBO clearance header + status pill
   { t: "bar", x: 0.24, y: 0.2, w: 1.32, h: 0.12, fill: "ink" },
   { t: "bar", x: 0.24, y: 0.39, w: 0.84, h: 0.065, fill: "soft" },
-  { t: "rect", x: SHEET.w - 0.94, y: 0.18, w: 0.7, h: 0.26, r: 0.13, fill: "accent", stroke: true },
+  {
+    t: "rect",
+    x: SHEET.w - 0.94,
+    y: 0.18,
+    w: 0.7,
+    h: 0.26,
+    r: 0.13,
+    fill: "accent",
+    stroke: true,
+  },
   { t: "bar", x: SHEET.w - 0.8, y: 0.27, w: 0.42, h: 0.07, fill: "face" },
   { t: "segs", segs: [[0.22, 0.56, SHEET.w - 0.22, 0.56]], stroke: "soft" },
   // 5 pre-enrollment steps ticked + status badges on right
@@ -267,13 +284,38 @@ const KIOSK = { x: -3.65, y: DY, z: 0.55, w: 1.45, h: 1.45, d: 1.35 };
 const ID_CARD = { x: 2.18, y: DY, z: 0.68, w: 1.65, h: 0.07, d: 1.1 };
 const topIdDecals: Decal[] = [
   // Header band on ID card
-  { t: "rect", x: 0.1, y: 0.1, w: ID_CARD.w - 0.2, h: 0.18, r: 0.04, fill: "ink" },
+  {
+    t: "rect",
+    x: 0.1,
+    y: 0.1,
+    w: ID_CARD.w - 0.2,
+    h: 0.18,
+    r: 0.04,
+    fill: "ink",
+  },
   { t: "circle", cx: 0.22, cy: 0.19, r: 0.045, fill: "accent" },
   { t: "bar", x: 0.32, y: 0.16, w: 0.55, h: 0.055, fill: "face" },
   // Lanyard slot
-  { t: "rect", x: ID_CARD.w / 2 - 0.16, y: 0.03, w: 0.32, h: 0.04, r: 0.02, fill: "detail" },
+  {
+    t: "rect",
+    x: ID_CARD.w / 2 - 0.16,
+    y: 0.03,
+    w: 0.32,
+    h: 0.04,
+    r: 0.02,
+    fill: "detail",
+  },
   // Student photo frame on left
-  { t: "rect", x: 0.14, y: 0.36, w: 0.46, h: 0.54, r: 0.06, fill: "detail", stroke: true },
+  {
+    t: "rect",
+    x: 0.14,
+    y: 0.36,
+    w: 0.46,
+    h: 0.54,
+    r: 0.06,
+    fill: "detail",
+    stroke: true,
+  },
   { t: "circle", cx: 0.37, cy: 0.54, r: 0.1, fill: "face" },
   {
     t: "line",
@@ -312,7 +354,8 @@ export const clearanceDeskModel: Drawing = {
     "university",
   ],
   kind: "scene",
-  prompt: "/isometric redesign the auth isometric for the ERPSYS enrollment clearance desk",
+  prompt:
+    "/isometric redesign the auth isometric for the ERPSYS enrollment clearance desk",
   description:
     "An enrollment clearance desk: a live queue monitor and ticket dispenser on the left, a six-step requirements clipboard at the centre with an officer's gold rubber stamp poised over the verification seal, requirement folders in an organizer tray at the back right, and a stack of student ID cards in the foreground.",
   createdAt: "2026-11-13",
@@ -463,7 +506,15 @@ export const clearanceDeskModel: Drawing = {
             ],
             stroke: "soft",
           },
-          { t: "rect", x: 0.14, y: 0.22, w: 0.56, h: 0.22, r: 0.04, fill: "accent" },
+          {
+            t: "rect",
+            x: 0.14,
+            y: 0.22,
+            w: 0.56,
+            h: 0.22,
+            r: 0.04,
+            fill: "accent",
+          },
           { t: "bar", x: 0.22, y: 0.29, w: 0.4, h: 0.07, fill: "face" },
           { t: "bar", x: 0.14, y: 0.52, w: 0.56, h: 0.06, fill: "ink" },
         ],
@@ -660,9 +711,7 @@ export const clearanceDeskModel: Drawing = {
         axis: "z",
       },
       decals: {
-        front: [
-          { t: "bar", x: 0.16, y: 0.16, w: 0.65, h: 0.07, fill: "face" },
-        ],
+        front: [{ t: "bar", x: 0.16, y: 0.16, w: 0.65, h: 0.07, fill: "face" }],
       },
     },
     {
@@ -680,7 +729,15 @@ export const clearanceDeskModel: Drawing = {
           { t: "circle", cx: 0.28, cy: 0.26, r: 0.1, fill: "accent" },
           frontCheck(0.22, 0.27, 0.11, "face"),
           { t: "bar", x: 0.46, y: 0.2, w: 0.72, h: 0.08, fill: "ink" },
-          ...textLines(0.2, 0.46, 1.05, [1, 0.78, 0.88, 0.6], 0.16, 0.055, "soft"),
+          ...textLines(
+            0.2,
+            0.46,
+            1.05,
+            [1, 0.78, 0.88, 0.6],
+            0.16,
+            0.055,
+            "soft",
+          ),
         ],
       },
     },
@@ -770,7 +827,8 @@ export const clearanceDeskModel: Drawing = {
   ],
   motion: {
     duration: 2.4,
-    label: "the officer's stamp presses the clearance seal while a queue ticket feeds out",
+    label:
+      "the officer's stamp presses the clearance seal while a queue ticket feeds out",
     tracks: [
       {
         group: "stamp",

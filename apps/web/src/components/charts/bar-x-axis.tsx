@@ -107,7 +107,7 @@ const BarXAxisInner = memo(function BarXAxisInner({
 
   const resolvedMaxLabels = useMemo(
     () => resolveResponsiveChartLabelCount(maxLabels, width, 12),
-    [maxLabels, width]
+    [maxLabels, width],
   );
 
   // Generate labels for each bar
@@ -158,7 +158,7 @@ const BarXAxisInner = memo(function BarXAxisInner({
         />
       ))}
     </div>,
-    container
+    container,
   );
 });
 

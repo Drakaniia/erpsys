@@ -70,7 +70,7 @@ export const GRID_ANGLE_LABEL_FADE_S = 0.5;
 /** Labels start once half of the `ringCount` grid rings have started. */
 export function gridLabelDelay(
   ringCount: number,
-  ringStagger: number = GRID_RING_STAGGER_S
+  ringStagger: number = GRID_RING_STAGGER_S,
 ): number {
   return ringCount * ringStagger * 0.5;
 }

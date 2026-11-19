@@ -12,7 +12,6 @@ import { api } from "$lib/api";
 import { LAUNCH_STALE_MS, visibleQueuePosition } from "$lib/perf/cache-policy";
 import { intervalWhileVisible } from "$lib/polling";
 
-
 export const EVIDENCE_CONFIG: Partial<
   Record<
     StepCode,

@@ -18,6 +18,8 @@ Design docs and runbooks for ERPSYS. Code-level conventions live in `../AGENTS.m
 
 ## Specs
 
+- [specs/normalized-database.md](specs/normalized-database.md) — ERPSYS business data from 1NF to 3NF, with the [standalone SQLite schema](specs/normalized-database.sql). No runtime migration.
+
 - [specs/app-launch-performance-spec.md](specs/app-launch-performance-spec.md) — warm-launch rendering from a persisted cache, the aggregate `/api/v1/me/launch` endpoint, route/vendor chunking, and the CI bundle budget. Status: implemented.
 - [specs/load-resilience-design.md](specs/load-resilience-design.md) — surviving 300–1000 concurrent students: process guards, Mongo index-enforced queue correctness, graceful deploys, load shedding, metrics. Status: approved, not yet implemented.
 - [specs/cloudflare-ai-spec.md](specs/cloudflare-ai-spec.md) — the student chatbot's move from Gemini to Cloudflare Workers AI, including the daily Neuron guard. Status: implemented.
@@ -27,7 +29,7 @@ Design docs and runbooks for ERPSYS. Code-level conventions live in `../AGENTS.m
 
 ## Plans
 
-- [plans/2026-11-19-cloudflare-workers.md](plans/2026-11-19-cloudflare-workers.md) — migrate the Express API from Vercel to Workers while preserving Pages, MongoDB and authentication.
+- [ops/local.md](ops/local.md) — local app hosting with MongoDB as the only online service; Cloudflare Pages and API Worker have been removed.
 
 - [plans/2026-10-08-svelte-to-react.md](plans/2026-10-08-svelte-to-react.md) — the dated Svelte → React migration plan, including the surfaces still awaiting an RTL port.
 - [plans/2026-11-08-timestamp-concurrency.md](plans/2026-11-08-timestamp-concurrency.md) — basic timestamp-ordering concurrency control for every `/api/v1` write, and what shipped versus the original plan. Code map: [`apps/server/CONCURRENCY.md`](../apps/server/CONCURRENCY.md).

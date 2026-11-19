@@ -115,9 +115,9 @@ describe("r2", () => {
     const [url, init] = mock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe(`${R2_ENDPOINT}/erpsys-prod`);
     expect(init.method).toBe("HEAD");
-    expect(
-      (init.headers as Record<string, string>).authorization,
-    ).toContain("AWS4-HMAC-SHA256");
+    expect((init.headers as Record<string, string>).authorization).toContain(
+      "AWS4-HMAC-SHA256",
+    );
   });
 
   it("maps 403 to the key and 404 to the bucket", async () => {
@@ -158,7 +158,8 @@ describe("cloudflareChat", () => {
     stubFetch(json(404, {}));
     const account = await probeCredentials("cloudflareChat", values);
     expect(account.ok).toBe(false);
-    if (!account.ok) expect(account.failures[0].key).toBe("CLOUDFLARE_ACCOUNT_ID");
+    if (!account.ok)
+      expect(account.failures[0].key).toBe("CLOUDFLARE_ACCOUNT_ID");
   });
 });
 

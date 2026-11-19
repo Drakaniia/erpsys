@@ -26,7 +26,6 @@ import { usersRouter } from "./users/index.js";
  */
 export const v1Router = Router();
 
-
 v1Router.use(academicYearsRouter);
 v1Router.use(requirementsRouter);
 v1Router.use(reportsRouter);

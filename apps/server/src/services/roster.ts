@@ -259,9 +259,7 @@ async function loadStudents(
   const wanted = new Set(input.departmentIds);
   const enrollments = await StudentEnrollmentModel.listForDepartments(
     yearId,
-    input.departmentIds?.length
-      ? owned.filter((id) => wanted.has(id))
-      : owned,
+    input.departmentIds?.length ? owned.filter((id) => wanted.has(id)) : owned,
     input.yearLevels,
     qProfileIds,
   );
@@ -300,9 +298,9 @@ export async function loadRoster(
   const year = await resolveYear(input.academicYearId);
   if (!year) return { year: null, rows: [], unassignedTotal: 0 };
   const yearId = String(year._id);
-  const enrolledIds = (
-    await StudentEnrollmentModel.listAllForYear(yearId)
-  ).map((row) => row.studentProfileId);
+  const enrolledIds = (await StudentEnrollmentModel.listAllForYear(yearId)).map(
+    (row) => row.studentProfileId,
+  );
   const unassignedTotal =
     await StudentProfileModel.countUnenrolled(enrolledIds);
   const students = await loadStudents(input, adviserId, yearId, enrolledIds);
@@ -498,12 +496,20 @@ export async function listStudents(
   if (role === "ADMIN" && !isRosterRequest) {
     return userDirectoryPage({
       q: input.q,
-      role: (
-        ["ALL", "STUDENT", "SBO_OFFICER", "ENROLLMENT_ADVISER", "ADMIN"] as const
-      ).find((r) => r === input.role) ?? "ALL",
-      outside: input.outside === "INSIDE" || input.outside === "OUTSIDE"
-        ? input.outside
-        : "ALL",
+      role:
+        (
+          [
+            "ALL",
+            "STUDENT",
+            "SBO_OFFICER",
+            "ENROLLMENT_ADVISER",
+            "ADMIN",
+          ] as const
+        ).find((r) => r === input.role) ?? "ALL",
+      outside:
+        input.outside === "INSIDE" || input.outside === "OUTSIDE"
+          ? input.outside
+          : "ALL",
       academicYearId: input.academicYearId,
       departmentId: input.departmentId,
       yearLevel: input.yearLevel as never,

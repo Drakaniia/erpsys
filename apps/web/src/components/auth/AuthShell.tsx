@@ -47,11 +47,7 @@ export default function AuthShell({
               COT-SBO Enrollment Requirements Processing System, Bukidnon State
               University
             </p>
-            {heading ? (
-              <h1 className="sr-only">
-                {heading}
-              </h1>
-            ) : null}
+            {heading ? <h1 className="sr-only">{heading}</h1> : null}
           </div>
 
           <main

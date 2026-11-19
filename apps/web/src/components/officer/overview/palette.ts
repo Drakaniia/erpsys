@@ -11,7 +11,8 @@ export const AWAITING_INK = "var(--color-warning)";
 
 /** Navy ramp for the clearance rings: lighter at the outer, earlier steps. */
 export function ringShade(index: number, count: number): string {
-  const strength = count <= 1 ? 100 : Math.round(38 + (62 * index) / (count - 1));
+  const strength =
+    count <= 1 ? 100 : Math.round(38 + (62 * index) / (count - 1));
   return `color-mix(in oklab, var(--chart-1) ${strength}%, var(--chart-scale-mix))`;
 }
 

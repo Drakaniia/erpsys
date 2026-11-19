@@ -28,7 +28,6 @@ export default function NotificationCenter({
   onview?: ((item: NotificationItem) => void) | undefined;
   compact?: boolean;
 }) {
-
   const sessionQuery = authClient.useSession();
 
   // The 20s poll lives in the student and instructor state stores. This is a
@@ -49,8 +48,6 @@ export default function NotificationCenter({
     itemsProp ?? (ownQuery.data?.data as NotificationItem[] | undefined) ?? [],
   );
   const unread = items.filter((n) => !n.readAt).length;
-
-
 
   // The one generator shared with the Profile-tab door (D4). Downloading from a
   // row must never close the panel, dismiss the row, or touch read-state (D9),

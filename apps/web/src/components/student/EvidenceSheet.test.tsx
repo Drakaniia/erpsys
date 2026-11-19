@@ -14,8 +14,6 @@ const apiState = vi.hoisted(() => ({
   invalidate: vi.fn(),
 }));
 
-
-
 const slotState = vi.hoisted(() => ({
   onqueue: null as null | ((run: (() => Promise<void>) | null) => void),
 }));
@@ -99,7 +97,9 @@ describe("EvidenceSheet submit-time uploads", () => {
     const run = vi.fn(() => upload.promise);
 
     // Nothing on the step yet, so the button only appears once a file is queued.
-    expect(screen.queryByRole("button", { name: "Submit for review" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Submit for review" }),
+    ).toBeNull();
     act(() => slotState.onqueue!(run));
 
     const submit = screen.getByRole("button", { name: "Submit for review" });

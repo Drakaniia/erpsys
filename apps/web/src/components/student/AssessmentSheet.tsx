@@ -19,7 +19,11 @@ export default function AssessmentSheet({
   const busy = applyMutation.isPending;
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const presence = useEditTimestamp("submission", confirmOpen ? "me~ASSESSMENT" : null, step);
+  const presence = useEditTimestamp(
+    "submission",
+    confirmOpen ? "me~ASSESSMENT" : null,
+    step,
+  );
   const [applyError, setApplyError] = useState<string | null>(null);
 
   async function apply() {
@@ -41,7 +45,6 @@ export default function AssessmentSheet({
   return (
     <>
       <div className="flex flex-col gap-4">
-
         {step.reply ? <ReplyNotice reply={step.reply} /> : null}
 
         {step.status === "VERIFIED" ? (

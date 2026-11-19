@@ -11,7 +11,6 @@ export type ClientRoute = {
 };
 
 export const ROUTES = {
-
   me: {
     // The aggregate launch read — one round trip for the landing surface.
     getLaunch: { method: "GET", path: "/api/v1/me/launch" },
@@ -21,8 +20,6 @@ export const ROUTES = {
   },
   notifications: {
     listMine: { method: "GET", path: "/api/v1/me/notifications", list: true },
-
-
   },
   admin: {
     getOverview: { method: "GET", path: "/api/v1/me/overview" },

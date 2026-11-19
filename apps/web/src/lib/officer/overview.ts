@@ -65,15 +65,16 @@ const OFFICER_STEPS = new Set<string>(PRE_ENROLLMENT_STEP_CODES);
 export function normalizeOverview(raw: unknown): OfficerOverview | null {
   if (!raw || typeof raw !== "object") return null;
   const data = raw as Loose;
-  const isAdminShape = !Array.isArray(data.steps) && Array.isArray(data.stepTotals);
+  const isAdminShape =
+    !Array.isArray(data.steps) && Array.isArray(data.stepTotals);
   const hasActiveYear =
     typeof data.hasActiveYear === "boolean"
       ? data.hasActiveYear
       : data.activeYear != null;
 
-  const rawSteps = (
-    (isAdminShape ? data.stepTotals : data.steps) as Loose[] | undefined
-  ) ?? [];
+  const rawSteps =
+    ((isAdminShape ? data.stepTotals : data.steps) as Loose[] | undefined) ??
+    [];
 
   const steps: DeskStep[] = rawSteps
     .filter((s) => OFFICER_STEPS.has(str(s.code)))
@@ -124,7 +125,8 @@ export function normalizeOverview(raw: unknown): OfficerOverview | null {
   const longestWait = steps.reduce<DeskStep | null>((oldest, step) => {
     if (!step.oldestAwaitingAt) return oldest;
     if (!oldest?.oldestAwaitingAt) return step;
-    return Date.parse(step.oldestAwaitingAt) < Date.parse(oldest.oldestAwaitingAt)
+    return Date.parse(step.oldestAwaitingAt) <
+      Date.parse(oldest.oldestAwaitingAt)
       ? step
       : oldest;
   }, null);
@@ -196,7 +198,9 @@ export function headline(
   )[0];
   return {
     lead,
-    follow: busiest ? `${busiest.name} has the most (${busiest.awaitingReview.toLocaleString()}).` : "",
+    follow: busiest
+      ? `${busiest.name} has the most (${busiest.awaitingReview.toLocaleString()}).`
+      : "",
   };
 }
 
@@ -208,7 +212,12 @@ export function parseDay(day: string): Date {
 
 export function trendPoints(
   model: OfficerOverview,
-): Array<{ date: Date; submitted: number; verified: number; returned: number }> {
+): Array<{
+  date: Date;
+  submitted: number;
+  verified: number;
+  returned: number;
+}> {
   return model.trend.map((d) => ({
     date: parseDay(d.day),
     submitted: d.submitted,

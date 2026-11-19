@@ -12,7 +12,13 @@ import {
 } from "$lib/officer/overview";
 import type { OfficerTab } from "$lib/officer/tabs";
 import Skeleton from "../../ui/Skeleton";
-import { AWAITING, AWAITING_INK, RETURNED, VERIFIED, dayFormat } from "./palette";
+import {
+  AWAITING,
+  AWAITING_INK,
+  RETURNED,
+  VERIFIED,
+  dayFormat,
+} from "./palette";
 
 type Point = ReturnType<typeof trendPoints>[number];
 type SeriesKey = "submitted" | "verified" | "returned";
@@ -79,7 +85,10 @@ function SeriesFigure({
               {...hover.sparklineProps}
             />
           )}
-          <span className="truncate text-[11px] text-muted tabular-nums" aria-live="polite">
+          <span
+            className="truncate text-[11px] text-muted tabular-nums"
+            aria-live="polite"
+          >
             {caption}
           </span>
         </dd>
@@ -88,7 +97,13 @@ function SeriesFigure({
   );
 }
 
-function ClearedFigure({ cleared, started }: { cleared: number; started: number }) {
+function ClearedFigure({
+  cleared,
+  started,
+}: {
+  cleared: number;
+  started: number;
+}) {
   const share = percent(cleared, started);
   return (
     <div className="flex min-w-0 flex-col gap-2 px-4 py-4 sm:px-5">
@@ -116,7 +131,8 @@ function ClearedFigure({ cleared, started }: { cleared: number; started: number 
           </div>
         </div>
         <span className="truncate text-[11px] text-muted tabular-nums">
-          of {started.toLocaleString()} {started === 1 ? "student" : "students"} who started
+          of {started.toLocaleString()} {started === 1 ? "student" : "students"}{" "}
+          who started
         </span>
       </dd>
     </div>

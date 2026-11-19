@@ -22,7 +22,6 @@ export default function UserTableRow({
     <tr
       key={item.id}
       className={`h-[52px] ${selected ? "bg-primary/5" : "hover:bg-surface"}`}
-
     >
       <td className="px-4">
         <input

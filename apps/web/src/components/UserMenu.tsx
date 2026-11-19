@@ -39,7 +39,8 @@ export default function UserMenu() {
   const onOfficerConsole = location.pathname === "/officer";
   const showConsoleHelp = onOfficerConsole
     ? isOfficerSurface
-    : location.pathname === "/instructor" && canEnterSurface(role, "instructor");
+    : location.pathname === "/instructor" &&
+      canEnterSurface(role, "instructor");
 
   useEffect(() => {
     if (!open) return;
@@ -173,9 +174,13 @@ export default function UserMenu() {
 
   function handleOpenHelp() {
     setOpen(false);
-    window.dispatchEvent(new Event(
-      onOfficerConsole ? "officer:open-onboarding" : "instructor:open-onboarding",
-    ));
+    window.dispatchEvent(
+      new Event(
+        onOfficerConsole
+          ? "officer:open-onboarding"
+          : "instructor:open-onboarding",
+      ),
+    );
   }
 
   return (

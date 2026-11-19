@@ -33,7 +33,6 @@ export class UserModel {
       });
   }
 
-
   static async findByIds(ids: string[]): Promise<UserRow[]> {
     if (ids.length === 0) return [];
     return getDbSync()
@@ -104,6 +103,4 @@ export class UserModel {
       .updateOne(idIn([id]) as never, { $set: patch } as never);
     return result.matchedCount > 0;
   }
-
-
 }

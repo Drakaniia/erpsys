@@ -14,7 +14,10 @@ import { AcademicYearModel } from "../models/AcademicYearModel.js";
 import { AdviserAvailabilityModel } from "../models/AdviserAvailabilityModel.js";
 import { AdviserDepartmentModel } from "../models/AdviserDepartmentModel.js";
 import { AvailabilityWindowModel } from "../models/AvailabilityWindowModel.js";
-import { DepartmentModel, type DepartmentRow } from "../models/DepartmentModel.js";
+import {
+  DepartmentModel,
+  type DepartmentRow,
+} from "../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../models/EnrollmentQueueModel.js";
 import { StudentEnrollmentModel } from "../models/StudentEnrollmentModel.js";
 import { StudentProfileModel } from "../models/StudentProfileModel.js";
@@ -131,8 +134,8 @@ export async function myDepartment(userId: string) {
       ? {
           id: firstLive.adviserId,
           name:
-            advisers.find((u) => String(u._id) === firstLive.adviserId)
-              ?.name ?? "Adviser",
+            advisers.find((u) => String(u._id) === firstLive.adviserId)?.name ??
+            "Adviser",
         }
       : null,
     waitingCount,
@@ -212,9 +215,7 @@ export async function enrollmentRegister(
   const nameByUserId = new Map(
     [...users, ...advisers].map((u) => [String(u._id), u.name ?? ""] as const),
   );
-  const profileById = new Map(
-    profiles.map((p) => [String(p._id), p] as const),
-  );
+  const profileById = new Map(profiles.map((p) => [String(p._id), p] as const));
   const last = page[page.length - 1];
 
   return {

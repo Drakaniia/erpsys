@@ -115,7 +115,6 @@ export function useOfficerState(officerId: string) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
 
-
   function reviewFromBell(item: {
     verificationId: string;
     stepCode: StepCode;
@@ -307,6 +306,5 @@ export function useOfficerState(officerId: string) {
       setNewCount(0);
       seen.current.ids = new Set(rawItems.map((i) => i.verificationId));
     },
-
   };
 }

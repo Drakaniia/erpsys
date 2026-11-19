@@ -21,22 +21,23 @@ type Transfer = {
 export default function InstructorDialogs({
   s,
   incomingTransferRequest,
-
 }: {
   s: S;
   incomingTransferRequest: Transfer;
-
 }) {
   return (
     <>
-
       <ConfirmEnrollmentDialog
         open={s.queue.showValidateDialog}
         entry={s.queue.serveEntry}
         departmentName={s.queue.activeDept?.name ?? ""}
         semesterLabel={s.queue.semesterLabel}
         yearLabel={s.queue.yearBare}
-        busy={s.enrolled.enrollMutation.isPending || s.queue.servingBusy || s.queue.availabilityMutation.isPending}
+        busy={
+          s.enrolled.enrollMutation.isPending ||
+          s.queue.servingBusy ||
+          s.queue.availabilityMutation.isPending
+        }
         onconfirm={s.confirmServe}
         onreturntoqueue={() => s.queue.closeValidateDialog()}
         onmovetoend={async () => {
@@ -118,7 +119,6 @@ export default function InstructorDialogs({
         onhere={s.queue.answerStillThere}
         onclosequeue={s.queue.closeAllQueues}
       />
-
     </>
   );
 }

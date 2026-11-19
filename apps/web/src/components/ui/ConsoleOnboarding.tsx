@@ -8,7 +8,11 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { readSeenTips, rememberTip, type OnboardingTip } from "$lib/ui/onboarding";
+import {
+  readSeenTips,
+  rememberTip,
+  type OnboardingTip,
+} from "$lib/ui/onboarding";
 
 const ANCHOR = "data-onboarding-tip";
 const MODAL = '[role="dialog"][aria-modal="true"]';
@@ -78,32 +82,46 @@ export default function ConsoleOnboarding({
     const intersecting = new Set<HTMLElement>();
     function publishVisible() {
       const next = items.filter(({ node }) => intersecting.has(node));
-      setVisible((current) => sameTargets(current, next) ? current : next);
+      setVisible((current) => (sameTargets(current, next) ? current : next));
     }
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting && entry.intersectionRatio > 0) {
-          intersecting.add(entry.target as HTMLElement);
-        } else {
-          intersecting.delete(entry.target as HTMLElement);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.intersectionRatio > 0) {
+            intersecting.add(entry.target as HTMLElement);
+          } else {
+            intersecting.delete(entry.target as HTMLElement);
+          }
         }
-      }
-      publishVisible();
-    }, { threshold: [0, 0.01] });
+        publishVisible();
+      },
+      { threshold: [0, 0.01] },
+    );
 
     function sync() {
       const dialogs = Array.from(document.querySelectorAll<HTMLElement>(MODAL));
-      const nextModal = dialogs.findLast(
-        (node) => !node.closest('[hidden], [inert], [aria-hidden="true"]'),
-      ) ?? null;
+      const nextModal =
+        dialogs.findLast(
+          (node) => !node.closest('[hidden], [inert], [aria-hidden="true"]'),
+        ) ?? null;
       const scope = nextModal ?? page;
-      const next = Array.from(scope.querySelectorAll<HTMLElement>(`[${ANCHOR}]`))
-        .filter((node) => node.closest(MODAL) === nextModal &&
-          !node.closest('[hidden], [inert], [aria-hidden="true"]'))
+      const next = Array.from(
+        scope.querySelectorAll<HTMLElement>(`[${ANCHOR}]`),
+      )
+        .filter(
+          (node) =>
+            node.closest(MODAL) === nextModal &&
+            !node.closest('[hidden], [inert], [aria-hidden="true"]'),
+        )
         .flatMap((node) => {
           const id = node.getAttribute(ANCHOR);
           if (!id || !known.has(id)) return [];
-          return [items.find((item) => item.node === node && item.id === id) ?? { id, node }];
+          return [
+            items.find((item) => item.node === node && item.id === id) ?? {
+              id,
+              node,
+            },
+          ];
         });
       if (top !== nextModal) {
         top = nextModal;
@@ -138,7 +156,9 @@ export default function ConsoleOnboarding({
 
   useEffect(() => {
     if (helpOpen) return;
-    const entered = visible.filter((item) => !previouslyVisible.current.includes(item));
+    const entered = visible.filter(
+      (item) => !previouslyVisible.current.includes(item),
+    );
     previouslyVisible.current = visible;
     if (replay.current) {
       const requested = visible.find(({ id }) => id === replay.current);
@@ -153,12 +173,15 @@ export default function ConsoleOnboarding({
     if (next && accountId) {
       setActive(next);
     } else {
-      setActive((current) => current && visible.includes(current) ? current : null);
+      setActive((current) =>
+        current && visible.includes(current) ? current : null,
+      );
     }
   }, [accountId, helpOpen, seen, targets, visible]);
 
   useEffect(() => {
-    if (shown && accountId && !seen.has(shown.id)) rememberTip(storageKey, seen, shown.id);
+    if (shown && accountId && !seen.has(shown.id))
+      rememberTip(storageKey, seen, shown.id);
   }, [accountId, seen, shown, storageKey]);
 
   function openHelp(trigger: HTMLElement | null) {
@@ -170,7 +193,10 @@ export default function ConsoleOnboarding({
 
   useEffect(() => {
     function openFromMenu() {
-      openHelp(root.current?.querySelector<HTMLElement>("[data-onboarding-help]") ?? null);
+      openHelp(
+        root.current?.querySelector<HTMLElement>("[data-onboarding-help]") ??
+          null,
+      );
     }
     const eventName = `${surface}:open-onboarding`;
     window.addEventListener(eventName, openFromMenu);
@@ -183,12 +209,16 @@ export default function ConsoleOnboarding({
     function pressEscape(event: KeyboardEvent) {
       if (event.key !== "Escape" || event.defaultPrevented) return;
       setHelpOpen(false);
-      if (helpPanel.current?.contains(document.activeElement)) helpReturn.current?.focus();
+      if (helpPanel.current?.contains(document.activeElement))
+        helpReturn.current?.focus();
     }
     function dismissOutside(event: PointerEvent) {
       const node = event.target;
-      if (node instanceof Node && !helpPanel.current?.contains(node) &&
-          !(node instanceof Element && node.closest("[data-onboarding-help]"))) {
+      if (
+        node instanceof Node &&
+        !helpPanel.current?.contains(node) &&
+        !(node instanceof Element && node.closest("[data-onboarding-help]"))
+      ) {
         setHelpOpen(false);
       }
     }
@@ -208,24 +238,37 @@ export default function ConsoleOnboarding({
     replay.current = id;
     setHelpOpen(false);
     helpReturn.current?.focus({ preventScroll: true });
-    target?.node.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "instant" });
+    target?.node.scrollIntoView?.({
+      block: "nearest",
+      inline: "nearest",
+      behavior: "instant",
+    });
   }
 
   function showOnInteraction(node: EventTarget) {
     if (!accountId || helpOpen || shown || !(node instanceof Element)) return;
     const anchor = node.closest(`[${ANCHOR}]`);
-    const target = visible.find((item) => item.node === anchor && !seen.has(item.id));
+    const target = visible.find(
+      (item) => item.node === anchor && !seen.has(item.id),
+    );
     if (target) setActive(target);
   }
 
   return (
-    <HelpContext.Provider value={{
-      open: helpOpen,
-      panelId,
-      toggle: () => helpOpen ? setHelpOpen(false) : openHelp(
-        root.current?.querySelector<HTMLElement>("[data-onboarding-help]") ?? null,
-      ),
-    }}>
+    <HelpContext.Provider
+      value={{
+        open: helpOpen,
+        panelId,
+        toggle: () =>
+          helpOpen
+            ? setHelpOpen(false)
+            : openHelp(
+                root.current?.querySelector<HTMLElement>(
+                  "[data-onboarding-help]",
+                ) ?? null,
+              ),
+      }}
+    >
       <div
         ref={root}
         className="flex h-full flex-col"
@@ -244,10 +287,16 @@ export default function ConsoleOnboarding({
           >
             <div className="mb-2 flex items-center justify-between gap-2 px-2">
               <h2 className="text-sm font-semibold">Console tips</h2>
-              <button type="button" className="press rounded-lg px-2 py-1 text-xs text-muted hover:bg-surface hover:text-ink" onClick={() => {
-                setHelpOpen(false);
-                helpReturn.current?.focus();
-              }}>Close Help</button>
+              <button
+                type="button"
+                className="press rounded-lg px-2 py-1 text-xs text-muted hover:bg-surface hover:text-ink"
+                onClick={() => {
+                  setHelpOpen(false);
+                  helpReturn.current?.focus();
+                }}
+              >
+                Close Help
+              </button>
             </div>
             <ul className="space-y-1">
               {tips.map((item) => {
@@ -255,13 +304,24 @@ export default function ConsoleOnboarding({
                 return (
                   <li key={item.id}>
                     {target ? (
-                      <button type="button" className="press w-full rounded-lg px-2 py-2 text-left text-sm font-medium hover:bg-surface" onClick={() => showAgain(item.id, target)}>
-                        {item.title}<span className="ml-2 text-xs font-normal text-muted">Show highlight</span>
+                      <button
+                        type="button"
+                        className="press w-full rounded-lg px-2 py-2 text-left text-sm font-medium hover:bg-surface"
+                        onClick={() => showAgain(item.id, target)}
+                      >
+                        {item.title}
+                        <span className="ml-2 text-xs font-normal text-muted">
+                          Show highlight
+                        </span>
                       </button>
                     ) : (
                       <details className="rounded-lg px-2 py-2 text-sm hover:bg-surface">
-                        <summary className="cursor-pointer font-medium">{item.title}</summary>
-                        <p className="mt-1 text-muted">{item.context} {item.body}</p>
+                        <summary className="cursor-pointer font-medium">
+                          {item.title}
+                        </summary>
+                        <p className="mt-1 text-muted">
+                          {item.context} {item.body}
+                        </p>
                         <button
                           type="button"
                           className="press mt-2 rounded-md px-1 py-1 text-xs font-medium text-primary hover:underline"
@@ -278,7 +338,13 @@ export default function ConsoleOnboarding({
           </aside>
         )}
         {!helpOpen && shown && tip && (
-          <TipCallout key={tip.id} tip={tip} target={shown.node} scope={modal} onDismiss={() => setActive(null)} />
+          <TipCallout
+            key={tip.id}
+            tip={tip}
+            target={shown.node}
+            scope={modal}
+            onDismiss={() => setActive(null)}
+          />
         )}
       </div>
     </HelpContext.Provider>
@@ -289,7 +355,12 @@ function sameTargets(a: Target[], b: Target[]) {
   return a.length === b.length && a.every((item, i) => item === b[i]);
 }
 
-function TipCallout({ tip, target, scope, onDismiss }: {
+function TipCallout({
+  tip,
+  target,
+  scope,
+  onDismiss,
+}: {
   tip: OnboardingTip;
   target: HTMLElement;
   scope: HTMLElement | null;
@@ -309,18 +380,28 @@ function TipCallout({ tip, target, scope, onDismiss }: {
       const rect = target.getBoundingClientRect();
       const width = document.documentElement.clientWidth || window.innerWidth;
       const height = window.innerHeight;
-      const left = Math.max(EDGE, Math.min(rect.left, width - card.offsetWidth - EDGE));
+      const left = Math.max(
+        EDGE,
+        Math.min(rect.left, width - card.offsetWidth - EDGE),
+      );
       const below = rect.bottom + GAP;
       const above = rect.top - card.offsetHeight - GAP;
-      const top = below + card.offsetHeight <= height - EDGE || above < EDGE && below < height - rect.top
-        ? Math.min(below, Math.max(EDGE, height - card.offsetHeight - EDGE))
-        : Math.max(EDGE, above);
+      const top =
+        below + card.offsetHeight <= height - EDGE ||
+        (above < EDGE && below < height - rect.top)
+          ? Math.min(below, Math.max(EDGE, height - card.offsetHeight - EDGE))
+          : Math.max(EDGE, above);
       const overlayParent = card.offsetParent;
       // Confirm dialogs may establish a fixed-position containing block while animating.
-      const origin = overlayParent instanceof HTMLElement && overlayParent !== document.body
-        ? overlayParent.getBoundingClientRect()
-        : { left: 0, top: 0 };
-      Object.assign(card.style, { left: `${left - origin.left}px`, top: `${top - origin.top}px`, visibility: "visible" });
+      const origin =
+        overlayParent instanceof HTMLElement && overlayParent !== document.body
+          ? overlayParent.getBoundingClientRect()
+          : { left: 0, top: 0 };
+      Object.assign(card.style, {
+        left: `${left - origin.left}px`,
+        top: `${top - origin.top}px`,
+        visibility: "visible",
+      });
       const radius = getComputedStyle(target).borderRadius;
       Object.assign(outline.style, {
         left: `${rect.left - origin.left - 3}px`,
@@ -342,7 +423,11 @@ function TipCallout({ tip, target, scope, onDismiss }: {
     window.addEventListener("scroll", schedule, true);
     window.addEventListener("resize", schedule);
     scope?.addEventListener("transitionend", schedule);
-    const describedBy = new Set((target.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean));
+    const describedBy = new Set(
+      (target.getAttribute("aria-describedby") ?? "")
+        .split(/\s+/)
+        .filter(Boolean),
+    );
     describedBy.add(descriptionId);
     target.setAttribute("aria-describedby", [...describedBy].join(" "));
     return () => {
@@ -351,36 +436,58 @@ function TipCallout({ tip, target, scope, onDismiss }: {
       window.removeEventListener("scroll", schedule, true);
       window.removeEventListener("resize", schedule);
       scope?.removeEventListener("transitionend", schedule);
-      const remaining = (target.getAttribute("aria-describedby") ?? "").split(/\s+/).filter((id) => id && id !== descriptionId);
-      if (remaining.length) target.setAttribute("aria-describedby", remaining.join(" "));
+      const remaining = (target.getAttribute("aria-describedby") ?? "")
+        .split(/\s+/)
+        .filter((id) => id && id !== descriptionId);
+      if (remaining.length)
+        target.setAttribute("aria-describedby", remaining.join(" "));
       else target.removeAttribute("aria-describedby");
     };
   }, [descriptionId, scope, target]);
 
   return createPortal(
     <>
-      <div aria-hidden="true" className="pointer-events-none invisible fixed z-40 border-2 border-primary" ref={ring} />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none invisible fixed z-40 border-2 border-primary"
+        ref={ring}
+      />
       <div
         ref={callout}
         data-console-onboarding-ui
         className="pointer-events-none invisible fixed z-40 flex max-h-[calc(100dvh-1.5rem)] w-[min(17rem,calc(100vw-1.5rem))] items-start gap-2 overflow-auto rounded-xl border border-primary/35 bg-surface-raised p-3 text-ink shadow-lg"
       >
-        <p id={descriptionId} role="status" className="min-w-0 flex-1 text-sm leading-snug text-muted">
-          <strong className="mb-0.5 block text-sm font-semibold text-ink">{tip.title}</strong>
+        <p
+          id={descriptionId}
+          role="status"
+          className="min-w-0 flex-1 text-sm leading-snug text-muted"
+        >
+          <strong className="mb-0.5 block text-sm font-semibold text-ink">
+            {tip.title}
+          </strong>
           {tip.body}
         </p>
-        <button type="button" aria-label={`Dismiss tip: ${tip.title}`} className="press pointer-events-auto -mr-1 -mt-1 flex size-8 shrink-0 items-center justify-center rounded-lg text-base text-muted hover:bg-surface hover:text-ink focus-visible:outline-2 focus-visible:outline-primary" onClick={(event) => {
-          event.stopPropagation();
-          if (event.detail === 0) {
-            const returnTo = target.matches("button:not(:disabled), input:not(:disabled), [href]")
-              ? target
-              : scope
-                ? scope.querySelector<HTMLElement>("button:not(:disabled)")
-                : document.querySelector<HTMLElement>("[data-onboarding-help]");
-            returnTo?.focus({ preventScroll: true });
-          }
-          onDismiss();
-        }}>
+        <button
+          type="button"
+          aria-label={`Dismiss tip: ${tip.title}`}
+          className="press pointer-events-auto -mr-1 -mt-1 flex size-8 shrink-0 items-center justify-center rounded-lg text-base text-muted hover:bg-surface hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
+          onClick={(event) => {
+            event.stopPropagation();
+            if (event.detail === 0) {
+              const returnTo = target.matches(
+                "button:not(:disabled), input:not(:disabled), [href]",
+              )
+                ? target
+                : scope
+                  ? scope.querySelector<HTMLElement>("button:not(:disabled)")
+                  : document.querySelector<HTMLElement>(
+                      "[data-onboarding-help]",
+                    );
+              returnTo?.focus({ preventScroll: true });
+            }
+            onDismiss();
+          }}
+        >
           <span aria-hidden="true">×</span>
         </button>
       </div>

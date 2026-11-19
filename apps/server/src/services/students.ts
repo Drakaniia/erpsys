@@ -203,20 +203,27 @@ export async function ensureProfileForYear(params: {
   if (!studentNumber) return null;
 
   const createFresh = async (): Promise<StudentProfileRow> => {
-    const doc = { _id: genId("profile"), userId, studentNumber, academicYearId };
+    const doc = {
+      _id: genId("profile"),
+      userId,
+      studentNumber,
+      academicYearId,
+    };
     await StudentProfileModel.insert(doc);
     return doc;
   };
   const inUse = () =>
     new ApiError("CONFLICT", { message: STUDENT_NUMBER_IN_USE_MESSAGE });
 
-  const colliding = await StudentProfileModel.findByStudentNumber(studentNumber);
+  const colliding =
+    await StudentProfileModel.findByStudentNumber(studentNumber);
   if (!colliding) {
     try {
       return await createFresh();
     } catch (error) {
       if ((error as { code?: number }).code !== 11000) throw error;
-      const retry = await StudentProfileModel.findByStudentNumber(studentNumber);
+      const retry =
+        await StudentProfileModel.findByStudentNumber(studentNumber);
       if (!retry) throw error;
       if (retry.userId === userId) return retry;
       throw inUse();
@@ -234,7 +241,8 @@ export async function ensureProfileForYear(params: {
   }
   if (deriveStudentNumberFromEmail(owner.email) === studentNumber) {
     throw new ApiError("CONFLICT", {
-      message: "This student number is already claimed — contact the SBO office.",
+      message:
+        "This student number is already claimed — contact the SBO office.",
     });
   }
   await StudentProfileModel.assignUser(colliding._id, userId);
@@ -266,8 +274,7 @@ export async function listEnrollments(studentProfileId: string): Promise<
   ]);
   const yearById = new Map(years.map((y) => [String(y._id), y]));
   const departmentById = new Map(departments.map((d) => [String(d._id), d]));
-  const createdAt = (id: string) =>
-    yearById.get(id)?.createdAt?.getTime() ?? 0;
+  const createdAt = (id: string) => yearById.get(id)?.createdAt?.getTime() ?? 0;
   return rows
     .map((row) => {
       const year = yearById.get(row.academicYearId);
@@ -626,7 +633,9 @@ export async function officerDetail(
     };
   });
   const [department, queueDepartment] = await Promise.all([
-    enrollment ? DepartmentModel.findById(String(enrollment.departmentId)) : null,
+    enrollment
+      ? DepartmentModel.findById(String(enrollment.departmentId))
+      : null,
     queue ? DepartmentModel.findById(String(queue.departmentId)) : null,
   ]);
 
@@ -664,8 +673,8 @@ export async function officerDetail(
         }
       : null,
     pendingRequirements: STEP_CODES.filter(
-      (code) => stepRows.find((row) => row.code === code)?.status !== "VERIFIED",
+      (code) =>
+        stepRows.find((row) => row.code === code)?.status !== "VERIFIED",
     ).length,
   };
 }
-

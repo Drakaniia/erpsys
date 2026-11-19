@@ -16,11 +16,19 @@ type AuditLogRow = {
 };
 
 export class AuditLogModel {
-  static async insert(row: Omit<AuditLogRow, "_id" | "createdAt" | "updatedAt">): Promise<void> {
+  static async insert(
+    row: Omit<AuditLogRow, "_id" | "createdAt" | "updatedAt">,
+  ): Promise<void> {
     const at = new Date();
     await getDbSync()
       .collection(COLLECTIONS.auditLog)
-      .insertOne({ _id: genId("audit"), kind: "http", ...row, createdAt: at, updatedAt: at } as never);
+      .insertOne({
+        _id: genId("audit"),
+        kind: "http",
+        ...row,
+        createdAt: at,
+        updatedAt: at,
+      } as never);
   }
 
   static async search(

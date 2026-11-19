@@ -23,7 +23,6 @@ import {
 const ALREADY_REVERTED =
   "This enrollment has already been reverted or is not completed.";
 
-
 export async function complete(
   adviserId: string,
   entryId: string,
@@ -204,7 +203,6 @@ async function revertOne(
     );
     if (previous) {
       await NotificationModel.updateById(previous._id, {
-
         title: `[Retracted] ${previous.title}`,
         action: null,
       });

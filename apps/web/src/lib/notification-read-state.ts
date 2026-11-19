@@ -16,7 +16,11 @@ function snapshot(userId: string): string {
 function readIds(value: string): Set<string> {
   try {
     const parsed: unknown = JSON.parse(value);
-    return new Set(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : []);
+    return new Set(
+      Array.isArray(parsed)
+        ? parsed.filter((id): id is string => typeof id === "string")
+        : [],
+    );
   } catch {
     return new Set();
   }
@@ -45,11 +49,24 @@ export function markNotificationsRead(userId: string, ids: string[]): void {
   window.dispatchEvent(new Event(changed));
 }
 
-export function useNotificationReadState<T extends { id: string; readAt?: string | null }>(userId: string, items: T[]) {
-  const value = useSyncExternalStore(subscribe, () => snapshot(userId), () => "[]");
+export function useNotificationReadState<
+  T extends { id: string; readAt?: string | null },
+>(userId: string, items: T[]) {
+  const value = useSyncExternalStore(
+    subscribe,
+    () => snapshot(userId),
+    () => "[]",
+  );
   const read = readIds(value);
   return {
-    items: items.map((item) => ({ ...item, readAt: read.has(item.id) ? "local" : item.readAt })),
-    markRead: () => markNotificationsRead(userId, items.map((item) => item.id)),
+    items: items.map((item) => ({
+      ...item,
+      readAt: read.has(item.id) ? "local" : item.readAt,
+    })),
+    markRead: () =>
+      markNotificationsRead(
+        userId,
+        items.map((item) => item.id),
+      ),
   };
 }

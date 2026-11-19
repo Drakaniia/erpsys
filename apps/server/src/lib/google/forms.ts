@@ -53,7 +53,11 @@ async function accessToken(): Promise<string> {
   return cached.token;
 }
 
-async function call<T>(url: string, method = "GET", body?: unknown): Promise<T> {
+async function call<T>(
+  url: string,
+  method = "GET",
+  body?: unknown,
+): Promise<T> {
   const res = await fetch(url, {
     method,
     headers: {

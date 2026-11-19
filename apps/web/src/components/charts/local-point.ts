@@ -24,7 +24,7 @@ function isElement(value: unknown): value is Element {
 }
 
 function isEvent(
-  value: unknown
+  value: unknown,
 ): value is Event | { nativeEvent: Event; target: EventTarget | null } {
   if (typeof Event === "undefined" || !value) {
     return false;
@@ -89,11 +89,11 @@ function localPointFromNode(node: Element, event: LocalPointEvent): LocalPoint {
 export function localPoint(event: LocalPointEvent): LocalPoint | null;
 export function localPoint(
   node: Element | null | undefined,
-  event: LocalPointEvent
+  event: LocalPointEvent,
 ): LocalPoint | null;
 export function localPoint(
   nodeOrEvent: Element | LocalPointEvent | null | undefined,
-  maybeEvent?: LocalPointEvent
+  maybeEvent?: LocalPointEvent,
 ): LocalPoint | null {
   if (isElement(nodeOrEvent) && maybeEvent) {
     return localPointFromNode(nodeOrEvent, maybeEvent);

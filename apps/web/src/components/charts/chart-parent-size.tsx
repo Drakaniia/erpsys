@@ -97,7 +97,7 @@ function leadingDebounce<A>(fn: (arg: A) => void, wait: number) {
 export function useElementSize<T extends HTMLElement>(
   ref: RefObject<T | null>,
   debounceTime = 0,
-  { timing = "layout" }: ElementSizeOptions = {}
+  { timing = "layout" }: ElementSizeOptions = {},
 ): ElementSize {
   const [size, setSize] = useState<ElementSize>(ZERO_SIZE);
 

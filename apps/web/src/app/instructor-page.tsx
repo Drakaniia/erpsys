@@ -1,5 +1,7 @@
 import { useEffect } from "react";
-import ConsoleOnboarding, { OnboardingHelp } from "../components/ui/ConsoleOnboarding";
+import ConsoleOnboarding, {
+  OnboardingHelp,
+} from "../components/ui/ConsoleOnboarding";
 import { INSTRUCTOR_TIPS } from "$lib/instructor/onboarding";
 import { shortcutBlocked } from "$lib/ui/shortcut-guard";
 import CalendarBanner from "../components/instructor/CalendarBanner";
@@ -23,7 +25,6 @@ import { getInstructorShortcutAction } from "$lib/instructor/shortcuts";
 import { REPORTS_TAB_ID } from "$lib/instructor/reports";
 import type { EnrolledEntry } from "$lib/instructor/types";
 
-
 const SHORTCUTS = [
   { action: "Students tab", keys: ["0"] },
   { action: "Switch department", keys: ["1", "–", "N"] },
@@ -46,7 +47,6 @@ export function InstructorPage() {
   const s = useInstructorState();
   const incomingTransferRequest = s.incomingTransferRequests[0] ?? null;
 
-
   const enrolledEntries: EnrolledEntry[] =
     (s.enrolled.enrolledQuery.data as { data?: EnrolledEntry[] } | undefined)
       ?.data ?? [];
@@ -65,7 +65,6 @@ export function InstructorPage() {
 
   useEffect(() => {
     function onKeydown(e: KeyboardEvent) {
-
       const isTyping = shortcutBlocked(e);
       const hasDialog = !!(
         s.queue.closeConfirmOpen ||
@@ -169,7 +168,12 @@ export function InstructorPage() {
       : s.activeDeptId;
 
   return (
-    <ConsoleOnboarding key={myAdviserId} surface="instructor" accountId={myAdviserId} tips={INSTRUCTOR_TIPS}>
+    <ConsoleOnboarding
+      key={myAdviserId}
+      surface="instructor"
+      accountId={myAdviserId}
+      tips={INSTRUCTOR_TIPS}
+    >
       <InstructorTabBar
         departments={s.queue.departments}
         activeId={activeId}
@@ -183,7 +187,9 @@ export function InstructorPage() {
         <div>
           <h1
             className="text-xl font-semibold tracking-tight"
-            data-onboarding-tip={s.reportsSelected && s.queue.hasActiveYear ? "reports" : undefined}
+            data-onboarding-tip={
+              s.reportsSelected && s.queue.hasActiveYear ? "reports" : undefined
+            }
           >
             {s.reportsSelected
               ? "Reports"
@@ -303,11 +309,19 @@ export function InstructorPage() {
         )}
 
         {s.queue.queueQuery.isPending ? (
-          <p role="status" className="py-8 text-sm text-muted">Loading instructor queues…</p>
+          <p role="status" className="py-8 text-sm text-muted">
+            Loading instructor queues…
+          </p>
         ) : s.queue.queueQuery.isError ? (
           <div role="alert" className="py-8 text-sm text-error">
             Could not load instructor queues.
-            <button type="button" className="ml-3 underline" onClick={() => void s.queue.refreshQueues()}>Retry</button>
+            <button
+              type="button"
+              className="ml-3 underline"
+              onClick={() => void s.queue.refreshQueues()}
+            >
+              Retry
+            </button>
           </div>
         ) : s.reportsSelected ? (
           !s.queue.hasActiveYear ? (
@@ -341,12 +355,20 @@ export function InstructorPage() {
         ) : !s.queue.activeDept ? (
           <EmptyState icon="user" title="Select a department." />
         ) : s.queue.activeDept.queueLoading ? (
-          <p role="status" className="py-8 text-sm text-muted">Assignment saved. Loading department queue…</p>
+          <p role="status" className="py-8 text-sm text-muted">
+            Assignment saved. Loading department queue…
+          </p>
         ) : (
           <div className="space-y-4">
-            <DeptTabHeader key={s.queue.activeDept.id}
+            <DeptTabHeader
+              key={s.queue.activeDept.id}
               department={s.queue.activeDept}
-              busy={s.queue.availabilityMutation.isPending || s.queue.beginServingMutation.isPending || s.queue.servingBusy || s.enrolled.enrollMutation.isPending}
+              busy={
+                s.queue.availabilityMutation.isPending ||
+                s.queue.beginServingMutation.isPending ||
+                s.queue.servingBusy ||
+                s.enrolled.enrollMutation.isPending
+              }
               refreshing={s.queue.manualRefreshing}
               hasActiveYear={s.queue.hasActiveYear}
               onrefresh={s.queue.refreshQueues}
@@ -406,7 +428,8 @@ export function InstructorPage() {
                       myAdviserId={myAdviserId}
                       busy={
                         s.enrolled.enrollMutation.isPending ||
-                        s.queue.servingBusy || s.queue.availabilityMutation.isPending
+                        s.queue.servingBusy ||
+                        s.queue.availabilityMutation.isPending
                       }
                       onvalidate={() => s.queue.openValidateDialog()}
                       onreturntoqueue={() => void s.queue.returnToQueue()}
@@ -423,7 +446,11 @@ export function InstructorPage() {
                           ? (s.queue.spotlight?.entryId ?? null)
                           : null
                       }
-                      busy={s.queue.beginServingMutation.isPending || s.queue.removeMutation.isPending || s.queue.availabilityMutation.isPending}
+                      busy={
+                        s.queue.beginServingMutation.isPending ||
+                        s.queue.removeMutation.isPending ||
+                        s.queue.availabilityMutation.isPending
+                      }
                       deptOpen={s.queue.activeDept.myOpen}
                       removingId={s.queue.removingId}
                       onserve={(entry) => void s.queue.openServe(entry)}

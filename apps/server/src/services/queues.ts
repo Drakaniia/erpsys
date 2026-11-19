@@ -212,7 +212,9 @@ export async function assertStudentLevelInScope(
     academicYearId,
   );
   if (enrollment && String(enrollment.departmentId) !== departmentId) {
-    throw new ApiError("CONFLICT", { message: "This student's department changed — refresh the queue." });
+    throw new ApiError("CONFLICT", {
+      message: "This student's department changed — refresh the queue.",
+    });
   }
   const level = (enrollment?.yearLevel ?? null) as YearLevel | null;
   if (
@@ -458,17 +460,22 @@ export async function serve(
     });
   }
 
-  const inProgress = await EnrollmentQueueModel.findInProgress(input.departmentId, yearId);
+  const inProgress = await EnrollmentQueueModel.findInProgress(
+    input.departmentId,
+    yearId,
+  );
   if (inProgress) {
-    throw new ApiError("CONFLICT", { message: "A student is already being served in this department." });
+    throw new ApiError("CONFLICT", {
+      message: "A student is already being served in this department.",
+    });
   }
   let transitioned: boolean;
   try {
-    transitioned = await EnrollmentQueueModel.transition(
-      entry._id,
-      "WAITING",
-      { status: "IN_PROGRESS", servedById: adviserId, servedAt: new Date() },
-    );
+    transitioned = await EnrollmentQueueModel.transition(entry._id, "WAITING", {
+      status: "IN_PROGRESS",
+      servedById: adviserId,
+      servedAt: new Date(),
+    });
   } catch (error) {
     if (!isDuplicateKeyError(error)) throw error;
     const holder = await servedByName(
@@ -524,18 +531,25 @@ export async function release(
   if (
     entry.status === "IN_PROGRESS" &&
     entry.servedById === adviserId &&
-    (await EnrollmentQueueModel.transition(entry._id, "IN_PROGRESS", {
-      status: "WAITING",
-      servedById: null,
-      servedAt: null,
-    }, adviserId))
+    (await EnrollmentQueueModel.transition(
+      entry._id,
+      "IN_PROGRESS",
+      {
+        status: "WAITING",
+        servedById: null,
+        servedAt: null,
+      },
+      adviserId,
+    ))
   ) {
     return { entryId: String(entry._id), status: "WAITING" };
   }
   const latest = await EnrollmentQueueModel.findById(entry._id);
-  if (latest?.status === "WAITING") return { entryId: String(entry._id), status: "WAITING" };
+  if (latest?.status === "WAITING")
+    return { entryId: String(entry._id), status: "WAITING" };
   throw new ApiError("CONFLICT", {
-    message: "This student is no longer being served by you — refresh the queue.",
+    message:
+      "This student is no longer being served by you — refresh the queue.",
   });
 }
 
@@ -575,14 +589,19 @@ export async function moveToEnd(
   }
 
   const movedAt = new Date();
-  const moved = await EnrollmentQueueModel.transition(entry._id, entry.status, {
-    status: "WAITING",
-    servedById: null,
-    servedAt: null,
-    joinedAt: movedAt,
-    movedToEndById: adviserId,
-    movedToEndAt: movedAt,
-  }, entry.status === "IN_PROGRESS" ? adviserId : undefined);
+  const moved = await EnrollmentQueueModel.transition(
+    entry._id,
+    entry.status,
+    {
+      status: "WAITING",
+      servedById: null,
+      servedAt: null,
+      joinedAt: movedAt,
+      movedToEndById: adviserId,
+      movedToEndAt: movedAt,
+    },
+    entry.status === "IN_PROGRESS" ? adviserId : undefined,
+  );
   if (!moved) {
     throw new ApiError("CONFLICT", {
       message: "This student's place changed — refresh and try again.",

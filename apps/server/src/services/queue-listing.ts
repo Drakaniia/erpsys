@@ -94,7 +94,8 @@ export async function myQueues(adviserId: string) {
 
   const entries = [...waiting, ...serving].sort(
     (a, b) =>
-      new Date(a.joinedAt ?? 0).getTime() - new Date(b.joinedAt ?? 0).getTime() ||
+      new Date(a.joinedAt ?? 0).getTime() -
+        new Date(b.joinedAt ?? 0).getTime() ||
       String(a._id).localeCompare(String(b._id)),
   );
   const profileIds = [
@@ -113,12 +114,16 @@ export async function myQueues(adviserId: string) {
     if (row.status !== "VERIFIED") continue;
     const code = codeByStepId.get(String(row.stepId));
     if (!code) continue;
-    const set = verifiedByProfile.get(String(row.studentProfileId)) ?? new Set();
+    const set =
+      verifiedByProfile.get(String(row.studentProfileId)) ?? new Set();
     set.add(code);
     verifiedByProfile.set(String(row.studentProfileId), set);
   }
   const yearLevelByProfile = new Map(
-    enrollments.map((row) => [String(row.studentProfileId), row.yearLevel ?? null]),
+    enrollments.map((row) => [
+      String(row.studentProfileId),
+      row.yearLevel ?? null,
+    ]),
   );
   const profileById = new Map(profiles.map((p) => [String(p._id), p]));
 
@@ -181,7 +186,8 @@ export async function myQueues(adviserId: string) {
         .map((entry: QueueEntryRow) => {
           const profileId = String(entry.studentProfileId);
           const profile = profileById.get(profileId);
-          const verified = verifiedByProfile.get(profileId) ?? new Set<string>();
+          const verified =
+            verifiedByProfile.get(profileId) ?? new Set<string>();
           const missingCodes = [...PRE_ENROLLMENT_STEP_CODES].filter(
             (code) => !verified.has(code),
           );
@@ -189,7 +195,8 @@ export async function myQueues(adviserId: string) {
           return {
             yearLevel,
             locked:
-              yearLevel === null || !departmentAcceptsLevel(myLevels, yearLevel),
+              yearLevel === null ||
+              !departmentAcceptsLevel(myLevels, yearLevel),
             entryId: String(entry._id),
             studentId: profile ? String(profile.userId) : "",
             name: profile

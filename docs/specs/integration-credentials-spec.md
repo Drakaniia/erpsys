@@ -1,14 +1,14 @@
 # Integration Credentials — Spec
 
-The Integrations tab currently answers one question: *is this integration on?*
-This change makes it answer the second one: *what credentials is it using, and
-who can change them?*
+The Integrations tab currently answers one question: _is this integration on?_
+This change makes it answer the second one: _what credentials is it using, and
+who can change them?_
 
 The driver is ownership transfer. Today every credential lives in
 `/etc/erpsys.env` on one VM, owned by `root`, mode `0640`, and changing it takes
 SSH plus a `systemctl restart`. A new owner inheriting this deployment cannot
 reconfigure Google sign-in, R2, Workers AI, Turnstile or Brevo without shell
-access to a machine they may not have. This spec moves the *values* into an
+access to a machine they may not have. This spec moves the _values_ into an
 encrypted Mongo override layer that the admin console edits, keeps `.env` as the
 bootstrap floor, and adds a restart-required handshake so nobody believes a
 change is live when it is not.
@@ -21,46 +21,46 @@ shape all come from there and are not redesigned here.
 
 ## 1. Decisions (locked from the interview)
 
-| Decision                | Choice                                                                                         |
-| ----------------------- | ---------------------------------------------------------------------------------------------- |
-| Where values live       | Encrypted overrides in MongoDB; `.env` stays the bootstrap floor                               |
-| Activation              | Save now, queue it, show **Restart required**. No in-app restart                               |
-| Secret readability      | Never after save. Write-only; the UI shows a mask                                               |
-| Who can edit            | Any account that passes `requireSurface("admin")`. No re-auth, no allowlist                    |
-| Mask format             | First 5 characters + a fixed 12-dot run; all dots when the value is under 6 characters          |
-| Editable surface        | Integration credentials only                                                                   |
-| Validation              | Live provider probe; **any** probe failure blocks the save, with Retry                          |
-| Encryption              | AES-256-GCM under a key derived (HKDF) from `BETTER_AUTH_SECRET`                                |
-| Missing/wrong key       | Degrade: mark the group unreadable, fall back to `.env`, tell the admin to re-enter             |
-| Restart proof           | Per-key fingerprint computed at boot, compared to the stored value's fingerprint                |
-| Handover artifact       | Panel-level export of the effective integration keys as `.env` text (real values)               |
-| Reset                   | Per-integration reset to the `.env` value, confirmation required                                |
-| Editor placement        | Inline disclosure under each row                                                                |
-| Edit gesture            | `Replace` clears the field to an empty input; the mask becomes the placeholder                   |
-| Non-secret values       | Plaintext, always visible                                                                       |
-| Restart UI              | Per-row badge **and** one panel banner carrying the restart command                             |
-| Override injection      | Bootstrap step in `index.ts`: load + decrypt + apply, then dynamically import the app            |
-| Save granularity        | Atomic per integration; incomplete credential pairs are rejected                                |
-| Toggle coupling         | Independent — a save never flips the switch                                                     |
-| Value history           | None. Last write wins                                                                           |
-| Provenance              | Per field: `.env` or `Stored`, plus `Missing`                                                    |
-| Boot read failure       | Boot with `.env` values, log loudly, surface it in the panel                                    |
-| Export contents         | Real plaintext values, admin-only, audited, warned                                              |
-| Probe network policy    | Strict per-integration allowlist of provider hosts and endpoint shapes                          |
-| Audit detail            | Key names plus the masked prefix; never a value                                                 |
-| Environment availability| Every environment, same as the toggles                                                          |
-| Mongo / core config     | **Not** an integration and not editable; a read-only "Core configuration" section names keys     |
-| Turnstile site key      | Served from the public integrations payload at runtime, not baked into the bundle               |
-| Concurrent edits        | Optimistic concurrency on a `version`; a stale save returns `409`                               |
-| Broken credentials      | The toggle stays free to flip; the row states the problem                                       |
-| Spec shape              | This new file; the toggles spec stays as written                                                 |
+| Decision                 | Choice                                                                                       |
+| ------------------------ | -------------------------------------------------------------------------------------------- |
+| Where values live        | Encrypted overrides in MongoDB; `.env` stays the bootstrap floor                             |
+| Activation               | Save now, queue it, show **Restart required**. No in-app restart                             |
+| Secret readability       | Never after save. Write-only; the UI shows a mask                                            |
+| Who can edit             | Any account that passes `requireSurface("admin")`. No re-auth, no allowlist                  |
+| Mask format              | First 5 characters + a fixed 12-dot run; all dots when the value is under 6 characters       |
+| Editable surface         | Integration credentials only                                                                 |
+| Validation               | Live provider probe; **any** probe failure blocks the save, with Retry                       |
+| Encryption               | AES-256-GCM under a key derived (HKDF) from `BETTER_AUTH_SECRET`                             |
+| Missing/wrong key        | Degrade: mark the group unreadable, fall back to `.env`, tell the admin to re-enter          |
+| Restart proof            | Per-key fingerprint computed at boot, compared to the stored value's fingerprint             |
+| Handover artifact        | Panel-level export of the effective integration keys as `.env` text (real values)            |
+| Reset                    | Per-integration reset to the `.env` value, confirmation required                             |
+| Editor placement         | Inline disclosure under each row                                                             |
+| Edit gesture             | `Replace` clears the field to an empty input; the mask becomes the placeholder               |
+| Non-secret values        | Plaintext, always visible                                                                    |
+| Restart UI               | Per-row badge **and** one panel banner carrying the restart command                          |
+| Override injection       | Bootstrap step in `index.ts`: load + decrypt + apply, then dynamically import the app        |
+| Save granularity         | Atomic per integration; incomplete credential pairs are rejected                             |
+| Toggle coupling          | Independent — a save never flips the switch                                                  |
+| Value history            | None. Last write wins                                                                        |
+| Provenance               | Per field: `.env` or `Stored`, plus `Missing`                                                |
+| Boot read failure        | Boot with `.env` values, log loudly, surface it in the panel                                 |
+| Export contents          | Real plaintext values, admin-only, audited, warned                                           |
+| Probe network policy     | Strict per-integration allowlist of provider hosts and endpoint shapes                       |
+| Audit detail             | Key names plus the masked prefix; never a value                                              |
+| Environment availability | Every environment, same as the toggles                                                       |
+| Mongo / core config      | **Not** an integration and not editable; a read-only "Core configuration" section names keys |
+| Turnstile site key       | Served from the public integrations payload at runtime, not baked into the bundle            |
+| Concurrent edits         | Optimistic concurrency on a `version`; a stale save returns `409`                            |
+| Broken credentials       | The toggle stays free to flip; the row states the problem                                    |
+| Spec shape               | This new file; the toggles spec stays as written                                             |
 
 **Explicitly not integrations:** MongoDB, `BETTER_AUTH_SECRET`, `DATABASE_URL`,
 `PORT`, `NODE_ENV`, `PUBLIC_SITE_URL`, `BETTER_AUTH_URL`, `WEB_ORIGIN`,
 `ADMIN_EMAILS`, and every tuning key (`CLOUDFLARE_PRIMARY_MODEL`,
 `CLOUDFLARE_FALLBACK_MODELS`, `RPM`, `DAILY_NEURON_CAP`, quotas, maintenance
 messages, `R2_QUOTA_BYTES`). Those stay in the deployment env file and the
-runbook. The panel shows their *names and configured state* only.
+runbook. The panel shows their _names and configured state_ only.
 
 ---
 
@@ -69,26 +69,26 @@ runbook. The panel shows their *names and configured state* only.
 The set is closed. Adding a key means adding it here, to the registry in §7, and
 to the probe table in §6.
 
-| Integration     | Env key                    | Class           | Required | Pairing                    |
-| --------------- | -------------------------- | --------------- | -------- | -------------------------- |
-| `googleAuth`    | `GOOGLE_CLIENT_ID`         | secret          | yes      | with `…_SECRET`            |
-| `googleAuth`    | `GOOGLE_CLIENT_SECRET`     | secret          | yes      | with `…_ID`                |
-| `turnstile`     | `TURNSTILE_SECRET_KEY`     | secret          | yes      | with site key              |
-| `turnstile`     | `VITE_TURNSTILE_SITE_KEY`  | plain (public)  | yes      | with secret key            |
-| `turnstile`     | `TURNSTILE_HOSTNAMES`      | plain           | no       | —                          |
-| `r2`            | `R2_BUCKET`                | plain           | yes      | —                          |
-| `r2`            | `R2_ENDPOINT`              | plain           | yes      | —                          |
-| `r2`            | `R2_ACCESS_KEY_ID`         | secret          | yes      | with `…_SECRET_ACCESS_KEY` |
-| `r2`            | `R2_SECRET_ACCESS_KEY`     | secret          | yes      | with `…_ACCESS_KEY_ID`     |
-| `cloudflareChat`| `CLOUDFLARE_ACCOUNT_ID`    | plain           | yes      | —                          |
-| `cloudflareChat`| `CLOUDFLARE_API_TOKEN`     | secret          | yes      | —                          |
-| `email`         | `BREVO_API_KEY`            | secret          | yes      | —                          |
-| `email`         | `MAIL_FROM`                | plain           | yes      | —                          |
+| Integration      | Env key                   | Class          | Required | Pairing                    |
+| ---------------- | ------------------------- | -------------- | -------- | -------------------------- |
+| `googleAuth`     | `GOOGLE_CLIENT_ID`        | secret         | yes      | with `…_SECRET`            |
+| `googleAuth`     | `GOOGLE_CLIENT_SECRET`    | secret         | yes      | with `…_ID`                |
+| `turnstile`      | `TURNSTILE_SECRET_KEY`    | secret         | yes      | with site key              |
+| `turnstile`      | `VITE_TURNSTILE_SITE_KEY` | plain (public) | yes      | with secret key            |
+| `turnstile`      | `TURNSTILE_HOSTNAMES`     | plain          | no       | —                          |
+| `r2`             | `R2_BUCKET`               | plain          | yes      | —                          |
+| `r2`             | `R2_ENDPOINT`             | plain          | yes      | —                          |
+| `r2`             | `R2_ACCESS_KEY_ID`        | secret         | yes      | with `…_SECRET_ACCESS_KEY` |
+| `r2`             | `R2_SECRET_ACCESS_KEY`    | secret         | yes      | with `…_ACCESS_KEY_ID`     |
+| `cloudflareChat` | `CLOUDFLARE_ACCOUNT_ID`   | plain          | yes      | —                          |
+| `cloudflareChat` | `CLOUDFLARE_API_TOKEN`    | secret         | yes      | —                          |
+| `email`          | `BREVO_API_KEY`           | secret         | yes      | —                          |
+| `email`          | `MAIL_FROM`               | plain          | yes      | —                          |
 
 Notes:
 
 - `GOOGLE_CLIENT_ID` is masked even though Google treats a client id as public
-  metadata. It is an identifier for a credential, it is not needed to *read*
+  metadata. It is an identifier for a credential, it is not needed to _read_
   anything in this console, and consistency beats a per-key debate.
 - `VITE_TURNSTILE_SITE_KEY` is genuinely public — it ships to every browser — so
   it is plaintext. It also stops being a build-time value (§5.4).
@@ -100,8 +100,8 @@ Notes:
 
 ### 2.1 Clearing a value
 
-`PUT` accepts `null` for a key, meaning *drop the stored override and fall back
-to `.env`*. An empty string is not a value — a plaintext field cannot be saved
+`PUT` accepts `null` for a key, meaning _drop the stored override and fall back
+to `.env`_. An empty string is not a value — a plaintext field cannot be saved
 empty while the key is required, and a secret field cannot be saved as `""`.
 Missing keys in the request body are left untouched (partial updates within the
 group are still atomic: one document write).
@@ -126,16 +126,16 @@ collide.
 ```ts
 type CredentialField = {
   ciphertext: string; // base64, AES-256-GCM
-  iv: string;         // base64, 12 random bytes
-  tag: string;        // base64, 16-byte GCM tag
+  iv: string; // base64, 12 random bytes
+  tag: string; // base64, 16-byte GCM tag
   fingerprint: string; // HMAC-SHA256 truncated to 16 hex — see §4.2
 };
 
 type IntegrationCredentialDoc = {
-  _id: string;                 // genId("integration-credential")
-  key: IntegrationKey;         // one doc per integration
+  _id: string; // genId("integration-credential")
+  key: IntegrationKey; // one doc per integration
   values: Record<string, CredentialField>; // env key → field
-  version: number;             // starts at 1, $inc on every accepted save
+  version: number; // starts at 1, $inc on every accepted save
   updatedById?: string;
   updatedAt: Date;
   createdAt: Date;
@@ -203,7 +203,7 @@ chosen behaviour is **degrade, never crash**:
 
 `env` is currently a plain object built at import time by `dotenv`, and
 `config/auth.ts` builds `betterAuth` with `env.GOOGLE_CLIENT_ID` at module load.
-A DB override therefore cannot reach either without changing *when* the app is
+A DB override therefore cannot reach either without changing _when_ the app is
 imported. This is the one structural change in the feature.
 
 ### 5.1 `env.ts` becomes lazily readable
@@ -225,6 +225,7 @@ imported. This is the one structural change in the feature.
    `req()` becomes `overrides[key] ?? BASE[key] ?? fallback`. Numeric helpers
    (`num`, `port`) stay evaluated as they are today — no editable key is
    numeric, and changing them would invite a mid-flight parse failure.
+
 4. Export `baseEnvValue(key)` so the panel can label a field `.env` and show what
    the deployment actually supplies, and `effectiveValue(key)` so the boot
    fingerprint can be computed.
@@ -240,10 +241,17 @@ imported. This is the one structural change in the feature.
 installProcessGuards();
 
 import { getDb } from "./lib/db/db.js";
-import { env, assertPublicOrigin, assertProductionEnv } from "./lib/platform/env.js";
+import {
+  env,
+  assertPublicOrigin,
+  assertProductionEnv,
+} from "./lib/platform/env.js";
 import { ensureIndexes } from "./lib/db/indexes.js";
 import { applyEnvOverrides } from "./lib/platform/env.js";
-import { loadCredentialOverrides, snapshotAppliedFingerprints } from "./lib/platform/env-overrides.js";
+import {
+  loadCredentialOverrides,
+  snapshotAppliedFingerprints,
+} from "./lib/platform/env-overrides.js";
 
 await (await getDb()).command({ ping: 1 });
 await ensureIndexes();
@@ -266,7 +274,7 @@ Rules:
   `.env` Google client. Add a comment-free test that asserts this ordering
   (§13) rather than relying on review.
 - `assertProductionEnv()` and `assertPublicOrigin()` move after overrides so the
-  R2 checks validate the *effective* values. `DATABASE_URL` is never
+  R2 checks validate the _effective_ values. `DATABASE_URL` is never
   overridable, so the connection above already used the only value it can use.
 - `ensureIndexes()` runs before the credential read, so the unique index exists
   on a fresh database.
@@ -308,7 +316,7 @@ Consequences worth stating explicitly:
 
 - A save changes the stored fingerprint → `pendingRestart` is true until a boot
   reads that value. No manual acknowledgement, no "any restart clears it".
-- A *reset* also sets `pendingRestart`, because the running process still holds
+- A _reset_ also sets `pendingRestart`, because the running process still holds
   the override it loaded at boot; only a restart drops it.
 - A restart that failed to load overrides does not clear the badge — the
   fingerprints still differ, which is the honest answer.
@@ -338,13 +346,13 @@ a pattern first.
   internal retries — the admin's Retry button is the retry.
 - Fixed hosts only:
 
-  | Integration      | Host                                   | Method / path                                             |
-  | ---------------- | -------------------------------------- | --------------------------------------------------------- |
-  | `googleAuth`     | `oauth2.googleapis.com`                | `POST /token`                                             |
-  | `turnstile`      | `challenges.cloudflare.com`            | `POST /turnstile/v0/siteverify`                           |
-  | `cloudflareChat` | `api.cloudflare.com`                   | `GET /client/v4/accounts/{id}/ai/models`                  |
-  | `email`          | `api.brevo.com`                        | `GET /v3/account`                                         |
-  | `r2`             | `<hex>.r2.cloudflarestorage.com`       | `HEAD /{bucket}` (SigV4)                                  |
+  | Integration      | Host                             | Method / path                            |
+  | ---------------- | -------------------------------- | ---------------------------------------- |
+  | `googleAuth`     | `oauth2.googleapis.com`          | `POST /token`                            |
+  | `turnstile`      | `challenges.cloudflare.com`      | `POST /turnstile/v0/siteverify`          |
+  | `cloudflareChat` | `api.cloudflare.com`             | `GET /client/v4/accounts/{id}/ai/models` |
+  | `email`          | `api.brevo.com`                  | `GET /v3/account`                        |
+  | `r2`             | `<hex>.r2.cloudflarestorage.com` | `HEAD /{bucket}` (SigV4)                 |
 
 - R2 endpoint must match `^https://[a-f0-9]{32}\.r2\.cloudflarestorage\.com$`
   exactly: no port, path, query, userinfo, or alternate host. Anything else is
@@ -358,13 +366,13 @@ a pattern first.
 
 ### 6.2 Classification
 
-| Integration      | Accepted                                   | Rejected with                                                       |
-| ---------------- | ------------------------------------------ | ------------------------------------------------------------------- |
-| `googleAuth`     | `400` whose `error` is `invalid_grant` or `invalid_request` — the pair is recognised, the dummy code is not | `401 invalid_client`, `400 redirect_uri_mismatch`, anything else |
-| `turnstile`      | `200` with `error-codes` containing `invalid-input-response` (or `timeout-or-duplicate`) — the secret is good, the dummy token is not | `invalid-input-secret`, `missing-input-secret`, anything else |
-| `r2`             | `200` on the bucket                        | `403` "key rejected", `404` "bucket not found", other              |
-| `cloudflareChat` | `200` with `success: true`                 | `401`/`403` "token rejected", `404` "account not found"            |
-| `email`          | `200` from `/v3/account`                   | `401` "API key rejected", other                                    |
+| Integration      | Accepted                                                                                                                              | Rejected with                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `googleAuth`     | `400` whose `error` is `invalid_grant` or `invalid_request` — the pair is recognised, the dummy code is not                           | `401 invalid_client`, `400 redirect_uri_mismatch`, anything else |
+| `turnstile`      | `200` with `error-codes` containing `invalid-input-response` (or `timeout-or-duplicate`) — the secret is good, the dummy token is not | `invalid-input-secret`, `missing-input-secret`, anything else    |
+| `r2`             | `200` on the bucket                                                                                                                   | `403` "key rejected", `404` "bucket not found", other            |
+| `cloudflareChat` | `200` with `success: true`                                                                                                            | `401`/`403` "token rejected", `404` "account not found"          |
+| `email`          | `200` from `/v3/account`                                                                                                              | `401` "API key rejected", other                                  |
 
 `MAIL_FROM` has no probe of its own: validate it as an email address, then keep
 the existing caveat that Brevo only accepts a **verified sender**, which cannot
@@ -396,12 +404,12 @@ export type CredentialClass = "secret" | "plain";
 
 export type CredentialFieldSpec = {
   envKey: string;
-  label: string;          // "Client secret"
-  hint: string;           // one line, what it is for
-  helpUrl?: string;       // provider console deep link
+  label: string; // "Client secret"
+  hint: string; // one line, what it is for
+  helpUrl?: string; // provider console deep link
   className: CredentialClass;
   required: boolean;
-  pair?: string;          // envKey that must be set at the same time
+  pair?: string; // envKey that must be set at the same time
 };
 
 export const CREDENTIAL_FIELDS: Record<IntegrationKey, CredentialFieldSpec[]>;
@@ -421,10 +429,10 @@ New file `apps/server/src/lib/platform/env-overrides.ts`:
 
 ```ts
 export async function loadCredentialOverrides(): Promise<{
-  values: Record<string, string>;                 // decrypted, applied at boot
-  fingerprints: Record<string, string>;           // per env key
+  values: Record<string, string>; // decrypted, applied at boot
+  fingerprints: Record<string, string>; // per env key
   unreadable: Record<IntegrationKey, boolean>;
-  loaded: boolean;                                // false on any read failure
+  loaded: boolean; // false on any read failure
 }>;
 
 export function bootFingerprints(): Record<string, string>;
@@ -517,9 +525,19 @@ is `false` only after a failed boot read (§5.3).
 `{ data: { turnstile: boolean, … } }`. It becomes:
 
 ```json
-{ "data": { "flags": { "turnstile": true, "r2": true, "googleAuth": false,
-  "cloudflareChat": true, "email": true }, "turnstileSiteKey": "0x4AAA…",
-  "overridesLoaded": true } }
+{
+  "data": {
+    "flags": {
+      "turnstile": true,
+      "r2": true,
+      "googleAuth": false,
+      "cloudflareChat": true,
+      "email": true
+    },
+    "turnstileSiteKey": "0x4AAA…",
+    "overridesLoaded": true
+  }
+}
 ```
 
 `useIntegrations()` in the web app is the only consumer and is updated in the
@@ -600,7 +618,7 @@ type IntegrationRow = {
   updatedByName: string | null;
   updatedAt: string | null;
   credentials: CredentialFieldView[];
-  version: number;          // 0 when no stored group exists
+  version: number; // 0 when no stored group exists
   pendingRestart: boolean;
   overridesLoaded: boolean;
 };
@@ -635,12 +653,12 @@ asserts the server rule at the boundaries (5, 6, 7 characters).
 `apps/web/src/lib/integrations/use-integrations.ts`:
 
 ```ts
-useIntegrations();          // now reads { flags, turnstileSiteKey, overridesLoaded }
-useAdminIntegrations();     // rows carry credentials, version, pendingRestart
-useSetIntegration();        // unchanged
-useSaveCredentials();       // PUT, invalidates ["integrations"] on success
-useResetCredentials();      // DELETE, invalidates ["integrations"] on success
-useExportCredentials();     // GET, returns { filename, content }
+useIntegrations(); // now reads { flags, turnstileSiteKey, overridesLoaded }
+useAdminIntegrations(); // rows carry credentials, version, pendingRestart
+useSetIntegration(); // unchanged
+useSaveCredentials(); // PUT, invalidates ["integrations"] on success
+useResetCredentials(); // DELETE, invalidates ["integrations"] on success
+useExportCredentials(); // GET, returns { filename, content }
 ```
 
 - Query keys stay `["integrations", "public" | "admin"]` so the existing
@@ -731,16 +749,16 @@ Row order is unchanged — the server's blast-radius order
 
 ### 10.3 Field anatomy
 
-| Part        | Rule                                                                                          |
-| ----------- | --------------------------------------------------------------------------------------------- |
-| Label       | The registry label — "Client secret", not "Secret 2"                                          |
-| Plain field | Real `<input>`, value visible, editable inline, `spellCheck={false}`                          |
-| Secret field| Read-only display of `masked`; `Replace` swaps it for `<input type="password">` with `autoComplete="new-password"`, `spellCheck={false}`, `autoCapitalize="off"` |
-| Provenance  | `.env` / `stored` / `missing`, plus the masked or plain value                                 |
-| Hint        | One line under the field group; `helpUrl` renders as a normal link that opens in a new tab    |
-| Unreadable  | The whole group shows a warning line; values are not claimed to be readable                   |
-| Dirty state | `Save` disabled until at least one field differs from the loaded row                          |
-| Cancel      | Restores every field to the loaded value and collapses nothing                                |
+| Part         | Rule                                                                                                                                                             |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Label        | The registry label — "Client secret", not "Secret 2"                                                                                                             |
+| Plain field  | Real `<input>`, value visible, editable inline, `spellCheck={false}`                                                                                             |
+| Secret field | Read-only display of `masked`; `Replace` swaps it for `<input type="password">` with `autoComplete="new-password"`, `spellCheck={false}`, `autoCapitalize="off"` |
+| Provenance   | `.env` / `stored` / `missing`, plus the masked or plain value                                                                                                    |
+| Hint         | One line under the field group; `helpUrl` renders as a normal link that opens in a new tab                                                                       |
+| Unreadable   | The whole group shows a warning line; values are not claimed to be readable                                                                                      |
+| Dirty state  | `Save` disabled until at least one field differs from the loaded row                                                                                             |
+| Cancel       | Restores every field to the loaded value and collapses nothing                                                                                                   |
 
 Editing a secret is deliberately not "click the mask": a mask that becomes an
 input implies the field is pre-filled with the secret, and it never is. `Replace`
@@ -896,39 +914,39 @@ Rules:
 
 ## 12. Edge cases (production)
 
-| Case                                                    | Behaviour                                                                                                                   |
-| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Fresh install, no credential docs                       | Zero rows; every field shows its `.env` value or `Missing`; nothing is written on read                                       |
-| Mongo unavailable at boot                               | Boot with `.env` only, log loudly, `overridesLoaded: false`, panel banner says the stored values were not applied            |
-| Mongo unavailable at save                               | `503`, single-document write means nothing is half-applied; the field keeps the value the admin typed                       |
-| `BETTER_AUTH_SECRET` rotated                            | Every stored group decrypts to `unreadable`; runtime falls back to `.env`; panel tells the admin to re-enter or reset         |
-| `BETTER_AUTH_SECRET` restored from an old backup        | Same degrade path — unreadable, not a crash                                                                                  |
-| Value saved, service never restarted                    | `pendingRestart` stays true; the badge survives later restarts until the boot fingerprint matches                            |
-| Value saved then reset before restart                   | Still pending; the running process is holding the override, so only a restart returns it to `.env`                           |
-| Restart happened but boot read failed                   | Badge remains, because fingerprints still differ — no false "applied"                                                       |
-| Admin saves the same bytes twice                        | All fingerprints equal the stored ones → `changed: false`, no version bump, no audit row, no pending badge                   |
-| Two admins, same integration                            | Second save sees a stale `version` → `409`, row asks for a reload; nothing is overwritten                                   |
-| Two admins, different integrations                      | Separate documents, no interaction                                                                                           |
-| Probe times out / provider 5xx                          | Save blocked, reason shown, `Retry` re-sends; `.env` editing remains the escape hatch                                        |
-| Probe rejected (401)                                    | Save blocked with the provider's message; the previous stored value is untouched                                             |
-| `R2_ENDPOINT` pointing at an internal host              | Rejected by the allowlist before any request; message names the expected shape                                              |
-| `R2_ENDPOINT` correct but bucket missing                | Probe returns 404 → blocked with "bucket not found"                                                                          |
-| Pair half-filled (access key without secret)            | `422` before any probe                                                                                                       |
-| Required key cleared and `.env` also empty              | Allowed to save as `null`; row shows `Missing`; toggle is independent and may still be on                                    |
-| Integration off, credentials edited                     | Allowed; the toggle does not move                                                                                             |
-| Credentials broken, toggle on                           | Allowed; the row states the runtime consequence. No auto-off                                                                 |
-| Site key changed, secret unchanged                      | New key is served on the next public fetch (no restart); group badge still shows because the group also holds the secret      |
-| Google client changed                                   | Needs the restart; `better-auth` builds its provider from `env` at import, which the bootstrap guarantees happens after apply |
-| Google saved while a user is mid-OAuth-redirect         | Callback still resolves against the old client id until restart; after restart a stale code fails and the user retries        |
-| Turnstile secret changed, site key not                  | Widget renders with the old key until the secret is applied; the probe validates the secret only — inline help warns to save both |
-| Credential body over 4 KB per value                     | `400` with the limit named                                                                                                   |
-| Unknown env key in the body                             | `400` (strict schema), never a silent ignore                                                                                 |
-| Export requested                                        | Plaintext in the response body, `no-store`, audited with actor and time; nothing cached client- or server-side               |
-| Export while a group is unreadable                      | That group emits the "could not be read" comment line and no values                                                          |
-| 11 saves in a minute by one admin                       | `429`, no probe is sent, no provider quota burned                                                                            |
-| Classified value contains quotes/newlines               | Export escapes it; the API never assumes a value is shell-safe                                                               |
-| Log inspection after a credential change                | Key names, statuses and outcomes only; no value, mask included                                                               |
-| Second server instance                                  | Unchanged ceiling: the in-process caches do not propagate. Still single-instance (toggles spec §12)                           |
+| Case                                             | Behaviour                                                                                                                         |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| Fresh install, no credential docs                | Zero rows; every field shows its `.env` value or `Missing`; nothing is written on read                                            |
+| Mongo unavailable at boot                        | Boot with `.env` only, log loudly, `overridesLoaded: false`, panel banner says the stored values were not applied                 |
+| Mongo unavailable at save                        | `503`, single-document write means nothing is half-applied; the field keeps the value the admin typed                             |
+| `BETTER_AUTH_SECRET` rotated                     | Every stored group decrypts to `unreadable`; runtime falls back to `.env`; panel tells the admin to re-enter or reset             |
+| `BETTER_AUTH_SECRET` restored from an old backup | Same degrade path — unreadable, not a crash                                                                                       |
+| Value saved, service never restarted             | `pendingRestart` stays true; the badge survives later restarts until the boot fingerprint matches                                 |
+| Value saved then reset before restart            | Still pending; the running process is holding the override, so only a restart returns it to `.env`                                |
+| Restart happened but boot read failed            | Badge remains, because fingerprints still differ — no false "applied"                                                             |
+| Admin saves the same bytes twice                 | All fingerprints equal the stored ones → `changed: false`, no version bump, no audit row, no pending badge                        |
+| Two admins, same integration                     | Second save sees a stale `version` → `409`, row asks for a reload; nothing is overwritten                                         |
+| Two admins, different integrations               | Separate documents, no interaction                                                                                                |
+| Probe times out / provider 5xx                   | Save blocked, reason shown, `Retry` re-sends; `.env` editing remains the escape hatch                                             |
+| Probe rejected (401)                             | Save blocked with the provider's message; the previous stored value is untouched                                                  |
+| `R2_ENDPOINT` pointing at an internal host       | Rejected by the allowlist before any request; message names the expected shape                                                    |
+| `R2_ENDPOINT` correct but bucket missing         | Probe returns 404 → blocked with "bucket not found"                                                                               |
+| Pair half-filled (access key without secret)     | `422` before any probe                                                                                                            |
+| Required key cleared and `.env` also empty       | Allowed to save as `null`; row shows `Missing`; toggle is independent and may still be on                                         |
+| Integration off, credentials edited              | Allowed; the toggle does not move                                                                                                 |
+| Credentials broken, toggle on                    | Allowed; the row states the runtime consequence. No auto-off                                                                      |
+| Site key changed, secret unchanged               | New key is served on the next public fetch (no restart); group badge still shows because the group also holds the secret          |
+| Google client changed                            | Needs the restart; `better-auth` builds its provider from `env` at import, which the bootstrap guarantees happens after apply     |
+| Google saved while a user is mid-OAuth-redirect  | Callback still resolves against the old client id until restart; after restart a stale code fails and the user retries            |
+| Turnstile secret changed, site key not           | Widget renders with the old key until the secret is applied; the probe validates the secret only — inline help warns to save both |
+| Credential body over 4 KB per value              | `400` with the limit named                                                                                                        |
+| Unknown env key in the body                      | `400` (strict schema), never a silent ignore                                                                                      |
+| Export requested                                 | Plaintext in the response body, `no-store`, audited with actor and time; nothing cached client- or server-side                    |
+| Export while a group is unreadable               | That group emits the "could not be read" comment line and no values                                                               |
+| 11 saves in a minute by one admin                | `429`, no probe is sent, no provider quota burned                                                                                 |
+| Classified value contains quotes/newlines        | Export escapes it; the API never assumes a value is shell-safe                                                                    |
+| Log inspection after a credential change         | Key names, statuses and outcomes only; no value, mask included                                                                    |
+| Second server instance                           | Unchanged ceiling: the in-process caches do not propagate. Still single-instance (toggles spec §12)                               |
 
 ---
 
@@ -979,13 +997,13 @@ Web (`*.test.tsx`, colocated):
 - A secret renders the server mask and no plaintext exists in the DOM.
 - `Replace` produces an empty password input; Cancel restores the mask.
 - `Save` is disabled until dirty; a successful save shows `Saved · restart
-  required` and the new masks, with **no** toast.
+required` and the new masks, with **no** toast.
 - A `422` shows the provider reason and Retry re-sends the same body.
 - A `409` shows the reload message and clears the optimistic state.
 - `Export .env` requires the second click; the content is absent from the DOM
   before it.
 - The restart banner appears only with `pendingRestart` or `overridesLoaded:
-  false`, and names `sudo systemctl restart erpsys`.
+false`, and names `sudo systemctl restart erpsys`.
 - Reduced motion: the disclosure renders open/closed instantly (assert no
   transition classes / spring hook bypassed).
 - `LoginCard` reads the site key from the API payload, renders no Turnstile when

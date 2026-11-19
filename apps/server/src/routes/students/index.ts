@@ -217,7 +217,9 @@ studentsRouter.post(
       profiles.map((profile) => [String(profile._id), String(profile.userId)]),
     );
     const completedProfiles = new Set(completed);
-    const codeById = new Map(steps.map((step) => [String(step._id), step.code]));
+    const codeById = new Map(
+      steps.map((step) => [String(step._id), step.code]),
+    );
     const verifiedByProfile = new Map<string, Set<string>>();
     for (const row of verifications) {
       const code = codeById.get(String(row.stepId));
@@ -414,9 +416,7 @@ studentsRouter.post(
   "/me/assessment",
   student,
   catchAsync(async (req, res) => {
-    const { profile, year } = await requireStudentContext(
-      sessionUser(req),
-    );
+    const { profile, year } = await requireStudentContext(sessionUser(req));
     const step = await StepModel.findByCode("ASSESSMENT");
     if (!step) {
       throw new ApiError("NOT_FOUND", {

@@ -124,7 +124,9 @@ export function useGoogleSignIn({
 
     setLinkDialogOpen(false);
     pendingGoogleUser.current = null;
-    navigate(`${googleSignInCallback(dest)}&message=Account+linked+successfully…`);
+    navigate(
+      `${googleSignInCallback(dest)}&message=Account+linked+successfully…`,
+    );
   }
 
   function handleLinkCancel() {
