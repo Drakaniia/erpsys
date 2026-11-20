@@ -16,6 +16,7 @@ import {
   rosterReportInput,
 } from "$lib/instructor/reports";
 import { notify } from "$lib/notifications";
+import { loadRecordBatch as loadRecords } from "$lib/report/load-record-batch";
 import { api } from "$lib/api";
 import { formatCount } from "$lib/report/format";
 import {
@@ -365,21 +366,15 @@ export default function ReportsPanel({
     return thrownMessage(error) ?? FORBIDDEN_FALLBACK;
   }
 
-  async function loadRecordBatch(): Promise<unknown> {
-    const records: unknown[] = [];
-    for (const student of picked) {
+  function loadRecordBatch(): Promise<unknown> {
+    return loadRecords(picked, async (student) => {
       const input = { studentProfileId: student.studentProfileId };
       if (role === "instructor") {
-        records.push(
-          await api.instructor.getStudentRecord.call({ ...input, scope }),
-        );
-      } else if (role === "admin") {
-        records.push(await api.admin.getStudentRecord.call(input));
-      } else {
-        records.push(await api.officer.getStudentRecord.call(input));
+        return api.instructor.getStudentRecord.call({ ...input, scope });
       }
-    }
-    return records;
+      if (role === "admin") return api.admin.getStudentRecord.call(input);
+      return api.officer.getStudentRecord.call(input);
+    });
   }
 
   function loadForKind(): () => Promise<unknown> {
