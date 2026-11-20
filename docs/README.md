@@ -33,6 +33,8 @@ Design docs and runbooks for ERPSYS. Code-level conventions live in `../AGENTS.m
 
 ## Plans
 
+- [plans/2026-11-20-full-system-performance.md](plans/2026-11-20-full-system-performance.md) — full-system baselines, client/API/database optimization phases, safe optimistic updates, and verification limits.
+
 - [ops/local.md](ops/local.md) — local app hosting with MongoDB as the only online service; Cloudflare Pages and API Worker have been removed.
 
 - [plans/2026-10-08-svelte-to-react.md](plans/2026-10-08-svelte-to-react.md) — the dated Svelte → React migration plan, including the surfaces still awaiting an RTL port.
