@@ -13,9 +13,9 @@ import {
   evidenceUploadIds,
   stepHintFor,
 } from "../config/steps.js";
-import { getDbSync } from "../lib/db/db.js";
+
 import { genId } from "../lib/db/ids.js";
-import { purgeUserById } from "../lib/db/user-purge.js";
+
 import type { SessionUser } from "../middleware/auth.js";
 import type { AcademicYearRow } from "../models/AcademicYearModel.js";
 import { AcademicYearModel } from "../models/AcademicYearModel.js";
@@ -239,8 +239,8 @@ export async function ensureProfileForYear(params: {
 
   const owner = await UserModel.findById(colliding.userId);
   if (owner?.blockedAt) {
-    await purgeUserById(getDbSync(), String(owner._id));
-    return createFresh();
+    throw inUse();
+
   }
   if (deriveStudentNumberFromEmail(email) !== studentNumber || !owner?.email) {
     throw inUse();
@@ -350,7 +350,12 @@ export async function loadStudentSteps(user: SessionUser) {
     ]);
   let profilingResponse: ProfilingResponse | null = null;
   const profilingStep = steps.find((step) => step.code === "PROFILING");
-  if (profile && profilingForm?.formId && profilingStep) {
+  if (
+    user.emailVerified === true &&
+    profile &&
+    profilingForm?.formId &&
+    profilingStep
+  ) {
     const existing = verifications.find(
       (v) => v.stepId === String(profilingStep._id),
     );

@@ -13,11 +13,12 @@ export type SessionUser = {
   id: string;
   name?: string;
   email: string;
+  emailVerified?: boolean;
   role?: string;
   isOutsideOrg?: boolean;
 };
 
-type Session = { user: SessionUser };
+type Session = { user: SessionUser; sessionId: string };
 
 export type AuthedRequest = Request & { session?: Session };
 
@@ -29,10 +30,12 @@ export async function getSession(req: Request): Promise<Session | null> {
   if (!user || typeof user.id !== "string") return null;
 
   return {
+    sessionId: typeof result?.session?.id === "string" ? result.session.id : "",
     user: {
       id: user.id,
       name: typeof user.name === "string" ? user.name : undefined,
       email: typeof user.email === "string" ? user.email : "",
+      emailVerified: user.emailVerified === true,
       role: typeof user.role === "string" ? user.role : undefined,
       isOutsideOrg: user.isOutsideOrg === true,
     },
@@ -48,6 +51,7 @@ function sessionOf(req: Request): Session {
 }
 
 export const sessionUser = (req: Request): SessionUser => sessionOf(req).user;
+export const sessionId = (req: Request): string => sessionOf(req).sessionId;
 
 export const requireSession: RequestHandler = async (req, _res, next) => {
   try {
@@ -76,7 +80,7 @@ export function requireSurface(surface: SurfaceId): RequestHandler {
 }
 
 export const requireStepUp: RequestHandler = async (req, _res, next) => {
-  if ((await stepUpStatus(sessionOf(req).user.id)).unlocked) return next();
+  if ((await stepUpStatus(sessionUser(req).id, sessionId(req))).unlocked) return next();
   throw new ApiError("FORBIDDEN", {
     message:
       "Confirm with the PIN, your password, the emailed code and the authenticator first.",
