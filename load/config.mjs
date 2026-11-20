@@ -7,6 +7,8 @@
  * timeout tells an operator nothing they can act on.
  */
 
+import { assertDisposableDatabase } from "./safety.mjs";
+
 const NUMERIC = new Set([
   "LOAD_STUDENTS",
   "LOAD_CONNECTIONS",
@@ -142,8 +144,10 @@ export function loadConfig() {
 
   if (problems.length > 0) throw new ConfigError(problems);
 
-  return {
+  const config = {
     baseUrl,
+    nodeEnv: process.env.NODE_ENV,
+    disposableDatabase: process.env.LOAD_DISPOSABLE_DATABASE,
     /** `Origin` is only sent when set; the REST surface does not gate on it. */
     origin: (process.env.LOAD_ORIGIN ?? "").trim() || null,
     students,
@@ -166,6 +170,8 @@ export function loadConfig() {
       ""
     ).trim(),
   };
+  assertDisposableDatabase(config);
+  return config;
 }
 
 export function printHelp() {

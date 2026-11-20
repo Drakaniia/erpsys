@@ -40,7 +40,7 @@ import { checkIntegrity } from "./integrity.mjs";
 import { startHeapSampler } from "./metrics.mjs";
 import { runScenario } from "./scenario.mjs";
 import { seed, teardown } from "./seed.mjs";
-import { decodeResponse, encodeInput } from "./wire.mjs";
+import { decodeResponse, encodeInput, LOAD_PATHS } from "./wire.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, "..");
@@ -90,7 +90,7 @@ async function preflightProbe(config, probe, departmentId) {
   };
   if (config.origin) headers.origin = config.origin;
 
-  const response = await fetch(`${config.baseUrl}/queues`, {
+  const response = await fetch(`${config.baseUrl}${LOAD_PATHS.queue}`, {
     method: "POST",
     headers,
     body: encodeInput({ departmentId }),
@@ -129,11 +129,11 @@ async function preflightProbe(config, probe, departmentId) {
   ) {
     throw new Error(
       [
-        `${config.baseUrl}/queues answered 200 with a body that is not a`,
+        `${config.baseUrl}${LOAD_PATHS.queue} answered with a body that is not a`,
         `joinQueue result: ${text.slice(0, 200)}`,
         "",
-        "POST /queues returns {entryId, departmentName, position} as raw JSON, with no",
-        "envelope. Anything else means LOAD_BASE_URL is not pointing at the app server's",
+        "POST /api/v1/me/queue returns { data: {entryId, departmentName, position} }.",
+        "Anything else means LOAD_BASE_URL is not pointing at the app server's",
         "REST surface.",
       ].join("\n"),
     );

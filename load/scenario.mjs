@@ -28,7 +28,7 @@
  */
 
 import { LatencyHistogram } from "./histogram.mjs";
-import { decodeResponse, encodeInput } from "./wire.mjs";
+import { decodeResponse, encodeInput, LOAD_PATHS } from "./wire.mjs";
 
 export async function loadAutocannon() {
   try {
@@ -170,9 +170,9 @@ export function runScenario({ config, students, departmentId }) {
     return Promise.all([
       startProcedure({
         ...shared,
-        name: "POST /queues",
+        name: `POST ${LOAD_PATHS.queue}`,
         method: "POST",
-        path: "/queues",
+        path: LOAD_PATHS.queue,
         input: { departmentId },
         connections: cookies.length,
         duration: config.durationS,
@@ -181,17 +181,17 @@ export function runScenario({ config, students, departmentId }) {
       }),
       startProcedure({
         ...shared,
-        name: "GET /departments/mine",
+        name: `GET ${LOAD_PATHS.departments}`,
         method: "GET",
-        path: "/departments/mine",
+        path: LOAD_PATHS.departments,
         connections: config.connections,
         duration: config.durationS,
       }),
       startProcedure({
         ...shared,
-        name: "GET /queues/mine",
+        name: `GET ${LOAD_PATHS.queue}`,
         method: "GET",
-        path: "/queues/mine",
+        path: LOAD_PATHS.queue,
         connections: config.connections,
         duration: config.durationS,
       }),
