@@ -65,7 +65,7 @@ export function Circles({
         <circle
           className={cn(
             "visx-pattern-circle visx-pattern-circle-complement",
-            className
+            className,
           )}
           cx={cornerX}
           cy={cornerY}

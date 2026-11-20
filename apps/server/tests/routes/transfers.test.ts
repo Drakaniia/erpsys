@@ -44,28 +44,28 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.department]: [
       {
         _id: "dept-1",
+        advisers: [
+          {
+            _id: "link-owner",
+            adviserId: "adv1",
+            yearLevels: ["FIRST", "SECOND"],
+          },
+        ],
         name: "College of Technologies",
         isActive: true,
         yearLevels: ["FIRST", "SECOND"],
       },
-      { _id: "dept-2", name: "College of Arts", isActive: true },
-    ],
-    [COLLECTIONS.adviserDepartment]: [
       {
-        _id: "link-owner",
-        adviserId: "adv1",
-        departmentId: "dept-1",
-        yearLevels: ["FIRST", "SECOND"],
-      },
-      {
-        _id: "link-owner-2",
-        adviserId: "adv1",
-        departmentId: "dept-2",
-        yearLevels: [],
+        _id: "dept-2",
+        name: "College of Arts",
+        isActive: true,
+        advisers: [{ _id: "link-owner-2", adviserId: "adv1", yearLevels: [] }],
       },
     ],
-    [COLLECTIONS.adviserAvailability]: [
+
+    [COLLECTIONS.adviserSchedule]: [
       {
+        kind: "presence",
         _id: "av-1",
         adviserId: "adv1",
         departmentId: "dept-1",
@@ -138,27 +138,40 @@ const ask = (body: Record<string, unknown> = {}) =>
     }),
   });
 
-const links = () => context.store[COLLECTIONS.adviserDepartment];
+const links = (): Row[] =>
+  context.store[COLLECTIONS.department].flatMap((department) =>
+    ((department.advisers ?? []) as Row[]).map((assignment) => ({
+      ...assignment,
+      departmentId: department._id,
+    })),
+  );
 
 describe("department transfers", () => {
-  it.each([true, false])("responds with a fresh transaction after staff polling (accept=%s)", async (accept) => {
-    holder.db = guardDb(context.db as never);
-    const created = (await (await ask()).json()).data;
-    holder.session = OWNER;
-    const snapshot = await (await call("/transfers")).json();
-    await call("/departments");
-    await call("/transfers");
-    const stale = await call(`/transfers/${created.id}`, {
-      method: "PATCH", body: JSON.stringify({ accept, ts: snapshot.ts }),
-    });
-    expect(stale.status).toBe(409);
-    expect((await stale.json()).data.code).toBe("TS_ABORTED");
-    const response = await call(`/transfers/${created.id}`, {
-      method: "PATCH", body: JSON.stringify({ accept }),
-    });
-    expect(response.status).toBe(200);
-    expect((await response.json()).data.status).toBe(accept ? "ACCEPTED" : "DECLINED");
-  });
+  it.each([true, false])(
+    "responds with a fresh transaction after staff polling (accept=%s)",
+    async (accept) => {
+      holder.db = guardDb(context.db as never);
+      const created = (await (await ask()).json()).data;
+      holder.session = OWNER;
+      const snapshot = await (await call("/transfers")).json();
+      await call("/departments");
+      await call("/transfers");
+      const stale = await call(`/transfers/${created.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ accept, ts: snapshot.ts }),
+      });
+      expect(stale.status).toBe(409);
+      expect((await stale.json()).data.code).toBe("TS_ABORTED");
+      const response = await call(`/transfers/${created.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ accept }),
+      });
+      expect(response.status).toBe(200);
+      expect((await response.json()).data.status).toBe(
+        accept ? "ACCEPTED" : "DECLINED",
+      );
+    },
+  );
   it("asks the current owner and notifies them", async () => {
     const response = await ask();
     expect(response.status).toBe(201);
@@ -206,7 +219,11 @@ describe("department transfers", () => {
       ),
     ).toMatchObject({ yearLevels: ["FIRST", "SECOND"] });
     // Their queue closes and the student they were serving returns to the line.
-    expect(context.store[COLLECTIONS.adviserAvailability][0]).toMatchObject({
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].find(
+        (row) => row.kind === "presence",
+      ),
+    ).toMatchObject({
       isOpen: false,
     });
     expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
@@ -226,8 +243,15 @@ describe("department transfers", () => {
       yearLevels: ["SECOND"],
     });
     // Their queue stays open, but the old serving lock must not strand a transferred level.
-    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "WAITING", servedById: null });
-    expect(context.store[COLLECTIONS.adviserAvailability][0]).toMatchObject({
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
+      status: "WAITING",
+      servedById: null,
+    });
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].find(
+        (row) => row.kind === "presence",
+      ),
+    ).toMatchObject({
       isOpen: true,
     });
   });
@@ -257,13 +281,17 @@ describe("department transfers", () => {
       body: JSON.stringify({ yearLevels: ["FIRST"] }),
     });
     expect(response.status).toBe(409);
-    expect(links().find((row) => row._id === "link-owner")).toMatchObject({ yearLevels: ["FIRST", "SECOND"] });
+    expect(links().find((row) => row._id === "link-owner")).toMatchObject({
+      yearLevels: ["FIRST", "SECOND"],
+    });
     expect(links().some((row) => row.adviserId === "adv3")).toBe(false);
   });
 
   it("transfers automatically when the request expires unanswered", async () => {
     // Owner offline → one-minute grace.
-    context.store[COLLECTIONS.adviserAvailability] = [];
+    context.store[COLLECTIONS.adviserSchedule] = context.store[
+      COLLECTIONS.adviserSchedule
+    ].filter((row) => row.kind !== "presence");
     const created = (await (await ask()).json()).data;
     const row = context.store[COLLECTIONS.departmentTransferRequest][0]!;
     expect(new Date(row.expiresAt as Date).getTime()).toBeLessThanOrEqual(
@@ -285,16 +313,24 @@ describe("department transfers", () => {
   it("expires a request instead of assigning an inactive department", async () => {
     await ask();
     context.store[COLLECTIONS.department][0].isActive = false;
-    context.store[COLLECTIONS.departmentTransferRequest][0].expiresAt = new Date(0);
+    context.store[COLLECTIONS.departmentTransferRequest][0].expiresAt =
+      new Date(0);
     const response = await call("/transfers");
     expect(response.status).toBe(200);
-    expect(context.store[COLLECTIONS.departmentTransferRequest][0].status).toBe("EXPIRED");
+    expect(context.store[COLLECTIONS.departmentTransferRequest][0].status).toBe(
+      "EXPIRED",
+    );
     expect(links().some((row) => row.adviserId === "adv2")).toBe(false);
   });
 
   it("refuses a transfer spanning multiple owners before changing any assignment", async () => {
-    links()[0].yearLevels = ["FIRST"];
-    links().push({ _id: "link-third", adviserId: "adv3", departmentId: "dept-1", yearLevels: ["SECOND"] });
+    (context.store[COLLECTIONS.department][0].advisers as Row[])[0].yearLevels =
+      ["FIRST"];
+    (context.store[COLLECTIONS.department][0].advisers as Row[]).push({
+      _id: "link-third",
+      adviserId: "adv3",
+      yearLevels: ["SECOND"],
+    });
     const response = await ask({ yearLevels: ["FIRST", "SECOND"] });
     expect(response.status).toBe(409);
     expect(links()).toHaveLength(3);

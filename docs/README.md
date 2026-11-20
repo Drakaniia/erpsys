@@ -1,11 +1,15 @@
 # Documentation
 
-Design docs and runbooks for ERPSYS. Code-level conventions live in `../AGENTS.md`.
+Design docs and runbooks for ERPSYS. Code-level conventions live in `../AGENTS.md`. Track open work in the [implementation checklist](todo.md).
 
 ## Ops
 
-- [ops/collection-simplification.md](ops/collection-simplification.md) — collection consolidation, safe migration, and browser-local notification read markers.
+- [ops/database-backup.md](ops/database-backup.md) — MongoDB and R2 backup scope, schedule, and isolated restore drill.
+
+- [ops/collection-simplification.md](ops/collection-simplification.md) — consolidated collections, migration history, and browser-local notification read markers.
+- [ops/collection-simplification-migration.md](ops/collection-simplification-migration.md) — offline v2 migration, embedded identities/assignments, typed content/schedules, canonical step IDs, and release gates.
 - [ops/collection-migration-qa.md](ops/collection-migration-qa.md) — applied migration evidence, full-suite results, browser coverage, and remaining QA findings.
+- [ops/qa-production-readiness-2026-11-20.md](ops/qa-production-readiness-2026-11-20.md) — production-readiness audit, reproduced security/concurrency blockers, live QA coverage, and remaining release gates.
 
 - [ops/deployment.md](ops/deployment.md) — deploy to a single Ubuntu server with Nginx, systemd, MongoDB Atlas, and GitHub Actions; also covers releases, incidents, and maintenance.
 - [ops/admin-step-up.md](ops/admin-step-up.md) — the four-step confirmation (PIN, password, emailed code, authenticator) before integration changes, its env settings, and the lost-device reset.
@@ -18,6 +22,8 @@ Design docs and runbooks for ERPSYS. Code-level conventions live in `../AGENTS.m
 
 ## Specs
 
+- [specs/normalized-database.md](specs/normalized-database.md) — ERPSYS business data from 1NF to 3NF, with the [standalone SQLite schema](specs/normalized-database.sql). No runtime migration.
+
 - [specs/app-launch-performance-spec.md](specs/app-launch-performance-spec.md) — warm-launch rendering from a persisted cache, the aggregate `/api/v1/me/launch` endpoint, route/vendor chunking, and the CI bundle budget. Status: implemented.
 - [specs/load-resilience-design.md](specs/load-resilience-design.md) — surviving 300–1000 concurrent students: process guards, Mongo index-enforced queue correctness, graceful deploys, load shedding, metrics. Status: approved, not yet implemented.
 - [specs/cloudflare-ai-spec.md](specs/cloudflare-ai-spec.md) — the student chatbot's move from Gemini to Cloudflare Workers AI, including the daily Neuron guard. Status: implemented.
@@ -27,7 +33,7 @@ Design docs and runbooks for ERPSYS. Code-level conventions live in `../AGENTS.m
 
 ## Plans
 
-- [plans/2026-11-19-cloudflare-workers.md](plans/2026-11-19-cloudflare-workers.md) — migrate the Express API from Vercel to Workers while preserving Pages, MongoDB and authentication.
+- [ops/local.md](ops/local.md) — local app hosting with MongoDB as the only online service; Cloudflare Pages and API Worker have been removed.
 
 - [plans/2026-10-08-svelte-to-react.md](plans/2026-10-08-svelte-to-react.md) — the dated Svelte → React migration plan, including the surfaces still awaiting an RTL port.
 - [plans/2026-11-08-timestamp-concurrency.md](plans/2026-11-08-timestamp-concurrency.md) — basic timestamp-ordering concurrency control for every `/api/v1` write, and what shipped versus the original plan. Code map: [`apps/server/CONCURRENCY.md`](../apps/server/CONCURRENCY.md).

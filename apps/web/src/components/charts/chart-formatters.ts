@@ -35,7 +35,7 @@ export function formatBandRange(
   point: Record<string, unknown>,
   upperKey: string,
   lowerKey: string,
-  format: (value: number) => string = intFmt
+  format: (value: number) => string = intFmt,
 ): string | number | null {
   const upper = point[upperKey];
   const lower = point[lowerKey];
@@ -75,7 +75,7 @@ function toArrayIndex(prop: string | symbol, length: number): number {
  */
 export function lazyLabels(
   length: number,
-  format: (index: number) => string
+  format: (index: number) => string,
 ): string[] {
   if (length <= EAGER_LABEL_LIMIT) {
     return Array.from({ length }, (_, index) => format(index));

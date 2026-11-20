@@ -3,6 +3,8 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { authClient } from "$lib/auth-client";
+import { newPasswordSchema, PASSWORD_REQUIREMENTS } from "$lib/auth/password";
+import PasswordStrengthMeter from "../../components/auth/PasswordStrengthMeter";
 import FieldErrors from "../../components/auth/FieldErrors";
 
 /** `routes/auth/login/reset-password/+page.svelte` — token-based reset form. */
@@ -11,10 +13,6 @@ export function ResetPasswordPage() {
   const navigate = useNavigate();
   const token = params.get("token") ?? "";
 
-  const passwordSchema = z
-    .string()
-    .min(8, "Password must be at least 8 characters");
-
   const [formError, setFormError] = useState("");
 
   const form = useForm({
@@ -22,7 +20,7 @@ export function ResetPasswordPage() {
     onSubmit: async ({ value, formApi }) => {
       setFormError("");
       const parsed = z
-        .object({ password: passwordSchema, confirm: z.string() })
+        .object({ password: newPasswordSchema, confirm: z.string() })
         .refine((v) => v.password === v.confirm, {
           message: "Passwords do not match",
           path: ["confirm"],
@@ -91,6 +89,9 @@ export function ResetPasswordPage() {
                   hasError ? "border-error" : "border-auth-border"
                 }`}
                 aria-invalid={hasError}
+                aria-describedby={
+                  name === "password" ? "password-strength-rules" : undefined
+                }
                 onBlur={field.handleBlur}
                 value={field.state.value}
                 onChange={(e) => {
@@ -103,6 +104,9 @@ export function ResetPasswordPage() {
                   setFormError("");
                 }}
               />
+              {name === "password" ? (
+                <PasswordStrengthMeter value={field.state.value} />
+              ) : null}
               <FieldErrors field={field} />
             </div>
           );
@@ -137,9 +141,7 @@ export function ResetPasswordPage() {
               <h1 className="text-2xl font-semibold tracking-[-0.02em] text-auth-ink">
                 Set a new password
               </h1>
-              <p className="mt-1 text-sm text-muted">
-                Choose a strong password for your BukSU account.
-              </p>
+              <p className="mt-1 text-sm text-muted">{PASSWORD_REQUIREMENTS}</p>
 
               <form
                 className="mt-6 space-y-4"

@@ -66,12 +66,12 @@ The office keeps the evidence and decision history. Advisers manage department q
 
 The office's working estimate is approximately 1,400–1,500 students. ERPSYS serves four user groups.
 
-| User group | Responsibility |
-| --- | --- |
-| Students | Submit requirements, follow progress, and join the enrollment queue. |
-| SBO officers | Review submissions and record verification decisions. |
-| Enrollment advisers | Manage department queues and complete enrollment. |
-| Administrators | Manage accounts, departments, academic years, and settings. |
+| User group          | Responsibility                                                       |
+| ------------------- | -------------------------------------------------------------------- |
+| Students            | Submit requirements, follow progress, and join the enrollment queue. |
+| SBO officers        | Review submissions and record verification decisions.                |
+| Enrollment advisers | Manage department queues and complete enrollment.                    |
+| Administrators      | Manage accounts, departments, academic years, and settings.          |
 
 > **TODO (author):** Confirm the student estimate and the numbers of departments, officers, and advisers using approved office records.
 
@@ -85,16 +85,16 @@ The chart identifies who supervises the people using ERPSYS. The administrator a
 
 > **TODO (figure):** Figure 1.2 — Functional chart connecting each task to its responsible person or office.
 
-| Function | Responsible user | Working area |
-| --- | --- | --- |
-| Review and approve submissions | SBO officer | Officer dashboard |
-| Return submissions or withdraw approval | SBO officer | Officer dashboard |
-| Capture and review photographs | SBO officer | Officer dashboard |
-| Manage required social-media links | SBO officer | Officer dashboard |
-| Attend to the department queue | Enrollment adviser | Adviser dashboard |
-| Complete or correct enrollment | Enrollment adviser | Adviser dashboard |
-| Manage accounts and permissions | Administrator | Administrator dashboard |
-| Manage departments and academic years | Administrator | Administrator dashboard |
+| Function                                | Responsible user   | Working area            |
+| --------------------------------------- | ------------------ | ----------------------- |
+| Review and approve submissions          | SBO officer        | Officer dashboard       |
+| Return submissions or withdraw approval | SBO officer        | Officer dashboard       |
+| Capture and review photographs          | SBO officer        | Officer dashboard       |
+| Manage required social-media links      | SBO officer        | Officer dashboard       |
+| Attend to the department queue          | Enrollment adviser | Adviser dashboard       |
+| Complete or correct enrollment          | Enrollment adviser | Adviser dashboard       |
+| Manage accounts and permissions         | Administrator      | Administrator dashboard |
+| Manage departments and academic years   | Administrator      | Administrator dashboard |
 
 ## 1.2. Business Processes
 
@@ -113,17 +113,17 @@ Information assets are the records and materials the office needs to protect:
 
 Table 1.1 List of Information Assets for ERPSYS
 
-| Asset | Responsible party | Sensitivity | Purpose |
-| --- | --- | --- | --- |
-| Student identity | Administrator | High | Identify students and their department and year level. |
-| Enrollment evidence | Student and officer | High | Support requirement review. |
-| Photographs and consent forms | SBO officer | High | Support identity checks and required consent. |
-| Verification decisions | SBO officer | High | Show who checked a requirement and when. |
-| Queue records | Enrollment adviser | Medium | Keep the service order clear and fair. |
-| Enrollment completion | Enrollment adviser | High | Record completion for the academic year. |
-| Reports | SBO and department | Medium | Summarize progress and completed work. |
-| Activity history | Administrator | Medium | Help review important changes. |
-| Office settings | Administrator | Medium | Keep periods, requirements, and departments correct. |
+| Asset                         | Responsible party   | Sensitivity | Purpose                                                |
+| ----------------------------- | ------------------- | ----------- | ------------------------------------------------------ |
+| Student identity              | Administrator       | High        | Identify students and their department and year level. |
+| Enrollment evidence           | Student and officer | High        | Support requirement review.                            |
+| Photographs and consent forms | SBO officer         | High        | Support identity checks and required consent.          |
+| Verification decisions        | SBO officer         | High        | Show who checked a requirement and when.               |
+| Queue records                 | Enrollment adviser  | Medium      | Keep the service order clear and fair.                 |
+| Enrollment completion         | Enrollment adviser  | High        | Record completion for the academic year.               |
+| Reports                       | SBO and department  | Medium      | Summarize progress and completed work.                 |
+| Activity history              | Administrator       | Medium      | Help review important changes.                         |
+| Office settings               | Administrator       | Medium      | Keep periods, requirements, and departments correct.   |
 
 Student identity, evidence, and decisions need particular care because they contain personal information or support official work. Reports can also contain personal data and must go only to authorized recipients. Evidence is not intended for public file links; the system checks whether a person may view it.
 
@@ -152,14 +152,14 @@ For example, an officer might review the wrong submission, an administrator migh
 
 Table 1.2 Vulnerability Database for ERPSYS
 
-| Possible weakness | Affected information | Priority | Protective measure |
-| --- | --- | --- | --- |
-| Weak or reused passwords | Accounts and private records | High | Sign-in protection and limits on repeated attempts. |
-| Unprotected file access | Evidence and photographs | High | Private storage and access checks. |
-| Actions outside assigned duties | Decisions and queues | High | Permission checks and rules for allowed actions. |
-| Incorrect settings | Enrollment records | Medium | Restricted changes and an activation preview. |
-| Excessive requests | Overall service | Medium | Request limits and efficient screen loading. |
-| Slow searches | Student and queue lists | Medium | Organized searches and limited list sizes. |
+| Possible weakness               | Affected information         | Priority | Protective measure                                  |
+| ------------------------------- | ---------------------------- | -------- | --------------------------------------------------- |
+| Weak or reused passwords        | Accounts and private records | High     | Sign-in protection and limits on repeated attempts. |
+| Unprotected file access         | Evidence and photographs     | High     | Private storage and access checks.                  |
+| Actions outside assigned duties | Decisions and queues         | High     | Permission checks and rules for allowed actions.    |
+| Incorrect settings              | Enrollment records           | Medium   | Restricted changes and an activation preview.       |
+| Excessive requests              | Overall service              | Medium   | Request limits and efficient screen loading.        |
+| Slow searches                   | Student and queue lists      | Medium   | Organized searches and limited list sizes.          |
 
 These entries guide review. They do not replace a security assessment of the hosted system.
 
@@ -250,42 +250,42 @@ The Threat–Vulnerability–Asset worksheet links an important asset to a threa
 
 Table 2.1 ERPSYS Threat–Vulnerability–Asset Worksheet
 
-| Asset | Threat | Possible weakness | Effect | Priority |
-| --- | --- | --- | --- | --- |
-| Student account | Account takeover | Reused password | Private records accessed by another person. | High |
-| Evidence | Unauthorized viewing | Unprotected file access | Private documents exposed. | High |
-| Verification | Incorrect approval | Action outside assigned duties | A requirement wrongly accepted. | High |
-| Queue | Conflicting actions | Two updates accepted for one place | Duplicate or unfair service. | Medium |
-| Enrollment | Wrong completion | Insufficient checking | Incorrect status. | High |
-| Settings | Accidental change | Wrong year or service selected | Many users blocked. | Medium |
-| Website | Heavy traffic | Limited capacity | Delayed or interrupted work. | High |
-| Server | Unauthorized access | Poor access protection | Records exposed or changed. | High |
-| Connected service | Outage or leaked credential | Provider dependence | A feature unavailable. | Medium |
-| Assistant | Usage limit reached | Shared daily allowance | Guidance temporarily unavailable. | Low |
+| Asset             | Threat                      | Possible weakness                  | Effect                                      | Priority |
+| ----------------- | --------------------------- | ---------------------------------- | ------------------------------------------- | -------- |
+| Student account   | Account takeover            | Reused password                    | Private records accessed by another person. | High     |
+| Evidence          | Unauthorized viewing        | Unprotected file access            | Private documents exposed.                  | High     |
+| Verification      | Incorrect approval          | Action outside assigned duties     | A requirement wrongly accepted.             | High     |
+| Queue             | Conflicting actions         | Two updates accepted for one place | Duplicate or unfair service.                | Medium   |
+| Enrollment        | Wrong completion            | Insufficient checking              | Incorrect status.                           | High     |
+| Settings          | Accidental change           | Wrong year or service selected     | Many users blocked.                         | Medium   |
+| Website           | Heavy traffic               | Limited capacity                   | Delayed or interrupted work.                | High     |
+| Server            | Unauthorized access         | Poor access protection             | Records exposed or changed.                 | High     |
+| Connected service | Outage or leaked credential | Provider dependence                | A feature unavailable.                      | Medium   |
+| Assistant         | Usage limit reached         | Shared daily allowance             | Guidance temporarily unavailable.           | Low      |
 
 ### 2.1.2. Likelihood Scale
 
 Table 2.2 ERPSYS Likelihood Scale
 
-| Rating | Label | Meaning |
-| --- | --- | --- |
-| 1 | Rare | Expected only in unusual circumstances. |
-| 2 | Unlikely | Possible but not expected in a normal semester. |
-| 3 | Possible | Could happen during ordinary use. |
-| 4 | Likely | Expected during an enrollment period. |
-| 5 | Almost certain | Expected repeatedly. |
+| Rating | Label          | Meaning                                         |
+| ------ | -------------- | ----------------------------------------------- |
+| 1      | Rare           | Expected only in unusual circumstances.         |
+| 2      | Unlikely       | Possible but not expected in a normal semester. |
+| 3      | Possible       | Could happen during ordinary use.               |
+| 4      | Likely         | Expected during an enrollment period.           |
+| 5      | Almost certain | Expected repeatedly.                            |
 
 ### 2.1.3. Risk Impact Scale
 
 Table 2.3 ERPSYS Risk Impact Scale
 
-| Rating | Label | Meaning |
-| --- | --- | --- |
-| 1 | Negligible | Small inconvenience without record loss. |
-| 2 | Minor | One student or task affected; straightforward correction. |
-| 3 | Moderate | A department or task interrupted for hours. |
-| 4 | Significant | Several departments affected or a working day lost. |
-| 5 | Severe | Private data exposed or important records damaged. |
+| Rating | Label       | Meaning                                                   |
+| ------ | ----------- | --------------------------------------------------------- |
+| 1      | Negligible  | Small inconvenience without record loss.                  |
+| 2      | Minor       | One student or task affected; straightforward correction. |
+| 3      | Moderate    | A department or task interrupted for hours.               |
+| 4      | Significant | Several departments affected or a working day lost.       |
+| 5      | Severe      | Private data exposed or important records damaged.        |
 
 The score is likelihood multiplied by impact. Scores of 15–25 are High, 6–14 are Medium, and 1–5 are Low. These are priority judgments, not measured probabilities.
 
@@ -293,18 +293,18 @@ The score is likelihood multiplied by impact. Scores of 15–25 are High, 6–14
 
 Table 2.4 ERPSYS Risk Control Strategies
 
-| Risk | Likelihood × Impact | Score | Strategy |
-| --- | --- | --- | --- |
-| Password attacks | 4 × 4 | 16 | Limit attempts and protect sign-in. |
-| Evidence exposure | 3 × 5 | 15 | Keep files private and check access. |
-| Unauthorized review | 3 × 5 | 15 | Check the user's role and review permission. |
-| Conflicting queue actions | 3 × 3 | 9 | Check the latest records before updating. |
-| Wrong enrollment status | 3 × 5 | 15 | Check prerequisites and allow controlled corrections. |
-| Wrong academic year | 3 × 4 | 12 | Preview activation and restrict it to administrators. |
-| Heavy traffic | 4 × 5 | 20 | Reduce requests, set limits, and test capacity. |
-| Server compromise | 3 × 5 | 15 | Restrict management access and maintain software. |
-| Service outage | 3 × 4 | 12 | Disable the affected feature and explain the interruption. |
-| Assistant allowance exhausted | 3 × 1 | 3 | Limit usage and direct students to an officer. |
+| Risk                          | Likelihood × Impact | Score | Strategy                                                   |
+| ----------------------------- | ------------------- | ----- | ---------------------------------------------------------- |
+| Password attacks              | 4 × 4               | 16    | Limit attempts and protect sign-in.                        |
+| Evidence exposure             | 3 × 5               | 15    | Keep files private and check access.                       |
+| Unauthorized review           | 3 × 5               | 15    | Check the user's role and review permission.               |
+| Conflicting queue actions     | 3 × 3               | 9     | Check the latest records before updating.                  |
+| Wrong enrollment status       | 3 × 5               | 15    | Check prerequisites and allow controlled corrections.      |
+| Wrong academic year           | 3 × 4               | 12    | Preview activation and restrict it to administrators.      |
+| Heavy traffic                 | 4 × 5               | 20    | Reduce requests, set limits, and test capacity.            |
+| Server compromise             | 3 × 5               | 15    | Restrict management access and maintain software.          |
+| Service outage                | 3 × 4               | 12    | Disable the affected feature and explain the interruption. |
+| Assistant allowance exhausted | 3 × 1               | 3     | Limit usage and direct students to an officer.             |
 
 Hosting controls and office procedures must be checked in the deployed environment rather than assumed from the application alone.
 
@@ -316,101 +316,101 @@ The following requirements cover the implemented user workflows and are grouped 
 
 Table 2.5 Functional Requirements — Student
 
-| Requirement | Description |
-| --- | --- |
-| Registration | Register using the required student number and email details. |
-| Login | Sign in with email and password or Google. |
-| Enrollment progress | View the six steps and their status. |
-| Assessment application | Request the assessment check. |
-| Evidence upload | Upload required screenshots, photographs, or scans. |
-| Evidence submission and deletion | Submit evidence for review and remove uploads when allowed. |
-| Queue entry | Join an eligible queue after prerequisites are complete and an adviser is available. |
-| Queue position and exit | View the waiting position and leave before service. |
-| Notifications | Read requirement and queue updates. |
-| Read indicators | Mark notifications as read. |
-| Onboarding | Complete missing student-number and current-year enrollment details before continuing. |
-| Profile corrections | Update eligible course and year-level details; changes are restricted while queued or after enrollment completion. |
-| Enrollment history | View available records from earlier enrollment periods. |
-| Queue invitations | Open a shared queue link and confirm leaving another queue before switching. |
-| Published office hours | View an adviser's published hours separately from live queue availability. |
-| Enrollment record | Preview and download the student's own enrollment record. |
+| Requirement                      | Description                                                                                                        |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Registration                     | Register using the required student number and email details.                                                      |
+| Login                            | Sign in with email and password or Google.                                                                         |
+| Enrollment progress              | View the six steps and their status.                                                                               |
+| Assessment application           | Request the assessment check.                                                                                      |
+| Evidence upload                  | Upload required screenshots, photographs, or scans.                                                                |
+| Evidence submission and deletion | Submit evidence for review and remove uploads when allowed.                                                        |
+| Queue entry                      | Join an eligible queue after prerequisites are complete and an adviser is available.                               |
+| Queue position and exit          | View the waiting position and leave before service.                                                                |
+| Notifications                    | Read requirement and queue updates.                                                                                |
+| Read indicators                  | Mark notifications as read.                                                                                        |
+| Onboarding                       | Complete missing student-number and current-year enrollment details before continuing.                             |
+| Profile corrections              | Update eligible course and year-level details; changes are restricted while queued or after enrollment completion. |
+| Enrollment history               | View available records from earlier enrollment periods.                                                            |
+| Queue invitations                | Open a shared queue link and confirm leaving another queue before switching.                                       |
+| Published office hours           | View an adviser's published hours separately from live queue availability.                                         |
+| Enrollment record                | Preview and download the student's own enrollment record.                                                          |
 
 Table 2.6 Functional Requirements — SBO Officer
 
-| Requirement | Description |
-| --- | --- |
-| Login | Sign in using email and password or Google. |
-| Logout | Sign out. |
-| Submission filtering | Find submissions by requirement, status, and date. |
-| Submission details | Inspect student details, evidence, and history. |
-| Digital verification | Record approval with a digital stamp. |
-| Return or withdrawal | Return with feedback or withdraw an earlier approval. |
-| Social-media links | Add and edit required links. |
-| Link order and deletion | Reorder or remove social-media links. |
-| Profiling form viewing | View the form linked to the enrollment period. |
-| Profiling form management | Create or unlink the form when the service is available. |
-| Stamp viewing | View personal stamp details. |
-| Stamp updates | Change the stamp name, image, and signature. |
-| Photograph review | Review and verify student photographs. |
-| Consent review | Review and verify consent forms. |
-| Reports | Filter, preview, and download reports for assigned requirements. |
+| Requirement               | Description                                                      |
+| ------------------------- | ---------------------------------------------------------------- |
+| Login                     | Sign in using email and password or Google.                      |
+| Logout                    | Sign out.                                                        |
+| Submission filtering      | Find submissions by requirement, status, and date.               |
+| Submission details        | Inspect student details, evidence, and history.                  |
+| Digital verification      | Record approval with a digital stamp.                            |
+| Return or withdrawal      | Return with feedback or withdraw an earlier approval.            |
+| Social-media links        | Add and edit required links.                                     |
+| Link order and deletion   | Reorder or remove social-media links.                            |
+| Profiling form viewing    | View the form linked to the enrollment period.                   |
+| Profiling form management | Create or unlink the form when the service is available.         |
+| Stamp viewing             | View personal stamp details.                                     |
+| Stamp updates             | Change the stamp name, image, and signature.                     |
+| Photograph review         | Review and verify student photographs.                           |
+| Consent review            | Review and verify consent forms.                                 |
+| Reports                   | Filter, preview, and download reports for assigned requirements. |
 
 Table 2.7 Functional Requirements — Enrollment Adviser
 
-| Requirement | Description |
-| --- | --- |
-| Login | Sign in using email and password or Google. |
-| Logout | Sign out and close availability. |
-| Department availability | Open or close the department for students. |
-| Availability maintenance | Confirm continuing activity so outdated availability can close. |
-| Queue monitoring | See waiting students and current service. |
-| Enrolled-student lists | View completed enrollments by department. |
-| Next student | Attend to the next eligible waiting student. |
-| End service or requeue | Stop service or move a student to the end. |
-| Enrollment completion | Complete enrollment after required checks. |
-| Enrollment correction | Undo an incorrect completion through the allowed process. |
-| Department details | Create and update department information when permitted. |
-| Department assignment | Select an eligible department and offered year levels without overlapping another adviser's responsibility. |
-| Queue invitations | Create and share an invitation to the department queue for the current academic year. |
-| Waiting-student removal | Remove a waiting student and briefly undo the removal to restore the original position. |
-| Department handover | Request, accept, decline, or cancel a transfer of department or year-level responsibility. |
-| Unanswered handover | Allow the defined waiting period before an unanswered request transfers responsibility automatically. |
-| Office-hour scheduling | Publish recurring or one-off hours, cancel specific dates, and remove schedule entries. |
-| Calendar connection | Connect, synchronize, or disconnect an optional Google Calendar copy of published hours. |
-| Student reminders | Send in-app reminders to selected students with unfinished requirements. |
-| Student roster | View students in assigned departments. |
-| Reports | Filter, preview, and download department reports. |
+| Requirement              | Description                                                                                                 |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Login                    | Sign in using email and password or Google.                                                                 |
+| Logout                   | Sign out and close availability.                                                                            |
+| Department availability  | Open or close the department for students.                                                                  |
+| Availability maintenance | Confirm continuing activity so outdated availability can close.                                             |
+| Queue monitoring         | See waiting students and current service.                                                                   |
+| Enrolled-student lists   | View completed enrollments by department.                                                                   |
+| Next student             | Attend to the next eligible waiting student.                                                                |
+| End service or requeue   | Stop service or move a student to the end.                                                                  |
+| Enrollment completion    | Complete enrollment after required checks.                                                                  |
+| Enrollment correction    | Undo an incorrect completion through the allowed process.                                                   |
+| Department details       | Create and update department information when permitted.                                                    |
+| Department assignment    | Select an eligible department and offered year levels without overlapping another adviser's responsibility. |
+| Queue invitations        | Create and share an invitation to the department queue for the current academic year.                       |
+| Waiting-student removal  | Remove a waiting student and briefly undo the removal to restore the original position.                     |
+| Department handover      | Request, accept, decline, or cancel a transfer of department or year-level responsibility.                  |
+| Unanswered handover      | Allow the defined waiting period before an unanswered request transfers responsibility automatically.       |
+| Office-hour scheduling   | Publish recurring or one-off hours, cancel specific dates, and remove schedule entries.                     |
+| Calendar connection      | Connect, synchronize, or disconnect an optional Google Calendar copy of published hours.                    |
+| Student reminders        | Send in-app reminders to selected students with unfinished requirements.                                    |
+| Student roster           | View students in assigned departments.                                                                      |
+| Reports                  | Filter, preview, and download department reports.                                                           |
 
 Table 2.8 Functional Requirements — Administrator
 
-| Requirement | Description |
-| --- | --- |
-| Login | Sign in using email and password or Google. |
-| Logout | Sign out. |
-| Statistics | View user, verification, and queue summaries. |
-| Activity history | Review recorded administrative actions. |
-| User search and management | Find accounts using available filters. |
-| Permissions | Change allowed account roles individually or in groups. |
-| Student search | Find students by name, email, or student number. |
-| Password assistance | Help restore access through the password-reset process. |
-| Department names and codes | Create and update department information. |
-| Department status | Activate or deactivate departments. |
-| Academic-year management | Create, edit, and delete eligible year records. |
-| Year activation | Preview and confirm the active period. |
-| Adviser assignments | View department assignments. |
-| Adviser mapping | Assign advisers to departments. |
-| Assessment requirements | Create, edit, and delete assessment items. |
-| Requirement order | Reorder assessment items. |
-| Assistant information | View approved guidance. |
-| Assistant updates | Revise the guidance used by the assistant. |
-| Reports | Filter, preview, and download administrative reports. |
-| Account blocking | Block accounts with recorded activity, end their sessions, and clear affected queue or availability state. |
-| Account deletion | Delete eligible inactive accounts or permanently remove an already-blocked non-administrator account through the separate permitted process. |
-| Integration switches | Enable or disable optional connected services. |
-| Integration credentials | Edit credentials, receive validation feedback, and save protected settings. |
-| Credential recovery | Restore configured defaults or export credentials after additional identity checks. |
-| Sensitive-action confirmation | Confirm identity through the ordered security checks before changing protected integration settings. |
-| Authenticator management | View administrator enrollment status and perform an authorized authenticator reset. |
+| Requirement                   | Description                                                                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Login                         | Sign in using email and password or Google.                                                                                                  |
+| Logout                        | Sign out.                                                                                                                                    |
+| Statistics                    | View user, verification, and queue summaries.                                                                                                |
+| Activity history              | Review recorded administrative actions.                                                                                                      |
+| User search and management    | Find accounts using available filters.                                                                                                       |
+| Permissions                   | Change allowed account roles individually or in groups.                                                                                      |
+| Student search                | Find students by name, email, or student number.                                                                                             |
+| Password assistance           | Help restore access through the password-reset process.                                                                                      |
+| Department names and codes    | Create and update department information.                                                                                                    |
+| Department status             | Activate or deactivate departments.                                                                                                          |
+| Academic-year management      | Create, edit, and delete eligible year records.                                                                                              |
+| Year activation               | Preview and confirm the active period.                                                                                                       |
+| Adviser assignments           | View department assignments.                                                                                                                 |
+| Adviser mapping               | Assign advisers to departments.                                                                                                              |
+| Assessment requirements       | Create, edit, and delete assessment items.                                                                                                   |
+| Requirement order             | Reorder assessment items.                                                                                                                    |
+| Assistant information         | View approved guidance.                                                                                                                      |
+| Assistant updates             | Revise the guidance used by the assistant.                                                                                                   |
+| Reports                       | Filter, preview, and download administrative reports.                                                                                        |
+| Account blocking              | Block accounts with recorded activity, end their sessions, and clear affected queue or availability state.                                   |
+| Account deletion              | Delete eligible inactive accounts or permanently remove an already-blocked non-administrator account through the separate permitted process. |
+| Integration switches          | Enable or disable optional connected services.                                                                                               |
+| Integration credentials       | Edit credentials, receive validation feedback, and save protected settings.                                                                  |
+| Credential recovery           | Restore configured defaults or export credentials after additional identity checks.                                                          |
+| Sensitive-action confirmation | Confirm identity through the ordered security checks before changing protected integration settings.                                         |
+| Authenticator management      | View administrator enrollment status and perform an authorized authenticator reset.                                                          |
 
 Students can submit only when submission is allowed. Officers review items awaiting a decision. All five pre-enrollment steps must be verified before queue entry and final enrollment. An adviser must not serve more than one student at a time. Important administrative changes must be recorded.
 
@@ -428,19 +428,19 @@ Password recovery has two paths. Administrators can set a replacement student pa
 
 These are quality requirements and operating targets, not claims of measured achievement.
 
-| Attribute | Requirement |
-| --- | --- |
-| Performance | Load common screens promptly without repeatedly downloading unchanged information. |
-| Capacity | Test 300 simultaneous students and a peak of 1,000 without lost queue or enrollment records. |
-| Availability | Aim for 99% availability during enrollment week and limit update interruptions. |
-| Recovery | Aim to restore service within one hour and lose no more than 24 hours of database changes. |
-| Security | Check identity, permission, and submitted information before protected actions. |
-| Integrity | Check changes against the latest saved records. |
-| Accountability | Record who made important changes, what was affected, and when. |
-| Usability | Show the next action clearly on phones and computers. |
-| Maintainability | Keep the application organized and changes testable. |
-| Portability | Support a suitably configured server with protected settings. |
-| Monitoring | Provide enough information to recognize and investigate failures. |
+| Attribute       | Requirement                                                                                  |
+| --------------- | -------------------------------------------------------------------------------------------- |
+| Performance     | Load common screens promptly without repeatedly downloading unchanged information.           |
+| Capacity        | Test 300 simultaneous students and a peak of 1,000 without lost queue or enrollment records. |
+| Availability    | Aim for 99% availability during enrollment week and limit update interruptions.              |
+| Recovery        | Aim to restore service within one hour and lose no more than 24 hours of database changes.   |
+| Security        | Check identity, permission, and submitted information before protected actions.              |
+| Integrity       | Check changes against the latest saved records.                                              |
+| Accountability  | Record who made important changes, what was affected, and when.                              |
+| Usability       | Show the next action clearly on phones and computers.                                        |
+| Maintainability | Keep the application organized and changes testable.                                         |
+| Portability     | Support a suitably configured server with protected settings.                                |
+| Monitoring      | Provide enough information to recognize and investigate failures.                            |
 
 The application already combines landing-screen information into one request and restores selected saved browser data before refreshing it. This reduces repeated requests but does not establish a measured speed improvement. Saved data has a 24-hour ceiling; queue positions older than two minutes are hidden until refreshed, and sign-out clears the saved information.
 
@@ -452,24 +452,24 @@ A schema describes how information is organized. MongoDB groups related records 
 
 Table 2.9 Main Record Groups
 
-| Record group | Information kept |
-| --- | --- |
-| Accounts and sessions | Identity, email, permission, and sign-in sessions. |
-| Academic years | Enrollment periods and active year. |
-| Student profiles | Student number, department, year level, and contacts. |
-| Enrollments | A student's record for a particular year. |
-| Requirements and verification | Definitions, status, decisions, and feedback. |
-| Evidence | Ownership, file type and size, and private storage reference. |
-| Profiling and social links | Linked form and required social-media links. |
-| Notifications | Updates for individual users. |
-| Departments and advisers | Department details and assignments. |
-| Queues | Waiting order, current service, and completed work. |
-| Availability and schedules | Current availability and office hours. |
-| Transfers | Requests to hand over department responsibility. |
-| Activity history | Important changes and responsible users. |
-| Administrator verification | Temporary confirmation progress and authenticator enrollment information. |
-| Protected integration settings | Encrypted credential overrides and their saved version. |
-| Assistant and settings | Approved guidance, usage, and connected-service settings. |
+| Record group                   | Information kept                                                          |
+| ------------------------------ | ------------------------------------------------------------------------- |
+| Accounts and sessions          | Identity, email, permission, and sign-in sessions.                        |
+| Academic years                 | Enrollment periods and active year.                                       |
+| Student profiles               | Student number, department, year level, and contacts.                     |
+| Enrollments                    | A student's record for a particular year.                                 |
+| Requirements and verification  | Definitions, status, decisions, and feedback.                             |
+| Evidence                       | Ownership, file type and size, and private storage reference.             |
+| Profiling and social links     | Linked form and required social-media links.                              |
+| Notifications                  | Updates for individual users.                                             |
+| Departments and advisers       | Department details and assignments.                                       |
+| Queues                         | Waiting order, current service, and completed work.                       |
+| Availability and schedules     | Current availability and office hours.                                    |
+| Transfers                      | Requests to hand over department responsibility.                          |
+| Activity history               | Important changes and responsible users.                                  |
+| Administrator verification     | Temporary confirmation progress and authenticator enrollment information. |
+| Protected integration settings | Encrypted credential overrides and their saved version.                   |
+| Assistant and settings         | Approved guidance, usage, and connected-service settings.                 |
 
 Records include creation and update times. Database checks help avoid conflicting queue records. Files remain in private storage; the database keeps the information linking them to their owner and requirement.
 
@@ -520,14 +520,14 @@ Some credential changes are saved before they take effect in the running service
 
 The browser displays screens. The server checks identity, permission, and enrollment rules. The database saves records, and private storage keeps files.
 
-| Part | Technology | Responsibility |
-| --- | --- | --- |
-| Interface | React | Displays the four user working areas. |
-| Communication | REST API over HTTPS | Exchanges protected requests and responses. |
-| Server | Node.js and Express | Checks actions and applies rules. |
-| Records | MongoDB Atlas | Saves student, review, queue, and office information. |
-| Files | Cloudflare R2 | Stores evidence privately. |
-| Hosting | One application server | Makes the site available. |
+| Part          | Technology             | Responsibility                                        |
+| ------------- | ---------------------- | ----------------------------------------------------- |
+| Interface     | React                  | Displays the four user working areas.                 |
+| Communication | REST API over HTTPS    | Exchanges protected requests and responses.           |
+| Server        | Node.js and Express    | Checks actions and applies rules.                     |
+| Records       | MongoDB Atlas          | Saves student, review, queue, and office information. |
+| Files         | Cloudflare R2          | Stores evidence privately.                            |
+| Hosting       | One application server | Makes the site available.                             |
 
 A screen button is not the final authority. The server checks the latest records before allowing submissions, approvals, queue actions, or completion. This matters when people use the system at the same time.
 
@@ -660,12 +660,12 @@ flowchart TD
 
 The assigned responsibility determines the first working area. Students with missing identity or current-year enrollment details complete onboarding before continuing. Eligible profile corrections and earlier enrollment records are available from the student area. The server checks permission even when a user types a protected address directly.
 
-| User | Main area | Other permitted area |
-| --- | --- | --- |
-| Student | Student dashboard | None by default. |
-| SBO officer | Officer dashboard | Student dashboard. |
-| Enrollment adviser | Adviser dashboard | None by default. |
-| Administrator | Administrator dashboard | Other areas permitted by the role policy. |
+| User               | Main area               | Other permitted area                      |
+| ------------------ | ----------------------- | ----------------------------------------- |
+| Student            | Student dashboard       | None by default.                          |
+| SBO officer        | Officer dashboard       | Student dashboard.                        |
+| Enrollment adviser | Adviser dashboard       | None by default.                          |
+| Administrator      | Administrator dashboard | Other areas permitted by the role policy. |
 
 ### 3.2.3. Scenario View (Use-Case Diagram)
 
@@ -724,14 +724,14 @@ This is a working plan, not proof that every activity finished on these dates.
 
 Table 3.1 Project Phases
 
-| Phase | Activities | Planned dates |
-| --- | --- | --- |
-| Planning | Interview, requirements, scope, and overall design. | June 15–July 10, 2026 |
-| Design | Screens, records, permissions, and queue rules. | July 13–August 7, 2026 |
-| Development | Working areas, integrations, reports, and assistant. | August 10–September 25, 2026 |
-| Testing | Feature, permission, capacity, and acceptance checks. | September 14–October 16, 2026 |
-| Documentation | Paper, API documentation, and operating guidance. | October 5–30, 2026 |
-| Deployment | Hosting setup and release preparation. | October 19–November 6, 2026 |
+| Phase         | Activities                                            | Planned dates                 |
+| ------------- | ----------------------------------------------------- | ----------------------------- |
+| Planning      | Interview, requirements, scope, and overall design.   | June 15–July 10, 2026         |
+| Design        | Screens, records, permissions, and queue rules.       | July 13–August 7, 2026        |
+| Development   | Working areas, integrations, reports, and assistant.  | August 10–September 25, 2026  |
+| Testing       | Feature, permission, capacity, and acceptance checks. | September 14–October 16, 2026 |
+| Documentation | Paper, API documentation, and operating guidance.     | October 5–30, 2026            |
+| Deployment    | Hosting setup and release preparation.                | October 19–November 6, 2026   |
 
 > **TODO (author):** Confirm dates using the approved schedule and completion records.
 
@@ -939,15 +939,15 @@ Applicable university IT policies and software-license conditions must also be f
 
 The design uses common web-security practices informed by OWASP guidance. This is not a claim of certification.
 
-| Area | Practice |
-| --- | --- |
-| Identity | Use maintained sign-in tools and protect sessions. |
-| Permission | Refuse actions outside assigned duties. |
-| Input | Check format and allowed values. |
-| Display | Prevent unsafe submitted content from acting as instructions. |
-| History | Record useful actions without secrets. |
-| Updates | Review dependencies and test changes. |
-| Errors | Explain problems without exposing private details. |
+| Area       | Practice                                                      |
+| ---------- | ------------------------------------------------------------- |
+| Identity   | Use maintained sign-in tools and protect sessions.            |
+| Permission | Refuse actions outside assigned duties.                       |
+| Input      | Check format and allowed values.                              |
+| Display    | Prevent unsafe submitted content from acting as instructions. |
+| History    | Record useful actions without secrets.                        |
+| Updates    | Review dependencies and test changes.                         |
+| Errors     | Explain problems without exposing private details.            |
 
 ## 4.3. Network Security Testing
 
@@ -965,9 +965,9 @@ The Common Vulnerability Scoring System, or CVSS, describes the seriousness of c
 
 Table 4.1 Vulnerability Assessment Record
 
-| Confirmed finding | Evidence | CVSS version and score | Required action | Retest |
-| --- | --- | --- | --- | --- |
-| To be supplied from the actual assessment. | To be supplied. | Not assessed. | To be determined. | Not tested. |
+| Confirmed finding                          | Evidence        | CVSS version and score | Required action   | Retest      |
+| ------------------------------------------ | --------------- | ---------------------- | ----------------- | ----------- |
+| To be supplied from the actual assessment. | To be supplied. | Not assessed.          | To be determined. | Not tested. |
 
 No confirmed scan results are supplied in this draft. Earlier possible risks are not automatically confirmed vulnerabilities.
 
@@ -981,14 +981,14 @@ Check who made the request, their permission, and whether the action is allowed 
 
 ### 4.4.2. Logical Design
 
-| Area | Main functions |
-| --- | --- |
-| Public | Sign-in, registration, and public guidance. |
-| Student | Requirements, evidence, queue, and notices. |
-| Officer | Review, stamps, feedback, and reports. |
-| Adviser | Availability, queue, completion, and rosters. |
-| Administrator | Users, years, departments, requirements, services, and history. |
-| Protected services | Records, private files, and service settings. |
+| Area               | Main functions                                                  |
+| ------------------ | --------------------------------------------------------------- |
+| Public             | Sign-in, registration, and public guidance.                     |
+| Student            | Requirements, evidence, queue, and notices.                     |
+| Officer            | Review, stamps, feedback, and reports.                          |
+| Adviser            | Availability, queue, completion, and rosters.                   |
+| Administrator      | Users, years, departments, requirements, services, and history. |
+| Protected services | Records, private files, and service settings.                   |
 
 Signed-out users must sign in. Users without the required permission receive an access refusal.
 
@@ -1004,21 +1004,21 @@ The maintainer must confirm access restrictions, backups, and monitoring against
 
 ### 4.4.4. Information Security Implementation Design
 
-| Control | Application |
-| --- | --- |
-| Sign-in checking | Recognize valid sessions. |
-| Role permissions | Limit actions to approved duties. |
-| Password assistance | Provide controlled account recovery. |
-| Input checks | Reject missing or unsuitable details. |
-| File access | Check who may upload or view files. |
-| Request limits | Reduce repeated or excessive requests. |
-| History | Record important administrative changes. |
-| Secrets | Encrypt saved credential overrides and hide secret values in ordinary settings responses. |
-| Optional services | Allow an affected feature to be disabled. |
-| Sensitive settings | Require ordered identity checks and limit the unlocked period. |
-| Credential validation | Check required fields and supported provider access before saving. |
-| Authenticator recovery | Allow an authorized reset that clears enrollment and requires fresh setup. |
-| Blocked accounts | End sessions and refuse new sign-in sessions for blocked users. |
+| Control                | Application                                                                               |
+| ---------------------- | ----------------------------------------------------------------------------------------- |
+| Sign-in checking       | Recognize valid sessions.                                                                 |
+| Role permissions       | Limit actions to approved duties.                                                         |
+| Password assistance    | Provide controlled account recovery.                                                      |
+| Input checks           | Reject missing or unsuitable details.                                                     |
+| File access            | Check who may upload or view files.                                                       |
+| Request limits         | Reduce repeated or excessive requests.                                                    |
+| History                | Record important administrative changes.                                                  |
+| Secrets                | Encrypt saved credential overrides and hide secret values in ordinary settings responses. |
+| Optional services      | Allow an affected feature to be disabled.                                                 |
+| Sensitive settings     | Require ordered identity checks and limit the unlocked period.                            |
+| Credential validation  | Check required fields and supported provider access before saving.                        |
+| Authenticator recovery | Allow an authorized reset that clears enrollment and requires fresh setup.                |
+| Blocked accounts       | End sessions and refuse new sign-in sessions for blocked users.                           |
 
 The sensitive-settings check follows PIN, password, emailed code, and authenticator confirmation, with attempt limits. Accounts without a password skip that step. Successful confirmation lasts five minutes. Authenticator status can be reviewed, and an authorized reset removes the existing factor and its temporary authorization.
 
@@ -1044,12 +1044,12 @@ The plan describes how the office should inform users and restore work after an 
 
 ### 4.5.1. Incident Response Plan
 
-| Severity | Example | First response |
-| --- | --- | --- |
-| Critical | Website unavailable or suspected data loss. | Contact maintainer, pause changes, notify office, and begin recovery. |
-| High | A department cannot review or serve students. | Pause affected work and notify the adviser. |
-| Moderate | An optional feature is unavailable. | Explain the interruption and continue unaffected work. |
-| Low | Display problem or isolated user issue. | Record and arrange correction. |
+| Severity | Example                                       | First response                                                        |
+| -------- | --------------------------------------------- | --------------------------------------------------------------------- |
+| Critical | Website unavailable or suspected data loss.   | Contact maintainer, pause changes, notify office, and begin recovery. |
+| High     | A department cannot review or serve students. | Pause affected work and notify the adviser.                           |
+| Moderate | An optional feature is unavailable.           | Explain the interruption and continue unaffected work.                |
+| Low      | Display problem or isolated user issue.       | Record and arrange correction.                                        |
 
 Identify the problem, limit harm, communicate, correct the cause, check recovery, and record the incident. Suspected privacy breaches must follow university reporting procedures.
 
@@ -1116,19 +1116,19 @@ Before final submission and operational approval, the team must complete the mis
 
 > **TODO (author):** Verify publication details and the department's APA requirements before submission.
 
-- Better Auth. (n.d.). *Better Auth documentation.* [Documentation](https://www.better-auth.com/docs).
-- Cloudflare. (n.d.). *Cloudflare R2 documentation.* [Documentation](https://developers.cloudflare.com/r2/).
-- Cloudflare. (n.d.). *Turnstile documentation.* [Documentation](https://developers.cloudflare.com/turnstile/).
-- Cloudflare. (n.d.). *Workers AI documentation.* [Documentation](https://developers.cloudflare.com/workers-ai/).
-- Express. (n.d.). *Express documentation.* [Documentation](https://expressjs.com/).
-- FIRST. (n.d.). *CVSS v4.0 specification document.* [Specification](https://www.first.org/cvss/v4-0/).
-- Google. (n.d.). *Google Calendar API.* [Documentation](https://developers.google.com/workspace/calendar/api).
-- Google. (n.d.). *Google Forms API.* [Documentation](https://developers.google.com/workspace/forms/api).
-- Google. (n.d.). *OAuth 2.0.* [Documentation](https://developers.google.com/identity/protocols/oauth2).
-- MongoDB. (n.d.). *MongoDB manual.* [Documentation](https://www.mongodb.com/docs/manual/).
-- OWASP Foundation. (n.d.). *Application Security Verification Standard.* [Standard](https://owasp.org/www-project-application-security-verification-standard/).
-- React. (n.d.). *React documentation.* [Documentation](https://react.dev/).
-- Republic Act No. 10173. (2012). *Data Privacy Act of 2012.* [Act](https://www.officialgazette.gov.ph/2012/08/15/republic-act-no-10173/).
+- Better Auth. (n.d.). _Better Auth documentation._ [Documentation](https://www.better-auth.com/docs).
+- Cloudflare. (n.d.). _Cloudflare R2 documentation._ [Documentation](https://developers.cloudflare.com/r2/).
+- Cloudflare. (n.d.). _Turnstile documentation._ [Documentation](https://developers.cloudflare.com/turnstile/).
+- Cloudflare. (n.d.). _Workers AI documentation._ [Documentation](https://developers.cloudflare.com/workers-ai/).
+- Express. (n.d.). _Express documentation._ [Documentation](https://expressjs.com/).
+- FIRST. (n.d.). _CVSS v4.0 specification document._ [Specification](https://www.first.org/cvss/v4-0/).
+- Google. (n.d.). _Google Calendar API._ [Documentation](https://developers.google.com/workspace/calendar/api).
+- Google. (n.d.). _Google Forms API._ [Documentation](https://developers.google.com/workspace/forms/api).
+- Google. (n.d.). _OAuth 2.0._ [Documentation](https://developers.google.com/identity/protocols/oauth2).
+- MongoDB. (n.d.). _MongoDB manual._ [Documentation](https://www.mongodb.com/docs/manual/).
+- OWASP Foundation. (n.d.). _Application Security Verification Standard._ [Standard](https://owasp.org/www-project-application-security-verification-standard/).
+- React. (n.d.). _React documentation._ [Documentation](https://react.dev/).
+- Republic Act No. 10173. (2012). _Data Privacy Act of 2012._ [Act](https://www.officialgazette.gov.ph/2012/08/15/republic-act-no-10173/).
 
 # Appendices
 
@@ -1136,25 +1136,25 @@ Before final submission and operational approval, the team must complete the mis
 
 Table 5. Summary of Achievements
 
-| Objective | Evidence to supply | Date |
-| --- | --- | --- |
-| Requirements | Approved interview and requirement list. | To be supplied. |
-| Design | Approved workflow, records, and permission diagrams. | To be supplied. |
-| Development | Demonstration of implemented features. | To be supplied. |
-| Testing | Automated checks exist; supply dated results and reconcile load tests before claiming measured capacity. | To be supplied. |
-| Documentation | Reviewed paper, API document, and operating guidance. | To be supplied. |
-| Deployment | Approved hosting and release record. | To be supplied. |
+| Objective     | Evidence to supply                                                                                       | Date            |
+| ------------- | -------------------------------------------------------------------------------------------------------- | --------------- |
+| Requirements  | Approved interview and requirement list.                                                                 | To be supplied. |
+| Design        | Approved workflow, records, and permission diagrams.                                                     | To be supplied. |
+| Development   | Demonstration of implemented features.                                                                   | To be supplied. |
+| Testing       | Automated checks exist; supply dated results and reconcile load tests before claiming measured capacity. | To be supplied. |
+| Documentation | Reviewed paper, API document, and operating guidance.                                                    | To be supplied. |
+| Deployment    | Approved hosting and release record.                                                                     | To be supplied. |
 
 ## Member Contributions and Roles
 
 Table 6. Member Contributions and Roles
 
-| Team member | Role | Confirmed contribution |
-| --- | --- | --- |
-| Ybanez, Alistair | To be confirmed. | To be supplied. |
-| Digal, John Paul | To be confirmed. | To be supplied. |
-| Cantiver, Miershan | To be confirmed. | To be supplied. |
-| Palmares, Melvis Alfonse | To be confirmed. | To be supplied. |
+| Team member              | Role             | Confirmed contribution |
+| ------------------------ | ---------------- | ---------------------- |
+| Ybanez, Alistair         | To be confirmed. | To be supplied.        |
+| Digal, John Paul         | To be confirmed. | To be supplied.        |
+| Cantiver, Miershan       | To be confirmed. | To be supplied.        |
+| Palmares, Melvis Alfonse | To be confirmed. | To be supplied.        |
 
 ## Project Management Evidence
 

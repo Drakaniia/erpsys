@@ -23,8 +23,8 @@ import {
 import { catchAsync } from "../../middleware/catchAsync.js";
 import { okOne, parseBody } from "../../middleware/http.js";
 import { AcademicYearModel } from "../../models/AcademicYearModel.js";
-import { AdviserAvailabilityModel } from "../../models/AdviserAvailabilityModel.js";
-import { AdviserDepartmentModel } from "../../models/AdviserDepartmentModel.js";
+import { AdviserScheduleModel } from "../../models/AdviserScheduleModel.js";
+
 import { DepartmentModel } from "../../models/DepartmentModel.js";
 import { DepartmentTransferModel } from "../../models/DepartmentTransferModel.js";
 import { assertLevelsOffered } from "../../services/advisers.js";
@@ -117,10 +117,16 @@ transfersRouter.post(
     const dept = await assignableDepartment(input.departmentId);
     assertLevelsOffered(dept, requested);
 
-    const holders = (await AdviserDepartmentModel.listOtherHolders(input.departmentId, requester.id))
-      .filter((holder) => yearLevelsOverlap(holder.yearLevels ?? [], requested));
+    const holders = (
+      await DepartmentModel.listOtherAdviserHolders(
+        input.departmentId,
+        requester.id,
+      )
+    ).filter((holder) => yearLevelsOverlap(holder.yearLevels ?? [], requested));
     if (holders.length > 1) {
-      throw new ApiError("CONFLICT", { message: "Request year levels from one instructor at a time." });
+      throw new ApiError("CONFLICT", {
+        message: "Request year levels from one instructor at a time.",
+      });
     }
     const owner = holders[0];
     if (!owner) {
@@ -133,7 +139,7 @@ transfersRouter.post(
     }
 
     const now = new Date();
-    const ownerActive = await AdviserAvailabilityModel.isActive(
+    const ownerActive = await AdviserScheduleModel.isActive(
       owner.adviserId,
       String(year._id),
       now,
@@ -226,16 +232,33 @@ transfersRouter.patch(
 
     const dept = await assignableDepartment(row.departmentId);
     assertLevelsOffered(dept, normalizeYearLevels(row.yearLevels ?? []));
-    const ownerLink = await AdviserDepartmentModel.findLink(userId, row.departmentId);
-    if (!ownerLink || !yearLevelsOverlap(ownerLink.yearLevels ?? [], row.yearLevels ?? [])) {
+    const ownerLink = await DepartmentModel.findAdviserLink(
+      userId,
+      row.departmentId,
+    );
+    if (
+      !ownerLink ||
+      !yearLevelsOverlap(ownerLink.yearLevels ?? [], row.yearLevels ?? [])
+    ) {
       throw new ApiError("CONFLICT", {
         message: "That department is no longer assigned to you.",
       });
     }
-    const currentOwners = (await AdviserDepartmentModel.listOtherHolders(row.departmentId, row.requesterId))
-      .filter((holder) => yearLevelsOverlap(holder.yearLevels ?? [], row.yearLevels ?? []));
-    if (currentOwners.length !== 1 || currentOwners[0].adviserId !== row.ownerId) {
-      throw new ApiError("CONFLICT", { message: "Ownership changed — request this transfer again." });
+    const currentOwners = (
+      await DepartmentModel.listOtherAdviserHolders(
+        row.departmentId,
+        row.requesterId,
+      )
+    ).filter((holder) =>
+      yearLevelsOverlap(holder.yearLevels ?? [], row.yearLevels ?? []),
+    );
+    if (
+      currentOwners.length !== 1 ||
+      currentOwners[0].adviserId !== row.ownerId
+    ) {
+      throw new ApiError("CONFLICT", {
+        message: "Ownership changed — request this transfer again.",
+      });
     }
     const transferredFromName = await runTransfer({
       departmentId: row.departmentId,
@@ -312,9 +335,18 @@ transfersRouter.post(
     const requested = normalizeYearLevels(input.yearLevels);
     const dept = await assignableDepartment(departmentId);
     assertLevelsOffered(dept, requested);
-    const holders = await AdviserDepartmentModel.listOtherHolders(departmentId, adviser.id);
-    if (holders.some((holder) => yearLevelsOverlap(holder.yearLevels ?? [], requested))) {
-      throw new ApiError("CONFLICT", { message: "These year levels are assigned — request a transfer first." });
+    const holders = await DepartmentModel.listOtherAdviserHolders(
+      departmentId,
+      adviser.id,
+    );
+    if (
+      holders.some((holder) =>
+        yearLevelsOverlap(holder.yearLevels ?? [], requested),
+      )
+    ) {
+      throw new ApiError("CONFLICT", {
+        message: "These year levels are assigned — request a transfer first.",
+      });
     }
     const transferredFromName = await runTransfer({
       departmentId,

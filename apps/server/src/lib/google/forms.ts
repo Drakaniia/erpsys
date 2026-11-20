@@ -3,9 +3,21 @@ import { env } from "../platform/env.js";
 
 const FORMS = "https://forms.googleapis.com/v1/forms";
 
+type FormQuestion = {
+  questionId?: string;
+  required?: boolean;
+  rowQuestion?: { title?: string };
+  choiceQuestion?: {
+    options?: { value?: string; goToSectionId?: string; goToAction?: string }[];
+  };
+};
+
 type FormItem = {
+  itemId?: string;
   title?: string;
-  questionItem?: { question?: { questionId?: string } };
+  pageBreakItem?: Record<string, never>;
+  questionItem?: { question?: FormQuestion };
+  questionGroupItem?: { questions?: FormQuestion[] };
 };
 
 type FormResponse = {
@@ -13,7 +25,12 @@ type FormResponse = {
   lastSubmittedTime?: string;
   answers?: Record<
     string,
-    { textAnswers?: { answers?: { value?: string }[] } }
+    {
+      textAnswers?: { answers?: { value?: string }[] };
+      fileUploadAnswers?: {
+        answers?: { fileId?: string; fileName?: string }[];
+      };
+    }
   >;
 };
 
@@ -53,7 +70,11 @@ async function accessToken(): Promise<string> {
   return cached.token;
 }
 
-async function call<T>(url: string, method = "GET", body?: unknown): Promise<T> {
+async function call<T>(
+  url: string,
+  method = "GET",
+  body?: unknown,
+): Promise<T> {
   const res = await fetch(url, {
     method,
     headers: {

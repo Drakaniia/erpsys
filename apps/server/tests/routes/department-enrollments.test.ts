@@ -41,29 +41,36 @@ function seed(): Record<string, Row[]> {
       },
     ],
     [COLLECTIONS.department]: [
-      { _id: "dept-1", name: "College of Technologies", isActive: true },
-    ],
-    [COLLECTIONS.adviserDepartment]: [
-      { _id: "link-1", adviserId: "adv1", departmentId: "dept-1" },
-    ],
-    [COLLECTIONS.studentProfile]: [
       {
-        _id: "profile-1",
-        userId: "stud1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-      {
-        _id: "profile-2",
-        userId: "stud2",
-        studentNumber: "54321",
-        academicYearId: "ay-1",
+        _id: "dept-1",
+        name: "College of Technologies",
+        isActive: true,
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: [] }],
       },
     ],
+
     [COLLECTIONS.user]: [
       { _id: "adv1", name: "Adviser", email: "adv@buksu.edu.ph" },
-      { _id: "stud1", name: "Ana", email: "12345@student.buksu.edu.ph" },
-      { _id: "stud2", name: "Ben", email: "54321@student.buksu.edu.ph" },
+      {
+        _id: "stud1",
+        name: "Ana",
+        email: "12345@student.buksu.edu.ph",
+        studentProfile: {
+          _id: "profile-1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
+      },
+      {
+        _id: "stud2",
+        name: "Ben",
+        email: "54321@student.buksu.edu.ph",
+        studentProfile: {
+          _id: "profile-2",
+          studentNumber: "54321",
+          academicYearId: "ay-1",
+        },
+      },
     ],
     [COLLECTIONS.enrollmentQueue]: [
       {

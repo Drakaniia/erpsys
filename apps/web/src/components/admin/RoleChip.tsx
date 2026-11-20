@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { prefersReducedMotion, UI_SPRING } from "$lib/motion";
 import { useSpring } from "$lib/ui/use-spring";
+import { roleLabel } from "$lib/auth/role-label";
 
 export default function RoleChip({ role }: { role: string }) {
   const prev = useRef<string | null>(null);
@@ -18,7 +19,6 @@ export default function RoleChip({ role }: { role: string }) {
     return () => cancelAnimationFrame(raf);
   }, [role, setT]);
 
-  const isInstructor = role === "ENROLLMENT_ADVISER";
   const chipClass =
     role === "SBO_OFFICER"
       ? "bg-primary text-white"
@@ -32,10 +32,9 @@ export default function RoleChip({ role }: { role: string }) {
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${chipClass}`}
       style={{ transform: `scale(${t})` }}
-      title={isInstructor ? "Derived from email domain" : undefined}
     >
       {role === "ENROLLMENT_ADVISER"
-        ? "Instructor (auto)"
+        ? roleLabel(role)
         : role.replaceAll("_", " ")}
     </span>
   );

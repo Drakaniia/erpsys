@@ -206,7 +206,9 @@ export function useQueueModel() {
       ? shareLanding.data.departmentId === myDept.departmentId
       : false;
   const shareMismatch =
-    shareLanding.kind === "show" && myDeptQuery.isSuccess && !shareMatchesRecord;
+    shareLanding.kind === "show" &&
+    myDeptQuery.isSuccess &&
+    !shareMatchesRecord;
 
   function dismissShareModal() {
     setShareModalOpen(false);

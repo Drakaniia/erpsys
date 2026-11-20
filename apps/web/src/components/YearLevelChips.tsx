@@ -80,7 +80,9 @@ export default function YearLevelChips({
               aria-disabled={isTaken}
               disabled={disabled || isTaken}
               onClick={() => toggle(level)}
-              title={isTaken ? "Served by another instructor" : undefined}
+              title={
+                isTaken ? "Served by another enrollment officer" : undefined
+              }
               className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-[transform,background-color,border-color,color] duration-100 ease-out active:scale-[0.97] disabled:cursor-not-allowed ${isTaken ? "border-dashed border-border/70 text-muted/60" : checked ? "border-primary/25 bg-primary/10 text-primary" : "border-border text-ink/70 hover:border-border/80 hover:bg-ink/[0.03] hover:text-ink"}`}
             >
               {YEAR_LEVEL_LABELS[level]}

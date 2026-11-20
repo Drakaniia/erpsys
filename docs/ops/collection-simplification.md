@@ -9,21 +9,20 @@
 - Authentication, step-up challenges, quotas, queue ownership, enrollment records, and schedules remain server-owned. Browser storage is not an authorization boundary.
 - Editor tracking has been removed. Save-conflict checks remain in the database wrapper; forms retain their original edit timestamps. An existing legacy editor-tracking collection can be dropped after the updated server and web app are deployed.
 
-## Migration
+## Migration history
 
-Do not deploy the new server against unmigrated data. The code deliberately does not dual-read old collections.
+The one-time migration copied legacy `admin_action_log`, `integration_setting`, `integration_credential`, and `profiling_form` records without deleting the source collections or decrypting credential values. See the [migration QA results](collection-migration-qa.md) for the applied migration.
 
-1. Back up the database. Stop the server, background jobs, and all other writers.
-2. Use the deployment database environment and preview: `pnpm --filter @erpsys/server db:simplify`.
-3. Resolve duplicate integration keys, duplicate forms per year, missing year references, or missing action timestamps reported by the preview.
-4. Apply: `pnpm --filter @erpsys/server db:simplify --apply`.
-5. Verify copied actions, integration keys/versions/encrypted values, and embedded forms against the backup. Preview counts describe source data, not a verification of destination completeness.
-6. Start the new server. Verify integrations, audit paging, overview activity, form read/unlink, student submission, and notifications.
-
-Migration copies legacy `admin_action_log`, `integration_setting`, `integration_credential`, and `profiling_form`. It never drops or deletes source collections. It preserves opaque encrypted fields without decrypting or printing credentials. Repeating it inserts only missing destination records and does not overwrite subsequent destination changes. Do not resume old writers between runs.
+The current server does not read legacy collections. Before using a legacy backup, verify that it contains the consolidated data or arrange a separate migration before starting the server.
 
 Old collections remain backup material until a separate cleanup is approved. After accepting new writes, rollback requires reconciling destination changes; merely restarting the old version would hide new records.
 
-## Further reductions considered
+## Version 2 storage layout
 
-Adviser ownership and availability have different academic-year and lifecycle semantics. Student profiles and enrollments preserve identity versus year-specific history. Requirements and workflow steps are different domain objects. Do not merge them solely to reduce the collection count.
+Version 2 embeds identity in `user.studentProfile` with its stable profile ID, and yearless adviser ownership in `department.advisers[]`. Year-specific enrollment history remains separate. Permanent account deletion may erase related history; it is not archival retention.
+
+`content` contains separate requirement and social-link documents, filtered by `kind` on every operation. `adviser_schedule` contains separate presence and window documents; live heartbeat writes never rewrite schedule documents. Window subtype is stored in `windowKind` and mapped back to the existing API shape.
+
+The six workflow definitions are code-owned in `config/constants.ts`. Verification `stepId` values use the canonical step code after migration; durable verification/evidence records remain in `step_verification`. Requirements and steps are not merged.
+
+See the [offline v2 migration runbook](collection-simplification-migration.md) before deploying on existing data. Startup refuses nonempty obsolete source collections without a verified completion marker. Source collections are not dropped by migration or startup; a separate offline retirement command requires reconciliation, cleanup approval, verified backup/restore, stopped writers and exact database-name acknowledgement. The five conditional legacy collections remain excluded from that command.

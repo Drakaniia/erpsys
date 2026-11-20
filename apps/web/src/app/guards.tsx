@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { loginRouteForSessionLoss } from "$lib/auth/session-guard";
-import { homeRouteForRole } from "$lib/auth/redirect";
+import { homeRouteForRole, surfaceForAppPath } from "$lib/auth/redirect";
+import { canEnterSurface } from "$lib/domain/roles";
 import {
   COMPLETION_ALLOWED_PATHS,
   COMPLETION_DEST_KEY,
@@ -91,15 +92,14 @@ export function RootGate() {
   if (isPending) return <PageLoader label="Loading session" />;
   if (!user) {
     if (
-      p.startsWith("/student") ||
-      p.startsWith("/queue") ||
-      p.startsWith("/officer") ||
-      p.startsWith("/instructor") ||
-      p.startsWith("/admin") ||
+      surfaceForAppPath(p) ||
       p === COMPLETION_PATH ||
       p === "/settings/accounts"
     ) {
-      return <Navigate to={loginRouteForSessionLoss()} replace />;
+      const dest = surfaceForAppPath(p)
+        ? `${p}${location.search}${location.hash}`
+        : undefined;
+      return <Navigate to={loginRouteForSessionLoss(dest)} replace />;
     }
     return <Outlet />;
   }
@@ -112,13 +112,6 @@ export function RootGate() {
   return <Outlet />;
 }
 
-const APP_PREFIXES = [
-  "/student",
-  "/queue",
-  "/officer",
-  "/instructor",
-  "/admin",
-];
 const AUTH_PATHS = new Set([
   "/login",
   "/login/register",
@@ -143,11 +136,12 @@ export function RequireApp({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   if (isPending) return <PageLoader label="Loading session" />;
   const role = data?.user.role;
-  if (!role) return <Navigate to={loginRouteForSessionLoss()} replace />;
-  if (
-    !APP_PREFIXES.some((prefix) => location.pathname.startsWith(prefix)) &&
-    location.pathname !== "/"
-  ) {
+  if (!role) {
+    const dest = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to={loginRouteForSessionLoss(dest)} replace />;
+  }
+  const surface = surfaceForAppPath(location.pathname);
+  if (!surface || !canEnterSurface(role, surface)) {
     return <Navigate to={homeRouteForRole(role)} replace />;
   }
   return <>{children}</>;

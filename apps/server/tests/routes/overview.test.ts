@@ -83,42 +83,33 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p1",
+        studentProfile: {
+          _id: "p1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
       },
       {
         _id: "u-p2",
+        studentProfile: {
+          _id: "p2",
+          studentNumber: "12346",
+          academicYearId: "ay-1",
+        },
         name: "Ben",
         email: "12346@student.buksu.edu.ph",
         role: "STUDENT",
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "p1",
-        userId: "u-p1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-      {
-        _id: "p2",
-        userId: "u-p2",
-        studentNumber: "12346",
-        academicYearId: "ay-1",
-      },
-    ],
-    [COLLECTIONS.step]: STEPS.map((code, index) => ({
-      _id: `step-${code}`,
-      code,
-      name: code,
-      order: index + 1,
-    })),
+
     [COLLECTIONS.stepVerification]: [
       {
         _id: "v-1",
         studentProfileId: "p1",
-        stepId: "step-ASSESSMENT",
+        stepId: "ASSESSMENT",
         academicYearId: "ay-1",
         status: "VERIFIED",
         verifiedAt: new Date("2025-07-02T10:00:00Z"),
@@ -127,7 +118,7 @@ function seed(): Record<string, Row[]> {
       {
         _id: "v-2",
         studentProfileId: "p2",
-        stepId: "step-ASSESSMENT",
+        stepId: "ASSESSMENT",
         academicYearId: "ay-1",
         status: "RETURNED",
         respondedAt: new Date("2025-07-03T10:00:00Z"),
@@ -136,7 +127,7 @@ function seed(): Record<string, Row[]> {
       {
         _id: "v-3",
         studentProfileId: "p2",
-        stepId: "step-PROFILING",
+        stepId: "PROFILING",
         academicYearId: "ay-1",
         status: "SUBMITTED",
       },
@@ -253,34 +244,39 @@ describe("admin overview", () => {
     ["object", {}],
     ["array", []],
     ["number", 123],
-  ])("keeps admin activity with a %s timestamp without failing", async (_label, createdAt) => {
-    context.store[COLLECTIONS.adminActionLog]!.push({
-      _id: "log-invalid",
-      actorId: "adm1",
-      action: "Updated department",
-      targetRef: "dept-1",
-      ...(createdAt === undefined ? {} : { createdAt }),
-    });
+  ])(
+    "keeps admin activity with a %s timestamp without failing",
+    async (_label, createdAt) => {
+      context.store[COLLECTIONS.adminActionLog]!.push({
+        _id: "log-invalid",
+        actorId: "adm1",
+        action: "Updated department",
+        targetRef: "dept-1",
+        ...(createdAt === undefined ? {} : { createdAt }),
+      });
 
-    for (const hasActiveYear of [true, false]) {
-      if (!hasActiveYear) context.store[COLLECTIONS.academicYear] = [];
-      const { status, body } = await call("/me/overview");
-      expect(status).toBe(200);
-      expect(body.data.recentActivity).toHaveLength(2);
-      expect(body.data.recentActivity).toEqual(expect.arrayContaining([
-        expect.objectContaining({
-          id: "log-invalid",
-          action: "Updated department",
-          actorName: "Admin",
-          at: "",
-        }),
-        expect.objectContaining({
-          id: "log-1",
-          at: "2025-06-02T08:00:00.000Z",
-        }),
-      ]));
-    }
-  });
+      for (const hasActiveYear of [true, false]) {
+        if (!hasActiveYear) context.store[COLLECTIONS.academicYear] = [];
+        const { status, body } = await call("/me/overview");
+        expect(status).toBe(200);
+        expect(body.data.recentActivity).toHaveLength(2);
+        expect(body.data.recentActivity).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: "log-invalid",
+              action: "Updated department",
+              actorName: "Admin",
+              at: "",
+            }),
+            expect.objectContaining({
+              id: "log-1",
+              at: "2025-06-02T08:00:00.000Z",
+            }),
+          ]),
+        );
+      }
+    },
+  );
 
   it("accepts a parseable string timestamp in admin activity", async () => {
     context.store[COLLECTIONS.adminActionLog]![0]!.createdAt =
@@ -303,8 +299,14 @@ describe("admin overview", () => {
       expect(trend).toHaveLength(14);
       expect(trend[0]!.day).toBe("2025-06-27");
       // 20:00Z on Jul 9 is already Jul 10 on campus (UTC+8), so both joins land on the last day.
-      expect(trend.at(-1)).toEqual({ day: "2025-07-10", joined: 2, completed: 1 });
-      expect(trend.slice(0, -1).every((d) => d.joined === 0 && d.completed === 0)).toBe(true);
+      expect(trend.at(-1)).toEqual({
+        day: "2025-07-10",
+        joined: 2,
+        completed: 1,
+      });
+      expect(
+        trend.slice(0, -1).every((d) => d.joined === 0 && d.completed === 0),
+      ).toBe(true);
     } finally {
       vi.useRealTimers();
     }
@@ -342,7 +344,7 @@ describe("officer overview", () => {
         id: "v-2",
         studentName: "Ben",
         stepCode: "ASSESSMENT",
-        stepName: "ASSESSMENT",
+        stepName: "Assessment",
         action: "Returned",
         at: "2025-07-03T10:00:00.000Z",
       },
@@ -350,7 +352,7 @@ describe("officer overview", () => {
         id: "v-1",
         studentName: "Ana",
         stepCode: "ASSESSMENT",
-        stepName: "ASSESSMENT",
+        stepName: "Assessment",
         action: "Verified",
         at: "2025-07-02T10:00:00.000Z",
       },
@@ -363,7 +365,7 @@ describe("officer overview", () => {
       {
         _id: "v-4",
         studentProfileId: "p1",
-        stepId: "step-PROFILING",
+        stepId: "PROFILING",
         academicYearId: "ay-1",
         status: "APPLIED",
         appliedAt: new Date("2025-07-05T02:00:00Z"),
@@ -371,7 +373,7 @@ describe("officer overview", () => {
       {
         _id: "v-5",
         studentProfileId: "p2",
-        stepId: "step-MUGSHOT",
+        stepId: "MUGSHOT",
         academicYearId: "ay-1",
         status: "SUBMITTED",
         appliedAt: new Date("2025-07-06T02:00:00Z"),
@@ -408,7 +410,7 @@ describe("officer overview", () => {
     ].map((code) => ({
       _id: `c-${code}`,
       studentProfileId: "p1",
-      stepId: `step-${code}`,
+      stepId: code,
       academicYearId: "ay-1",
       status: "VERIFIED",
       verifiedAt: new Date("2025-07-02T10:00:00Z"),
@@ -424,7 +426,7 @@ describe("officer overview", () => {
     context.store[COLLECTIONS.stepVerification]!.push({
       _id: "v-6",
       studentProfileId: "p1",
-      stepId: "step-CONSENT",
+      stepId: "CONSENT",
       academicYearId: "ay-1",
       status: "SUBMITTED",
       // 18:00Z on Jul 9 is already Jul 10 on campus (UTC+8).

@@ -8,6 +8,7 @@ import {
 } from "./queue-cards";
 import { JoinCard } from "./queue-join-card";
 import EnrollmentSuccess from "../components/student/EnrollmentSuccess";
+import RequirementPreview from "../components/student/RequirementPreview";
 import StampDisplay from "../components/student/StampDisplay";
 import StudentGate from "../components/student/StudentGate";
 import { scheduleLine } from "$lib/student/schedule";
@@ -220,6 +221,11 @@ export function QueuePage() {
             />
           )
         ) : null}
+        {m.data && !m.enrolled && !m.queue && (
+          <div className="mt-4">
+            <RequirementPreview step="ENROLLMENT" />
+          </div>
+        )}
       </main>
 
       {m.successOpen && m.queue?.departmentName ? (
@@ -238,9 +244,7 @@ export function QueuePage() {
         onclose={m.closeFacultyConfirm}
       />
 
-      {m.shareModalOpen &&
-      m.shareLanding.kind === "show" &&
-      m.shareMismatch ? (
+      {m.shareModalOpen && m.shareLanding.kind === "show" && m.shareMismatch ? (
         <div className="modal-scrim fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div
             role="dialog"

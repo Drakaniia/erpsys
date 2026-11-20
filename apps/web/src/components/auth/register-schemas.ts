@@ -18,7 +18,7 @@ export const emailSchema = z
   .refine((value) => !value.toLowerCase().endsWith(INSTITUTIONAL_DOMAIN), {
     message: "Institutional accounts sign in with Google instead.",
   });
-export const passwordSchema = z.string().min(8, "At least 8 characters");
+export { newPasswordSchema as passwordSchema } from "$lib/auth/password";
 export const confirmPasswordSchema = z.string().min(1, "Confirm your password");
 
 /**

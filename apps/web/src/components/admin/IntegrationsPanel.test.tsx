@@ -7,6 +7,12 @@ import { Toaster, toast } from "sonner";
 import { queryClient } from "$lib/api";
 import IntegrationsPanel from "./IntegrationsPanel";
 
+vi.mock("../ActiveEditors", () => ({
+  default: ({ children }: { children?: import("react").ReactNode }) =>
+    children ?? null,
+  useEditingLock: () => ({ blocked: false, onBlockedChange: () => {} }),
+}));
+
 /**
  * The master list, the detail pane, the optimistic flip, the 5-second undo and
  * the Turnstile warning. `fetch` answers the one GET and every PATCH; the
@@ -134,7 +140,9 @@ describe("IntegrationsPanel", () => {
     ]);
     // Live count is derived from the rows, not invented.
     expect(
-      screen.getByText((_, el) => el?.tagName === "P" && el.textContent === "3 of 4 live"),
+      screen.getByText(
+        (_, el) => el?.tagName === "P" && el.textContent === "3 of 4 live",
+      ),
     ).toBeTruthy();
   });
 
@@ -144,7 +152,9 @@ describe("IntegrationsPanel", () => {
     const heading = await screen.findByRole("heading", { level: 2 });
     expect(heading.textContent).toBe("File uploads");
     expect(screen.getByText("Never changed")).toBeTruthy();
-    const current = listLinks().find((a) => a.getAttribute("aria-current") === "true");
+    const current = listLinks().find(
+      (a) => a.getAttribute("aria-current") === "true",
+    );
     expect(current?.textContent).toContain("File uploads");
   });
 
@@ -167,7 +177,9 @@ describe("IntegrationsPanel", () => {
     await screen.findByRole("heading", { level: 2 });
     fireEvent.click(listLinks()[3]);
     await waitFor(() =>
-      expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Student chat"),
+      expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(
+        "Student chat",
+      ),
     );
   });
 

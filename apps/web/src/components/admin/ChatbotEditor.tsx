@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ConfirmDialog from "../ConfirmDialog";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import { renderMarkdown } from "$lib/chat/markdown";
 import { api, queryClient } from "$lib/api";
 import { relativeTime } from "$lib/officer/format";
@@ -32,6 +33,7 @@ export default function ChatbotEditor({
   // ---- Editor state ----
   const [draft, setDraft] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const lock = useEditingLock(loaded);
   const [savedContent, setSavedContent] = useState("");
 
   useEffect(() => {
@@ -43,7 +45,11 @@ export default function ChatbotEditor({
     }
   }, [loaded, docQuery.data, docQuery.isSuccess]);
 
-  const presence = useEditTimestamp("chatbot-knowledge", docQuery.isSuccess ? "default" : null, docQuery.data);
+  const presence = useEditTimestamp(
+    "chatbot-knowledge",
+    docQuery.isSuccess ? "default" : null,
+    docQuery.data,
+  );
   const dirty = loaded && draft !== savedContent;
   const wordCount = useMemo(() => {
     const text = document.createElement("div");
@@ -54,7 +60,10 @@ export default function ChatbotEditor({
   // ---- Save ----
   async function save() {
     try {
-      const res = await saveMutation.mutateAsync({ content: draft, ts: presence.ts });
+      const res = await saveMutation.mutateAsync({
+        content: draft,
+        ts: presence.ts,
+      });
       presence.saved(res);
       setSavedContent(draft);
       ontoast(`Saved — version ${res.version}`);
@@ -107,7 +116,6 @@ export default function ChatbotEditor({
 
   return (
     <div className="flex flex-col gap-4">
-
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-0.5">
           <p className="text-sm text-muted">
@@ -127,7 +135,7 @@ export default function ChatbotEditor({
         </div>
         <button
           onClick={save}
-          disabled={!loaded || !dirty || saveMutation.isPending}
+          disabled={lock.blocked || !loaded || !dirty || saveMutation.isPending}
           className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-40"
         >
           {saveMutation.isPending
@@ -152,7 +160,17 @@ export default function ChatbotEditor({
         </div>
       )}
 
-      <KnowledgeEditor value={draft} onChange={setDraft} disabled={!loaded} />
+      <ActiveEditors
+        resource="chatbot-knowledge"
+        enabled={loaded}
+        onBlockedChange={lock.onBlockedChange}
+      >
+        <KnowledgeEditor
+          value={draft}
+          onChange={setDraft}
+          disabled={lock.blocked || !loaded}
+        />
+      </ActiveEditors>
 
       <ConfirmDialog
         open={leaving}

@@ -43,7 +43,9 @@ export function DepartmentLines({
     >
       {!loading && rows.length === 0 ? (
         <PanelEmpty
-          action={<PanelLink onClick={onopendepartments}>Add a department</PanelLink>}
+          action={
+            <PanelLink onClick={onopendepartments}>Add a department</PanelLink>
+          }
         >
           No departments yet. Each department gets its own enrollment line.
         </PanelEmpty>
@@ -51,8 +53,14 @@ export function DepartmentLines({
         <>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             {SERIES.map((s) => (
-              <span key={s.key} className="flex items-center gap-1.5 text-xs text-muted">
-                <span className="size-2 rounded-full" style={{ backgroundColor: s.color }} />
+              <span
+                key={s.key}
+                className="flex items-center gap-1.5 text-xs text-muted"
+              >
+                <span
+                  className="size-2 rounded-full"
+                  style={{ backgroundColor: s.color }}
+                />
                 {s.label}
               </span>
             ))}

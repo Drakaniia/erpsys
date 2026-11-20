@@ -1,4 +1,4 @@
-import { Router, type Request } from "express";
+import { Router, type Request, type RequestHandler } from "express";
 import { z } from "zod";
 import {
   departmentLevelRangeLabel,
@@ -21,9 +21,8 @@ import {
   parseQuery,
 } from "../../middleware/http.js";
 import { AdminActionLogModel } from "../../models/AdminActionLogModel.js";
-import { AdviserAvailabilityModel } from "../../models/AdviserAvailabilityModel.js";
-import { AdviserDepartmentModel } from "../../models/AdviserDepartmentModel.js";
-import { AvailabilityWindowModel } from "../../models/AvailabilityWindowModel.js";
+import { AdviserScheduleModel } from "../../models/AdviserScheduleModel.js";
+
 import { DepartmentModel } from "../../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../../models/EnrollmentQueueModel.js";
 import { activeYearOrThrow } from "../../services/academic-years.js";
@@ -36,8 +35,6 @@ import {
   myDepartment,
 } from "../../services/departments.js";
 
-
-
 /**
  * `/api/v1` — `/me/departments` in both verbs, then the instructor/admin
  * department CRUD and register.
@@ -45,6 +42,13 @@ import {
 export const departmentsRouter = Router();
 
 const instructor = [requireSession, requireSurface("instructor")];
+const managers: RequestHandler[] = [
+  requireSession,
+  (req, res, next) => {
+    const surface = sessionUser(req).role === "ADMIN" ? "admin" : "instructor";
+    requireSurface(surface)(req, res, next);
+  },
+];
 
 const idParams = z.object({ id: z.string().min(1) });
 const yearLevels = z
@@ -76,7 +80,8 @@ async function assertIdentityAvailable(
 
 async function requireDepartment(id: string) {
   const row = await DepartmentModel.findById(id);
-  if (!row) throw new ApiError("NOT_FOUND", { message: "Department not found." });
+  if (!row)
+    throw new ApiError("NOT_FOUND", { message: "Department not found." });
   return row;
 }
 
@@ -86,7 +91,7 @@ async function requireAssigned(
   verb: string,
 ): Promise<void> {
   if (isAdmin) return;
-  if (!(await AdviserDepartmentModel.findLink(callerId, departmentId))) {
+  if (!(await DepartmentModel.findAdviserLink(callerId, departmentId))) {
     throw new ApiError("FORBIDDEN", {
       message: `Only this department's adviser (or an admin) can ${verb} it.`,
     });
@@ -134,14 +139,14 @@ departmentsRouter.put(
 
 /**
  * `GET /api/v1/departments`
- * Access: session + instructor surface.
+ * Access: session + instructor or admin surface.
  * Use: every department with who holds it; an admin sees all, an instructor
  * their own (query `page`, `pageSize`).
  * Returns: `{ data, page, pageSize, total }`.
  */
 departmentsRouter.get(
   "/departments",
-  instructor,
+  managers,
   catchAsync(async (req, res) => {
     const { callerId, isAdmin } = caller(req);
     const rows = await departmentListing(callerId, isAdmin);
@@ -158,14 +163,14 @@ departmentsRouter.get(
 
 /**
  * `POST /api/v1/departments`
- * Access: session + instructor surface.
+ * Access: session + instructor or admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: create one — body `{ name }`; an instructor holding none takes it.
  * Returns: `201` with `{ data: department }`.
  */
 departmentsRouter.post(
   "/departments",
-  instructor,
+  managers,
   catchAsync(async (req, res) => {
     const { name } = parseBody(
       z.object({ name: z.string().trim().min(1).max(120) }),
@@ -186,9 +191,9 @@ departmentsRouter.post(
       return okOne(res, view, 201);
     }
     const assigned =
-      (await AdviserDepartmentModel.listForAdviser(callerId)).length === 0;
+      (await DepartmentModel.listAssignmentsForAdviser(callerId)).length === 0;
     if (assigned) {
-      await AdviserDepartmentModel.insert({
+      await DepartmentModel.insertAdviser({
         _id: genId("adviser-dept"),
         adviserId: callerId,
         departmentId: row._id,
@@ -201,14 +206,14 @@ departmentsRouter.post(
 
 /**
  * `PATCH /api/v1/departments/:id`
- * Access: session + instructor surface.
+ * Access: session + instructor or admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: rename an assigned department (admins may edit any), or admin-only deactivate — body `{ name?, isActive? }`.
  * Returns: `{ data: department }`.
  */
 departmentsRouter.patch(
   "/departments/:id",
-  instructor,
+  managers,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
     const input = parseBody(
@@ -225,13 +230,22 @@ departmentsRouter.patch(
     const { callerId, isAdmin } = caller(req);
     await requireDepartment(id);
     if (input.isActive !== undefined && !isAdmin) {
-      throw new ApiError("FORBIDDEN", { message: "Only an admin can change department status." });
+      throw new ApiError("FORBIDDEN", {
+        message: "Only an admin can change department status.",
+      });
     }
-    if (input.name !== undefined) await requireAssigned({ callerId, isAdmin }, id, "edit");
-    if (input.isActive === false && (await EnrollmentQueueModel.countInLine({
-      departmentId: id, status: { $in: ["WAITING", "IN_PROGRESS"] },
-    })) > 0) {
-      throw new ApiError("CONFLICT", { message: "Close the queue first — dept has students still in line." });
+    if (input.name !== undefined)
+      await requireAssigned({ callerId, isAdmin }, id, "edit");
+    if (
+      input.isActive === false &&
+      (await EnrollmentQueueModel.countInLine({
+        departmentId: id,
+        status: { $in: ["WAITING", "IN_PROGRESS"] },
+      })) > 0
+    ) {
+      throw new ApiError("CONFLICT", {
+        message: "Close the queue first — dept has students still in line.",
+      });
     }
     let out: Record<string, unknown> = { id };
 
@@ -251,7 +265,6 @@ departmentsRouter.patch(
     }
 
     if (input.isActive !== undefined) {
-
       const existing = await requireDepartment(id);
       await DepartmentModel.update(id, { isActive: input.isActive });
       await AdminActionLogModel.log(
@@ -268,14 +281,14 @@ departmentsRouter.patch(
 
 /**
  * `PUT /api/v1/departments/:id/year-levels`
- * Access: session + instructor surface.
+ * Access: session + instructor or admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: set the year levels it serves — body `{ yearLevels }`.
  * Returns: `{ data: department }`.
  */
 departmentsRouter.put(
   "/departments/:id/year-levels",
-  instructor,
+  managers,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
     const body = parseBody(z.object({ yearLevels }), req);
@@ -297,14 +310,14 @@ departmentsRouter.put(
 
 /**
  * `DELETE /api/v1/departments/:id`
- * Access: session + instructor surface.
+ * Access: session + instructor or admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: delete it, only when nothing is queued in it.
  * Returns: `{ data: department }`.
  */
 departmentsRouter.delete(
   "/departments/:id",
-  instructor,
+  managers,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
     await requireDepartment(id);
@@ -314,9 +327,9 @@ departmentsRouter.delete(
         message: "Cannot delete a department with active queue entries.",
       });
     }
-    await AdviserAvailabilityModel.deleteByDepartment(id);
-    await AdviserDepartmentModel.deleteByDepartment(id);
-    const scheduled = await AvailabilityWindowModel.deleteByDepartment(id);
+    await AdviserScheduleModel.deleteByDepartment(id);
+    await DepartmentModel.deleteAdvisersByDepartment(id);
+    const scheduled = await AdviserScheduleModel.deleteWindowsByDepartment(id);
     await DepartmentModel.remove(id);
     for (const adviserId of scheduled) {
       await syncAfterScheduleChange(adviserId);

@@ -128,7 +128,7 @@ function hSegmentPath(
   segW: number,
   H: number,
   layerScale: number,
-  straight = false
+  straight = false,
 ) {
   const my = H / 2;
   const h0 = normStart * H * 0.44 * layerScale;
@@ -150,7 +150,7 @@ function vSegmentPath(
   segH: number,
   W: number,
   layerScale: number,
-  straight = false
+  straight = false,
 ) {
   const mx = W / 2;
   const w0 = normStart * W * 0.44 * layerScale;
@@ -239,7 +239,7 @@ function HSegment({
   const mountProgress = useMountProgress(
     enterTransition,
     index * staggerDelay,
-    index
+    index,
   );
   const enterComplete = useEnterComplete(mountProgress);
   const entranceScaleX = useTransform(mountProgress, [0, 1], [0, 1]);
@@ -450,7 +450,7 @@ function VSegment({
   const mountProgress = useMountProgress(
     enterTransition,
     index * staggerDelay,
-    index
+    index,
   );
   const enterComplete = useEnterComplete(mountProgress);
   const entranceScaleY = useTransform(mountProgress, [0, 1], [0, 1]);
@@ -646,7 +646,7 @@ function SegmentLabel({
         animate={{ opacity: 1 }}
         className={cn(
           "absolute inset-0 flex",
-          isHorizontal ? "flex-col items-center" : "flex-row items-center"
+          isHorizontal ? "flex-col items-center" : "flex-row items-center",
         )}
         initial={{ opacity: 0 }}
         transition={{
@@ -712,7 +712,7 @@ function SegmentLabel({
         // For vertical funnel, align controls horizontal placement
         isHorizontal
           ? cn("flex-col items-center", justifyMap[align])
-          : cn("flex-row items-center", justifyMap[align])
+          : cn("flex-row items-center", justifyMap[align]),
       )}
       initial={{ opacity: 0 }}
       style={{
@@ -729,7 +729,7 @@ function SegmentLabel({
           "flex gap-1.5",
           isVerticalStack
             ? cn("flex-col", itemsMap[isHorizontal ? "center" : align])
-            : cn("flex-row", itemsMap.center)
+            : cn("flex-row", itemsMap.center),
         )}
       >
         {valueEl}
@@ -782,7 +782,7 @@ export function FunnelChart({
         setInternalHoveredIndex(index);
       }
     },
-    [isControlled, onHoverChange]
+    [isControlled, onHoverChange],
   );
 
   const measure = useCallback(() => {
@@ -837,7 +837,7 @@ export function FunnelChart({
       <div
         className={cn(
           "relative w-full select-none overflow-visible",
-          className
+          className,
         )}
         ref={ref}
         style={{
@@ -894,7 +894,7 @@ export function FunnelChart({
             <div
               className={cn(
                 "absolute inset-0 flex overflow-visible",
-                horiz ? "flex-row" : "flex-col"
+                horiz ? "flex-row" : "flex-col",
               )}
               style={{ gap }}
             >

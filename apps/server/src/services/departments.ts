@@ -11,13 +11,13 @@ import {
 } from "../config/queue.js";
 import { summarize } from "../config/schedule.js";
 import { AcademicYearModel } from "../models/AcademicYearModel.js";
-import { AdviserAvailabilityModel } from "../models/AdviserAvailabilityModel.js";
-import { AdviserDepartmentModel } from "../models/AdviserDepartmentModel.js";
-import { AvailabilityWindowModel } from "../models/AvailabilityWindowModel.js";
-import { DepartmentModel, type DepartmentRow } from "../models/DepartmentModel.js";
+import { AdviserScheduleModel } from "../models/AdviserScheduleModel.js";
+import {
+  DepartmentModel,
+  type DepartmentRow,
+} from "../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../models/EnrollmentQueueModel.js";
 import { StudentEnrollmentModel } from "../models/StudentEnrollmentModel.js";
-import { StudentProfileModel } from "../models/StudentProfileModel.js";
 import { UserModel } from "../models/UserModel.js";
 import { assertDepartmentAssigned } from "./queues.js";
 
@@ -39,7 +39,7 @@ type OwnerEntry = {
 
 export async function departmentListing(callerId: string, isAdmin: boolean) {
   const [links, rows] = await Promise.all([
-    AdviserDepartmentModel.listAll(),
+    DepartmentModel.listAllAdviserAssignments(),
     DepartmentModel.listAll(),
   ]);
   const users = await UserModel.findByIds(links.map((l) => l.adviserId));
@@ -77,7 +77,7 @@ export async function departmentListing(callerId: string, isAdmin: boolean) {
 
 export async function myDepartment(userId: string) {
   const [profile, year] = await Promise.all([
-    StudentProfileModel.findByUserId(userId),
+    UserModel.findProfileByUserId(userId),
     AcademicYearModel.findActive(),
   ]);
   if (!profile || !year) return null;
@@ -93,14 +93,14 @@ export async function myDepartment(userId: string) {
   const [department, availabilities, serving, waitingCount, windows] =
     await Promise.all([
       DepartmentModel.findById(departmentId),
-      AdviserAvailabilityModel.listOpenByDepartment(departmentId, yearId),
+      AdviserScheduleModel.listOpenByDepartment(departmentId, yearId),
       EnrollmentQueueModel.listInProgress(departmentId, yearId),
       EnrollmentQueueModel.countInLine({
         departmentId,
         academicYearId: yearId,
         status: { $in: ["WAITING", "IN_PROGRESS"] },
       }),
-      AvailabilityWindowModel.listByDepartment(departmentId, yearId),
+      AdviserScheduleModel.listWindowsByDepartment(departmentId, yearId),
     ]);
   if (!department || !department.isActive) return null;
 
@@ -110,7 +110,7 @@ export async function myDepartment(userId: string) {
     adviserIds.length > 0
       ? await Promise.all([
           UserModel.findByIds(adviserIds),
-          AdviserDepartmentModel.listByDepartment(departmentId),
+          DepartmentModel.listAdvisersByDepartment(departmentId),
         ])
       : [[], []];
 
@@ -131,8 +131,8 @@ export async function myDepartment(userId: string) {
       ? {
           id: firstLive.adviserId,
           name:
-            advisers.find((u) => String(u._id) === firstLive.adviserId)
-              ?.name ?? "Adviser",
+            advisers.find((u) => String(u._id) === firstLive.adviserId)?.name ??
+            "Adviser",
         }
       : null,
     waitingCount,
@@ -179,10 +179,10 @@ export async function enrollmentRegister(
   if (filter.q) {
     const pattern = { $regex: escapeQueryRegex(filter.q), $options: "i" };
     const [byNumber, byName] = await Promise.all([
-      StudentProfileModel.searchByStudentNumber(pattern),
+      UserModel.searchProfilesByStudentNumber(pattern),
       UserModel.searchByName(pattern),
     ]);
-    const linked = await StudentProfileModel.listByUserIds(
+    const linked = await UserModel.listProfilesByUserIds(
       byName.map((u) => String(u._id)),
     );
     where.studentProfileIds = [
@@ -198,7 +198,7 @@ export async function enrollmentRegister(
   const hasMore = rows.length > filter.limit;
   const page = hasMore ? rows.slice(0, filter.limit) : rows;
 
-  const profiles = await StudentProfileModel.findByIds(
+  const profiles = await UserModel.findProfilesByIds(
     page.map((entry) => entry.studentProfileId),
   );
   const [users, advisers] = await Promise.all([
@@ -212,9 +212,7 @@ export async function enrollmentRegister(
   const nameByUserId = new Map(
     [...users, ...advisers].map((u) => [String(u._id), u.name ?? ""] as const),
   );
-  const profileById = new Map(
-    profiles.map((p) => [String(p._id), p] as const),
-  );
+  const profileById = new Map(profiles.map((p) => [String(p._id), p] as const));
   const last = page[page.length - 1];
 
   return {

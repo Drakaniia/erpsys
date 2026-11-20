@@ -18,5 +18,7 @@ if (!user) {
 
 await resetAuthenticator(String(user._id));
 
-console.log(`reset authenticator for ${email}; set it up again on the next integration change`);
+console.log(
+  `reset authenticator for ${email}; set it up again on the next integration change`,
+);
 process.exit(0);

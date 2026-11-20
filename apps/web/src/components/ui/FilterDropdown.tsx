@@ -45,7 +45,12 @@ export default function FilterDropdown({
   }
 
   function openMenu(focusIdx?: number) {
-    if (disabled || triggerEl.current?.matches(":disabled") || options.length === 0) return;
+    if (
+      disabled ||
+      triggerEl.current?.matches(":disabled") ||
+      options.length === 0
+    )
+      return;
     setOpen(true);
     const idx = focusIdx ?? options.findIndex((o) => o.value === value);
     setFocusedIndex(idx >= 0 ? idx : 0);
@@ -134,10 +139,15 @@ export default function FilterDropdown({
       default: {
         if (e.key.length !== 1 || e.ctrlKey || e.altKey || e.metaKey) break;
         const now = Date.now();
-        typeahead.current.text = now - typeahead.current.time > 600 ? e.key : typeahead.current.text + e.key;
+        typeahead.current.text =
+          now - typeahead.current.time > 600
+            ? e.key
+            : typeahead.current.text + e.key;
         typeahead.current.time = now;
         const query = typeahead.current.text.toLocaleLowerCase();
-        const index = options.findIndex((option) => option.label.toLocaleLowerCase().startsWith(query));
+        const index = options.findIndex((option) =>
+          option.label.toLocaleLowerCase().startsWith(query),
+        );
         if (index >= 0) {
           e.preventDefault();
           setFocusedIndex(index);
@@ -241,10 +251,7 @@ export default function FilterDropdown({
                     <path d="M5 13l4 4L19 7" />
                   </svg>
                 ) : (
-                  <span
-                    className="h-3.5 w-3.5 shrink-0"
-                    aria-hidden="true"
-                  />
+                  <span className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 )}
               </button>
             );

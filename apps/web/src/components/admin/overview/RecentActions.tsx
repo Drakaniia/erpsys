@@ -57,7 +57,9 @@ export function RecentActions({
                 </p>
                 <time
                   dateTime={a.at}
-                  title={Number.isNaN(at.getTime()) ? undefined : absolute.format(at)}
+                  title={
+                    Number.isNaN(at.getTime()) ? undefined : absolute.format(at)
+                  }
                   className="text-xs tabular-nums text-muted"
                 >
                   {relativeTime(a.at)}

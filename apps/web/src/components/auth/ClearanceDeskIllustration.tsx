@@ -17,8 +17,10 @@ type Tokens = {
   bg?: string;
 };
 
-export interface ClearanceDeskProps
-  extends Omit<React.SVGProps<SVGSVGElement>, "ref"> {
+export interface ClearanceDeskProps extends Omit<
+  React.SVGProps<SVGSVGElement>,
+  "ref"
+> {
   /** Width in px (or any CSS length). Height follows the aspect ratio. Default: 100% of the container. */
   size?: number | string;
   /** Base colours. Every shade is derived from these. */
@@ -41,7 +43,7 @@ const BASE: Required<Tokens> = {
 
 /** Every colour in the drawing, as an expression over the base tokens. */
 const SLOTS: Record<string, string> = {
-  line: "ink",
+  line: "ink~face:0.22",
   "face-l": "face>0.1",
   "face-t": "face>0.06",
   "face-r": "face>0.17",
@@ -94,7 +96,7 @@ function slot(expr: string, base: Record<string, string>): string {
 export default function ClearanceDesk({
   size,
   tokens,
-  weight = 1,
+  weight = 0.72,
   animate = "hover",
   title = "Enrollment clearance desk",
   style,

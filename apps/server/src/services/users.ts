@@ -1,12 +1,10 @@
-import {
-  deriveDepartmentCode,
-  type YearLevel,
-} from "../config/constants.js";
+import { deriveDepartmentCode, type YearLevel } from "../config/constants.js";
 import { escapeQueryRegex } from "../config/queue.js";
+import { refIn } from "../lib/db/db.js";
 import type { AcademicYearRow } from "../models/AcademicYearModel.js";
 import { DepartmentModel } from "../models/DepartmentModel.js";
 import { StudentEnrollmentModel } from "../models/StudentEnrollmentModel.js";
-import { StudentProfileModel } from "../models/StudentProfileModel.js";
+
 import { UserModel } from "../models/UserModel.js";
 import { resolveYear } from "./academic-years.js";
 
@@ -27,29 +25,30 @@ async function directoryFilter(
   const q = input.q.trim();
   if (q) {
     const pattern = { $regex: escapeQueryRegex(q), $options: "i" };
-    const profiles = await StudentProfileModel.findByIds(
-      (await StudentProfileModel.searchByStudentNumber(pattern, 1000)).map(
+    const profiles = await UserModel.findProfilesByIds(
+      (await UserModel.searchProfilesByStudentNumber(pattern, 1000)).map(
         (profile) => String(profile._id),
       ),
     );
     filter.$or = [
       { name: pattern },
       { email: pattern },
-      { _id: { $in: profiles.map((profile) => String(profile.userId)) } },
+      { _id: refIn(profiles.map((profile) => String(profile.userId))) },
     ];
   }
   if (input.role !== "ALL") filter.role = input.role;
-  if (input.outside !== "ALL") filter.isOutsideOrg = input.outside === "OUTSIDE";
+  if (input.outside !== "ALL")
+    filter.isOutsideOrg = input.outside === "OUTSIDE";
   if (year && (input.departmentId || input.yearLevel)) {
     const matched = await StudentEnrollmentModel.listForYearFilter({
       academicYearId: String(year._id),
       departmentId: input.departmentId,
       yearLevel: input.yearLevel,
     });
-    const owners = await StudentProfileModel.findByIds(
+    const owners = await UserModel.findProfilesByIds(
       matched.map((row) => row.studentProfileId),
     );
-    filter._id = { $in: owners.map((owner) => String(owner.userId)) };
+    filter._id = refIn(owners.map((owner) => String(owner.userId)));
   }
   return filter;
 }
@@ -58,7 +57,7 @@ async function loadItems(
   rows: Awaited<ReturnType<typeof UserModel.listForDirectory>>,
   year: AcademicYearRow | null,
 ) {
-  const profiles = await StudentProfileModel.listByUserIds(
+  const profiles = await UserModel.listProfilesByUserIds(
     rows.map((row) => String(row._id)),
   );
   const profileIdByUser = new Map(
@@ -68,7 +67,7 @@ async function loadItems(
     profiles.map((profile) => [String(profile._id), String(profile.userId)]),
   );
   const studentNumbers = new Map(
-    (await StudentProfileModel.findByIds([...userByProfile.keys()])).map(
+    (await UserModel.findProfilesByIds([...userByProfile.keys()])).map(
       (profile) => [String(profile.userId), profile.studentNumber ?? null],
     ),
   );
@@ -120,6 +119,7 @@ async function loadItems(
       role: row.role ?? "STUDENT",
       isOutsideOrg: Boolean(row.isOutsideOrg),
       blocked: row.blockedAt != null,
+      emailVerified: row.emailVerified === true,
       studentNumber: studentNumbers.get(id) ?? null,
       studentProfileId: profileIdByUser.get(id) ?? null,
       department: placement.get(id)?.department ?? null,
@@ -149,9 +149,13 @@ export async function userDirectoryPage(
     items.sort(
       (a, b) =>
         sign *
-        (a.studentNumber ?? "").localeCompare(b.studentNumber ?? "", undefined, {
-          numeric: true,
-        }),
+        (a.studentNumber ?? "").localeCompare(
+          b.studentNumber ?? "",
+          undefined,
+          {
+            numeric: true,
+          },
+        ),
     );
   } else if (input.sort === "name") {
     items.sort((a, b) => sign * a.name.localeCompare(b.name));

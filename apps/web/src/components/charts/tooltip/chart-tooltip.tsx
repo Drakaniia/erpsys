@@ -149,7 +149,7 @@ interface ChartTooltipInnerProps extends ChartTooltipProps {
  */
 function resolveActivePoint(
   tooltipData: TooltipData | null,
-  lines: LineConfig[]
+  lines: LineConfig[],
 ): { line: LineConfig; index: number; x: number; y: number } | null {
   if (!tooltipData) {
     return null;
@@ -174,7 +174,7 @@ function resolveActivePoint(
 /** Smallest (topmost) hovered y across series — `indicatorEnd="point"`. */
 function resolveTopmostPointY(
   tooltipData: TooltipData | null,
-  lines: LineConfig[]
+  lines: LineConfig[],
 ): number | undefined {
   if (!tooltipData) {
     return undefined;
@@ -285,7 +285,7 @@ const ChartTooltipInner = memo(function ChartTooltipInner({
   } = useChart();
   const tooltipBands = useMemo(
     () => (bands ?? []).filter((band) => band.showInTooltip),
-    [bands]
+    [bands],
   );
   const { tooltipSpring } = useChartConfig();
   const dateLabels = dateLabelsProp ?? contextDateLabels;
@@ -370,7 +370,7 @@ const ChartTooltipInner = memo(function ChartTooltipInner({
     // series — skip the rest.
     const rowLines = nearestPointHover
       ? lines.filter(
-          (line) => typeof tooltipData.point[line.dataKey] === "number"
+          (line) => typeof tooltipData.point[line.dataKey] === "number",
         )
       : lines;
     const rows: TooltipRow[] = rowLines.map((line) => ({
@@ -382,7 +382,7 @@ const ChartTooltipInner = memo(function ChartTooltipInner({
       const value = formatBandRange(
         tooltipData.point,
         band.upperKey,
-        band.lowerKey
+        band.lowerKey,
       );
       if (value != null) {
         rows.push({ color: band.color, label: band.label, value });

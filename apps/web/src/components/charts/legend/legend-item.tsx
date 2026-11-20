@@ -22,7 +22,7 @@ export function LegendItem({ className = "", children }: LegendItemProps) {
       className={cn(
         "cursor-pointer rounded-lg px-2 py-1.5 transition-all duration-150 ease-out",
         isHovered && "bg-legend-muted",
-        className
+        className,
       )}
       data-hovered={isHovered ? "" : undefined}
       onMouseEnter={() => setHoveredIndex(index)}

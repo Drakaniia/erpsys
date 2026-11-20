@@ -69,22 +69,22 @@ describe("SubmissionRow thumbs", () => {
     expect(screen.queryByRole("img")).toBeNull();
   });
 
-  // Profiling is a Google Form step: its table drops the Evidence column, so
-  // the row must not render a cell that would shift Status under the wrong header.
-  it("drops the evidence cell when the column is hidden", () => {
+  it("identifies a Google Forms response in the evidence cell without an upload", () => {
     const { container } = render(
       <table>
         <tbody>
           <SubmissionRow
-            item={itemWithEvidence([])}
+            item={{ ...itemWithEvidence([]), hasGoogleFormsResponse: true }}
             view="table"
             unread={false}
-            showEvidence={false}
             onopen={() => {}}
           />
         </tbody>
       </table>,
     );
-    expect(container.querySelectorAll("td")).toHaveLength(4);
+    expect(container.querySelectorAll("td")).toHaveLength(5);
+    expect(
+      screen.getByRole("cell", { name: "Google Forms response on file" }),
+    ).toBeTruthy();
   });
 });

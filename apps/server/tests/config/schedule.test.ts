@@ -130,21 +130,25 @@ describe("upcomingIntervals and summarize", () => {
       date: "2026-11-16",
       adviserId: "a",
     };
-    const rows = [own(weekly(1, 540, 720), "a"), own(weekly(1, 540, 720), "b"), cancel];
+    const rows = [
+      own(weekly(1, 540, 720), "a"),
+      own(weekly(1, 540, 720), "b"),
+      cancel,
+    ];
     const hours = upcomingIntervals(rows, now);
     expect(hours[0]).toEqual({
       startMs: Date.parse("2026-11-16T01:00:00Z"),
       endMs: Date.parse("2026-11-16T04:00:00Z"),
     });
-    const alone = upcomingIntervals([own(weekly(1, 540, 720), "a"), cancel], now);
+    const alone = upcomingIntervals(
+      [own(weekly(1, 540, 720), "a"), cancel],
+      now,
+    );
     expect(alone[0]!.startMs).toBe(Date.parse("2026-11-23T01:00:00Z"));
   });
 
   it("merges overlapping hours from two instructors into one", () => {
-    const rows = [
-      own(weekly(1, 540, 660), "a"),
-      own(weekly(1, 600, 720), "b"),
-    ];
+    const rows = [own(weekly(1, 540, 660), "a"), own(weekly(1, 600, 720), "b")];
     const [first] = upcomingIntervals(rows, now);
     expect(first).toEqual({
       startMs: Date.parse("2026-11-16T01:00:00Z"),

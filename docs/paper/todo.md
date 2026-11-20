@@ -203,6 +203,5 @@ Modules to cover, in this order:
 - [ ] Screenshots re-checked for personal data
 - [ ] `REFERENCE_OUTLINE.md` cross-check: no section from the reference is missing
 
-
 - [ ] auto generate image for the api documentation in the final paper
 - [ ] create a /script folder inside /docs/paper and add the script used in generating the /diagrams images

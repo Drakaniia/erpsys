@@ -1,29 +1,21 @@
-import { AsyncLocalStorage } from "node:async_hooks";
 import { type Db, MongoClient, ObjectId } from "mongodb";
 import { env } from "../platform/env.js";
 import { guardDb } from "./timestamp-ordering.js";
 
 export const COLLECTIONS = {
-
   user: "user",
   session: "session",
   account: "account",
   verification: "verification",
   academicYear: "academic_year",
-  studentProfile: "student_profile",
   studentEnrollment: "student_enrollment",
-  step: "step",
   stepVerification: "step_verification",
   upload: "upload",
-  requirementItem: "requirement_item",
-
-  socialMediaLink: "social_media_link",
+  content: "content",
   notification: "notification",
   department: "department",
-  adviserDepartment: "adviser_department",
   enrollmentQueue: "enrollment_queue",
-  adviserAvailability: "adviser_availability",
-  availabilityWindow: "availability_window",
+  adviserSchedule: "adviser_schedule",
   calendarConnection: "calendar_connection",
   departmentTransferRequest: "department_transfer_request",
   adminActionLog: "audit_log",
@@ -51,50 +43,32 @@ export function refIn(ids: string[]): { $in: (string | ObjectId)[] } {
 
 let client: MongoClient | null = null;
 let db: Db | null = null;
-const requestDb = new AsyncLocalStorage<{ client: MongoClient; db: Db }>();
-const scopedDb = new Proxy({} as Db, {
-  get(_target, key) {
-    if (key === "collection") return (name: string) => new Proxy({}, {
-      get(_collection, property) {
-        const current = requestDb.getStore()?.db;
-        if (!current) throw new Error("Database operation outside Worker request");
-        const collection = current.collection(name);
-        const value = Reflect.get(collection, property, collection);
-        return typeof value === "function" ? value.bind(collection) : value;
-      },
-    });
-    const current = requestDb.getStore()?.db;
-    if (!current) throw new Error("Database operation outside Worker request");
-    const value = Reflect.get(current, key, current);
-    return typeof value === "function" ? value.bind(current) : value;
-  },
-});
-
-export function withRequestDb<T>(run: () => T): T {
-  const client = new MongoClient(env.DATABASE_URL, { appName: "erpsys-worker", maxPoolSize: 2, minPoolSize: 0, serverSelectionTimeoutMS: 10_000 });
-  return requestDb.run({ client, db: guardDb(client.db()) }, run);
-}
 
 export function getDbSync(): Db {
-  if (process.env.CLOUDFLARE_WORKER === "1") return scopedDb;
   if (db) return db;
-  client = new MongoClient(env.DATABASE_URL, { appName: "erpsys", maxPoolSize: 25, minPoolSize: 0, maxIdleTimeMS: 60_000, serverSelectionTimeoutMS: 10_000 });
+  client = new MongoClient(env.DATABASE_URL, {
+    appName: "erpsys",
+    maxPoolSize: 25,
+    minPoolSize: 0,
+    maxIdleTimeMS: 60_000,
+    serverSelectionTimeoutMS: 10_000,
+  });
   db = guardDb(client.db());
   return db;
 }
 
 export async function getDb(): Promise<Db> {
   const handle = getDbSync();
-  await (requestDb.getStore()?.client ?? client)!.connect();
+  await client!.connect();
   return handle;
 }
 
+export function rawDb(): Db {
+  getDbSync();
+  return client!.db();
+}
+
 export async function closeDb(): Promise<void> {
-  const scoped = requestDb.getStore();
-  if (scoped) {
-    await scoped.client.close();
-    return;
-  }
   const open = client;
   client = null;
   db = null;

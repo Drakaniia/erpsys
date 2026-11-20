@@ -54,8 +54,9 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.stepVerification]: [],
 
     [COLLECTIONS.adminActionLog]: [],
-    [COLLECTIONS.socialMediaLink]: [
+    [COLLECTIONS.content]: [
       {
+        kind: "socialLink",
         _id: "sml-1",
         name: "Facebook",
         url: "https://fb.test",
@@ -165,14 +166,17 @@ describe("academic years", () => {
     const years = context.store[COLLECTIONS.academicYear];
     expect(years.find((y) => y._id === "ay-1")?.isActive).toBe(false);
     expect(years.filter((y) => y.isActive)).toHaveLength(1);
-    const created = years.find((y) => y.label === "2026-2027" && y._id !== "ay-2");
+    const created = years.find(
+      (y) => y.label === "2026-2027" && y._id !== "ay-2",
+    );
     expect(created?.createdAt).toBeInstanceOf(Date);
     expect(created?.updatedAt).toEqual(created?.createdAt);
   });
 
   it("refuses to delete a year that holds records", async () => {
     context.store[COLLECTIONS.academicYear][0].profilingForm = {
-      formId: "form-1", updatedAt: new Date(),
+      formId: "form-1",
+      updatedAt: new Date(),
     };
     const response = await call("/academic-years/ay-1", { method: "DELETE" });
     expect(response.status).toBe(409);
@@ -254,7 +258,6 @@ describe("content", () => {
     const list = await (await call("/social-links")).json();
     expect(list.data.map((l: Row) => l.id)).toEqual([createdId, "sml-1"]);
   });
-
 
   it("bumps the knowledge doc version", async () => {
     await call("/chatbot-knowledge", {

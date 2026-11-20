@@ -19,6 +19,7 @@ import OutsideOrgBanner from "../components/student/OutsideOrgBanner";
 import ProfileTab from "../components/student/ProfileTab";
 import ProfilingSheet from "../components/student/ProfilingSheet";
 import ProgressHeader from "../components/student/ProgressHeader";
+import RequirementPreview from "../components/student/RequirementPreview";
 import QueueChip from "../components/student/QueueChip";
 import StepChecklist from "../components/student/StepChecklist";
 import StepSheet from "../components/student/StepSheet";
@@ -224,13 +225,14 @@ export function StudentPage() {
                   chipClasses={s.sheetChip.classes}
                   onclose={s.closeSheet}
                 >
+                  <RequirementPreview
+                    key={s.openStepRow.code}
+                    step={s.openStepRow.code}
+                  />
                   {s.openCode === "ASSESSMENT" ? (
                     <AssessmentSheet step={s.openStepRow} notify={s.toast} />
                   ) : s.openCode === "PROFILING" ? (
-                    <ProfilingSheet
-                      step={s.openStepRow}
-                      notify={s.toast}
-                    />
+                    <ProfilingSheet step={s.openStepRow} notify={s.toast} />
                   ) : s.openCode && s.data ? (
                     <EvidenceSheet
                       step={s.openStepRow}

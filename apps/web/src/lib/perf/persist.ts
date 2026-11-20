@@ -201,10 +201,7 @@ export function clearPersistedCache(): void {
 export function broadcastIntegrationsChanged(): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(
-      INTEGRATIONS_BROADCAST_KEY,
-      String(Date.now()),
-    );
+    window.localStorage.setItem(INTEGRATIONS_BROADCAST_KEY, String(Date.now()));
   } catch {
     /* ignore */
   }
@@ -233,10 +230,7 @@ export function connectCacheLifecycle(): () => void {
       queryClient.clear();
       return;
     }
-    if (
-      event.key === INTEGRATIONS_BROADCAST_KEY &&
-      event.newValue !== null
-    ) {
+    if (event.key === INTEGRATIONS_BROADCAST_KEY && event.newValue !== null) {
       // An integration was switched off or on elsewhere: every flag this tab
       // renders (the Google button, Turnstile, uploads, chat) is now suspect.
       void queryClient.invalidateQueries({ queryKey: ["integrations"] });

@@ -1,16 +1,20 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { dialogTrap } from "$lib/ui/dialog-trap";
 
 export default function PurgeAccountDialog({
   open,
   name,
   busy = false,
+  confirmDisabled = false,
+  children,
   onconfirm,
   onclose,
 }: {
   open: boolean;
   name: string;
   busy?: boolean;
+  confirmDisabled?: boolean;
+  children?: ReactNode;
   onconfirm: () => void;
   onclose: () => void;
 }) {
@@ -63,6 +67,7 @@ export default function PurgeAccountDialog({
           This will wipe all of their records — including verifications and
           stamps they issued on other students' profiles. This cannot be undone.
         </p>
+        {children}
         <label
           className="mt-4 block text-xs font-medium text-muted"
           htmlFor="purge-confirm-input"
@@ -71,6 +76,7 @@ export default function PurgeAccountDialog({
         </label>
         <input
           id="purge-confirm-input"
+          disabled={confirmDisabled}
           value={typed}
           onChange={(e) => setTyped(e.currentTarget.value)}
           autoComplete="off"
@@ -90,7 +96,7 @@ export default function PurgeAccountDialog({
           <button
             type="button"
             onClick={onconfirm}
-            disabled={busy || !matches}
+            disabled={busy || confirmDisabled || !matches}
             title={matches ? undefined : "Type the account name to enable"}
             className="rounded-lg bg-error px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-40"
           >

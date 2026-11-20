@@ -1,5 +1,9 @@
 import type { CSSProperties } from "react";
-import { percent, waitedFor, type OfficerOverview } from "$lib/officer/overview";
+import {
+  percent,
+  waitedFor,
+  type OfficerOverview,
+} from "$lib/officer/overview";
 import type { OfficerTab } from "$lib/officer/tabs";
 import Skeleton from "../../ui/Skeleton";
 import { Key, Panel } from "./Panel";
@@ -52,7 +56,10 @@ export function StepDesk({
         <ol className="-mx-2 flex flex-col">
           {model.steps.map((step, i) => {
             const total = step.verified + step.unverified;
-            const other = Math.max(0, step.unverified - step.awaitingReview - step.returned);
+            const other = Math.max(
+              0,
+              step.unverified - step.awaitingReview - step.returned,
+            );
             const isLongest =
               model.longestWait?.code === step.code && step.awaitingReview > 0;
             const segments = [
@@ -135,10 +142,14 @@ export function StepDesk({
                         >
                           {step.awaitingReview.toLocaleString()}
                         </span>
-                        <span className="mt-1 text-[11px] text-muted">waiting</span>
+                        <span className="mt-1 text-[11px] text-muted">
+                          waiting
+                        </span>
                       </>
                     ) : (
-                      <span className="text-xs font-medium text-muted">Clear</span>
+                      <span className="text-xs font-medium text-muted">
+                        Clear
+                      </span>
                     )}
                   </span>
                 </button>

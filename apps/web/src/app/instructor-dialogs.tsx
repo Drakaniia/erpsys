@@ -1,7 +1,7 @@
 import ConfirmDialog from "../components/ConfirmDialog";
 
 import ConfirmEnrollmentDialog from "../components/instructor/ConfirmEnrollmentDialog";
-import InstructorGuideDialog from "../components/instructor/InstructorGuideDialog";
+
 import RevertConfirmDialog from "../components/instructor/RevertConfirmDialog";
 import StillThereDialog from "../components/instructor/StillThereDialog";
 import TransferRequestDialog from "../components/instructor/TransferRequestDialog";
@@ -21,22 +21,23 @@ type Transfer = {
 export default function InstructorDialogs({
   s,
   incomingTransferRequest,
-  onGuideClose,
 }: {
   s: S;
   incomingTransferRequest: Transfer;
-  onGuideClose: (persist: boolean) => void;
 }) {
   return (
     <>
-
       <ConfirmEnrollmentDialog
         open={s.queue.showValidateDialog}
         entry={s.queue.serveEntry}
         departmentName={s.queue.activeDept?.name ?? ""}
         semesterLabel={s.queue.semesterLabel}
         yearLabel={s.queue.yearBare}
-        busy={s.enrolled.enrollMutation.isPending || s.queue.servingBusy || s.queue.availabilityMutation.isPending}
+        busy={
+          s.enrolled.enrollMutation.isPending ||
+          s.queue.servingBusy ||
+          s.queue.availabilityMutation.isPending
+        }
         onconfirm={s.confirmServe}
         onreturntoqueue={() => s.queue.closeValidateDialog()}
         onmovetoend={async () => {
@@ -73,6 +74,9 @@ export default function InstructorDialogs({
       />
       <RevertConfirmDialog
         open={s.enrolled.revertEntry !== null}
+        enrollmentIds={
+          s.enrolled.revertEntry ? [s.enrolled.revertEntry.enrollmentId] : []
+        }
         student={
           s.enrolled.revertEntry
             ? {
@@ -90,6 +94,7 @@ export default function InstructorDialogs({
       />
       <RevertConfirmDialog
         open={s.enrolled.bulkConfirmOpen}
+        enrollmentIds={[...s.enrolled.selectedIds]}
         count={s.enrolled.selectedCount}
         departmentName={s.queue.activeDept?.name ?? ""}
         busy={s.enrolled.bulkRevertMutation.isPending}
@@ -98,6 +103,7 @@ export default function InstructorDialogs({
       />
       <TransferRequestDialog
         open={incomingTransferRequest !== null}
+        requestId={incomingTransferRequest?.id}
         requesterName={incomingTransferRequest?.requesterName ?? ""}
         departmentCode={incomingTransferRequest?.departmentCode ?? ""}
         departmentName={incomingTransferRequest?.departmentName ?? ""}
@@ -117,14 +123,6 @@ export default function InstructorDialogs({
         open={s.queue.stillThereOpen}
         onhere={s.queue.answerStillThere}
         onclosequeue={s.queue.closeAllQueues}
-      />
-      <InstructorGuideDialog
-        open={s.queue.guideOpen}
-        step={s.queue.guideStep}
-        dontShow={s.queue.guideDontShow}
-        onStepChange={(n) => s.queue.setGuideStep(n)}
-        onDontShowChange={(v) => s.queue.setGuideDontShow(v)}
-        onclose={onGuideClose}
       />
     </>
   );

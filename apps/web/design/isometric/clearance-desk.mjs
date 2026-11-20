@@ -28,7 +28,16 @@ const checklist = [
   { t: "bar", x: 0.3, y: 0.58, w: 0.8, h: 0.08 },
   ...ROWS.flatMap((y, i) => {
     const marks = [
-      { t: "rect", x: 0.3, y: y - 0.15, w: 0.3, h: 0.3, r: 0.06, fill: "face", stroke: true },
+      {
+        t: "rect",
+        x: 0.3,
+        y: y - 0.15,
+        w: 0.3,
+        h: 0.3,
+        r: 0.06,
+        fill: "face",
+        stroke: true,
+      },
       { t: "bar", x: 0.78, y: y - 0.05, w: ROW_WIDTHS[i], h: 0.1 },
     ];
     if (i < 3) {
@@ -65,7 +74,12 @@ const TICKET = { x: 1.4, w: 0.8, h: 0.62 };
 const ticketFront = [
   {
     t: "segs",
-    segs: [0, 1, 2, 3, 4, 5].map((i) => [0.08 + i * 0.12, 0.06, 0.14 + i * 0.12, 0.06]),
+    segs: [0, 1, 2, 3, 4, 5].map((i) => [
+      0.08 + i * 0.12,
+      0.06,
+      0.14 + i * 0.12,
+      0.06,
+    ]),
     stroke: "soft",
   },
   { t: "bar", x: 0.14, y: 0.2, w: 0.36, h: 0.14, fill: "ink" },
@@ -102,13 +116,21 @@ export const model = defineDrawing({
   description:
     "A requirements checklist on a clipboard with three rows ticked, a gold rubber stamp over the last row, a queue-ticket dispenser and a stack of ID cards.",
   parts: [
-    box([-3.1, 0, -2.3], [6.0, DESK_TOP, 4.8], { id: "desk", r: 0.16, role: "face" }),
+    box([-3.1, 0, -2.3], [6.0, DESK_TOP, 4.8], {
+      id: "desk",
+      r: 0.16,
+      role: "face",
+    }),
     box([BOARD.x, DESK_TOP, BOARD.z], [BOARD.w, BOARD.h, BOARD.d], {
       id: "board",
       r: 0.14,
       role: "detail",
     }),
-    box([-1.7, BOARD_TOP, -1.65], [1.0, 0.18, 0.45], { id: "clip", r: 0.06, role: "ink" }),
+    box([-1.7, BOARD_TOP, -1.65], [1.0, 0.18, 0.45], {
+      id: "clip",
+      r: 0.06,
+      role: "ink",
+    }),
     box([PAPER.x, BOARD_TOP, PAPER.z], [PAPER.w, PAPER.h, PAPER.d], {
       id: "paper",
       r: 0.04,
@@ -131,16 +153,26 @@ export const model = defineDrawing({
       role: "accent",
       group: "stamp",
     }),
-    box([DISPENSER.x, DESK_TOP, DISPENSER.z], [DISPENSER.w, DISPENSER.h, DISPENSER.d], {
-      id: "dispenser",
-      r: 0.14,
-      role: "body",
-      decals: { front: dispenserFront },
-    }),
+    box(
+      [DISPENSER.x, DESK_TOP, DISPENSER.z],
+      [DISPENSER.w, DISPENSER.h, DISPENSER.d],
+      {
+        id: "dispenser",
+        r: 0.14,
+        role: "body",
+        decals: { front: dispenserFront },
+      },
+    ),
     box(
       [TICKET.x, SLOT_Y - TICKET.h, DISPENSER.z + DISPENSER.d],
       [TICKET.w, TICKET.h, 0.03],
-      { id: "ticket", r: 0.03, axis: "z", role: "face", decals: { front: ticketFront } },
+      {
+        id: "ticket",
+        r: 0.03,
+        axis: "z",
+        role: "face",
+        decals: { front: ticketFront },
+      },
     ),
     ...cards,
   ],
@@ -164,7 +196,8 @@ const isMain = import.meta.url === pathToFileURL(process.argv[1] ?? "").href;
 if (isMain) {
   for (const phase of [undefined, 0.25, 0.5, 0.75, 0.99]) {
     const { audit } = render(model, { ...options, phase });
-    if (audit.cycles) throw new Error(`Depth cycles at phase ${phase}: ${audit.cycles}`);
+    if (audit.cycles)
+      throw new Error(`Depth cycles at phase ${phase}: ${audit.cycles}`);
   }
   const preview = resolve(here, "out");
   mkdirSync(preview, { recursive: true });

@@ -10,14 +10,14 @@ import {
   type YearLevel,
 } from "../constants.js";
 import { ApiError } from "../errors.js";
+import { newPasswordSchema } from "../password.js";
 import { getDbSync } from "../../lib/db/db.js";
 import { purgeUserById } from "../../lib/db/user-purge.js";
 import { AcademicYearModel } from "../../models/AcademicYearModel.js";
 import { DepartmentModel } from "../../models/DepartmentModel.js";
 import { StudentEnrollmentModel } from "../../models/StudentEnrollmentModel.js";
-import { StudentProfileModel } from "../../models/StudentProfileModel.js";
-import { UserModel } from "../../models/UserModel.js";
 
+import { UserModel } from "../../models/UserModel.js";
 
 const bodySchema = z
   .object({
@@ -28,7 +28,7 @@ const bodySchema = z
       .min(1, "Student number is required")
       .regex(STUDENT_NUMBER_PATTERN, "Only numbers are allowed"),
     email: z.email(),
-    password: z.string().min(8).max(128),
+    password: newPasswordSchema,
     academicYearId: z.string().min(1, "Choose an academic year"),
     departmentId: z.string().min(1, "Choose your course"),
     yearLevel: z.enum(YEAR_LEVELS, "Choose your year level"),
@@ -36,7 +36,6 @@ const bodySchema = z
     turnstileToken: z.string().min(1).max(2048).optional(),
   })
   .passthrough();
-
 
 function isDuplicateKeyError(error: unknown): boolean {
   let current: unknown = error;
@@ -77,7 +76,7 @@ async function place(input: {
 
   const profileId = crypto.randomUUID();
   try {
-    await StudentProfileModel.insert({
+    await UserModel.insertProfile({
       _id: profileId,
       userId: input.userId,
       studentNumber: input.studentNumber,
@@ -137,7 +136,7 @@ export function createStudentSignUpPlugin() {
             await purgeUserById(db, blocked._id);
           }
 
-          const existingProfile = await StudentProfileModel.findByStudentNumber(
+          const existingProfile = await UserModel.findProfileByStudentNumber(
             input.studentNumber,
           );
           if (existingProfile && existingProfile.userId !== "") {
@@ -173,7 +172,10 @@ export function createStudentSignUpPlugin() {
           for (const cookie of result.headers.getSetCookie()) {
             ctx.responseHeaders?.append("set-cookie", cookie);
           }
-          return ctx.json({ ...result.response, user: { ...user, isOutsideOrg: false } });
+          return ctx.json({
+            ...result.response,
+            user: { ...user, isOutsideOrg: false },
+          });
         },
       ),
     },

@@ -18,17 +18,14 @@ import {
   parsePagination,
   parseQuery,
 } from "../../middleware/http.js";
-import { AdviserAvailabilityModel } from "../../models/AdviserAvailabilityModel.js";
-import { AdviserDepartmentModel } from "../../models/AdviserDepartmentModel.js";
+import { AdviserScheduleModel } from "../../models/AdviserScheduleModel.js";
+
 import { DepartmentModel } from "../../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../../models/EnrollmentQueueModel.js";
 import { UserModel } from "../../models/UserModel.js";
 import { activeYearOrThrow } from "../../services/academic-years.js";
 import { replaceAssignments } from "../../services/advisers.js";
-import {
-  assertDepartmentAssigned,
-  release,
-} from "../../services/queues.js";
+import { assertDepartmentAssigned, release } from "../../services/queues.js";
 
 /**
  * `/api/v1` — the adviser roster, plus an instructor's own availability switch.
@@ -52,7 +49,7 @@ advisersRouter.get(
   admin,
   catchAsync(async (req, res) => {
     const users = await UserModel.listByRole("ENROLLMENT_ADVISER");
-    const links = await AdviserDepartmentModel.listAll();
+    const links = await DepartmentModel.listAllAdviserAssignments();
     const departments = await DepartmentModel.findByIds(
       links.map((link) => link.departmentId),
     );
@@ -139,9 +136,11 @@ advisersRouter.put(
     ]);
     const academicYearId = String(year._id);
     if (isOpen && !department?.isActive) {
-      throw new ApiError("CONFLICT", { message: "This department is inactive — it cannot accept students." });
+      throw new ApiError("CONFLICT", {
+        message: "This department is inactive — it cannot accept students.",
+      });
     }
-    await AdviserAvailabilityModel.setOpen({
+    await AdviserScheduleModel.setOpen({
       adviserId,
       departmentId,
       academicYearId,
@@ -150,11 +149,20 @@ advisersRouter.put(
     });
 
     if (isOpen) {
-      return okOne(res, { departmentId, myOpen: true, isOpen: true, openBy: null });
+      return okOne(res, {
+        departmentId,
+        myOpen: true,
+        isOpen: true,
+        openBy: null,
+      });
     }
-    await EnrollmentQueueModel.releaseServingBy(departmentId, adviserId, academicYearId);
+    await EnrollmentQueueModel.releaseServingBy(
+      departmentId,
+      adviserId,
+      academicYearId,
+    );
 
-    const open = await AdviserAvailabilityModel.listOpenByDepartment(
+    const open = await AdviserScheduleModel.listOpenByDepartment(
       departmentId,
       academicYearId,
     );
@@ -185,7 +193,7 @@ advisersRouter.post(
   instructor,
   catchAsync(async (req, res) => {
     okOne(res, {
-      touched: await AdviserAvailabilityModel.touchOpen(
+      touched: await AdviserScheduleModel.touchOpen(
         sessionUser(req).id,
         new Date(),
       ),

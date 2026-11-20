@@ -59,32 +59,32 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.department]: [
       {
         _id: "dept-1",
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: ["FIRST"] }],
         name: "College of Technologies",
         isActive: true,
         yearLevels: ["FIRST"],
       },
       {
         _id: "dept-2",
+        advisers: [{ _id: "link-2", adviserId: "adv2", yearLevels: [] }],
         name: "College of Arts",
         isActive: true,
         yearLevels: [],
       },
     ],
-    [COLLECTIONS.adviserDepartment]: [
-      {
-        _id: "link-1",
-        adviserId: "adv1",
-        departmentId: "dept-1",
-        yearLevels: ["FIRST"],
-      },
-      {
-        _id: "link-2",
-        adviserId: "adv2",
-        departmentId: "dept-2",
-        yearLevels: [],
-      },
-    ],
+
     [COLLECTIONS.user]: [
+      {
+        _id: "u-p1",
+        name: "Ana",
+        email: "12345@student.buksu.edu.ph",
+        role: "STUDENT",
+        studentProfile: {
+          _id: "p1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
+      },
       {
         _id: "adm1",
         name: "Admin",
@@ -104,14 +104,7 @@ function seed(): Record<string, Row[]> {
         role: "ENROLLMENT_ADVISER",
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "p1",
-        userId: "u-p1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-    ],
+
     [COLLECTIONS.enrollmentQueue]: [
       {
         _id: "q-1",
@@ -166,8 +159,19 @@ const call = async (path: string, method = "GET", body?: unknown) => {
 };
 
 describe("department listing", () => {
+  it.each([
+    "/me/queue",
+    "/me/stamp",
+    "/queues",
+    "/departments/dept-1/enrollments",
+  ])("blocks admin access to %s", async (path) => {
+    const { status } = await call(path);
+    expect(status).toBe(403);
+  });
+
   it("gives an admin the rows with their owners and mapping counts", async () => {
-    const { body } = await call("/departments");
+    const { status, body } = await call("/departments");
+    expect(status).toBe(200);
     expect(body.total).toBe(2);
     const tech = body.data.find((row: { id: string }) => row.id === "dept-1");
     expect(tech).toMatchObject({
@@ -272,24 +276,46 @@ describe("department writes", () => {
   it("deletes an empty department and its assignments", async () => {
     const { body } = await call("/departments/dept-2", "DELETE");
     expect(body.data).toEqual({ id: "dept-2", deleted: true });
-    expect(context.store[COLLECTIONS.adviserDepartment]).toHaveLength(1);
+    expect(
+      context.store[COLLECTIONS.department].flatMap(
+        (department) => department.advisers ?? [],
+      ),
+    ).toHaveLength(1);
   });
 
   it("returns a serving student when the instructor changes assigned levels", async () => {
     holder.session = ADVISER;
     context.store[COLLECTIONS.department][0].yearLevels = ["FIRST", "SECOND"];
-    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], { status: "IN_PROGRESS", servedById: "adv1" });
-    const response = await call("/me/departments", "PUT", { departmentIds: ["dept-1"], yearLevels: ["SECOND"] });
+    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], {
+      status: "IN_PROGRESS",
+      servedById: "adv1",
+    });
+    const response = await call("/me/departments", "PUT", {
+      departmentIds: ["dept-1"],
+      yearLevels: ["SECOND"],
+    });
     expect(response.status).toBe(200);
-    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "WAITING", servedById: null });
-    expect(context.store[COLLECTIONS.adviserDepartment].find((row) => row.adviserId === "adv1")?._id).toBe("link-1");
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
+      status: "WAITING",
+      servedById: null,
+    });
+    expect(
+      (context.store[COLLECTIONS.department][0].advisers as Row[]).find(
+        (row) => row.adviserId === "adv1",
+      )?._id,
+    ).toBe("link-1");
   });
 
   it("does not rename a department before rejecting an unauthorized status change", async () => {
     holder.session = ADVISER;
-    const response = await call("/departments/dept-1", "PATCH", { name: "Changed Name", isActive: false });
+    const response = await call("/departments/dept-1", "PATCH", {
+      name: "Changed Name",
+      isActive: false,
+    });
     expect(response.status).toBe(403);
-    expect(context.store[COLLECTIONS.department][0].name).toBe("College of Technologies");
+    expect(context.store[COLLECTIONS.department][0].name).toBe(
+      "College of Technologies",
+    );
   });
 
   it("claims a department for the adviser and refuses a clash", async () => {

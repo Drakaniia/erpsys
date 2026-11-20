@@ -39,9 +39,11 @@ const COPY: Record<Step, { title: string; body: string }> = {
 };
 
 export default function StepUpDialog({
+  authenticatorReset = false,
   onDone,
   onCancel,
 }: {
+  authenticatorReset?: boolean;
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -129,13 +131,15 @@ export default function StepUpDialog({
       }
       if (step === "password") {
         const failure = await submitPassword(value);
-        if (failure) return setError(gateMessage(failure, "Incorrect password."));
+        if (failure)
+          return setError(gateMessage(failure, "Incorrect password."));
         setPassword(value);
         return go("code");
       }
       if (step === "code") {
         const failure = await verifyEmailCode(value);
         if (failure) return setError(gateMessage(failure, "Incorrect code."));
+        if (authenticatorReset) return onDone();
         const status = await fetchGateStatus();
         return go(status?.enrolled ? "totp" : "enroll");
       }
@@ -174,7 +178,11 @@ export default function StepUpDialog({
         >
           {copy.title}
         </h2>
-        <p className="mt-1 text-sm leading-6 text-muted">{copy.body}</p>
+        <p className="mt-1 text-sm leading-6 text-muted">
+          {authenticatorReset && step === "pin"
+            ? "Reset your lost authenticator using the administrator PIN, your password if set, and an emailed code. Your old device is not required."
+            : copy.body}
+        </p>
 
         {step === "enroll" && setup ? (
           <div className="mt-4 space-y-3">
@@ -204,7 +212,9 @@ export default function StepUpDialog({
                 type="button"
                 className="mt-2 text-xs font-medium text-auth-blue"
                 onClick={() =>
-                  void navigator.clipboard?.writeText(setup.backupCodes.join("\n"))
+                  void navigator.clipboard?.writeText(
+                    setup.backupCodes.join("\n"),
+                  )
                 }
               >
                 Copy backup codes
@@ -233,9 +243,13 @@ export default function StepUpDialog({
                 setError("");
               }}
               className={`auth-input w-full ${
-                isPassword ? "" : "text-center font-mono text-xl tracking-[0.4em]"
+                isPassword
+                  ? ""
+                  : "text-center font-mono text-xl tracking-[0.4em]"
               }`}
-              placeholder={isPassword ? "Password" : backup ? "Backup code" : "000000"}
+              placeholder={
+                isPassword ? "Password" : backup ? "Backup code" : "000000"
+              }
             />
             {error ? (
               <p className="auth-alert" role="alert" aria-live="polite">

@@ -31,7 +31,7 @@ export function buildApp(): Express {
         );
         res.setHeader(
           "Access-Control-Allow-Headers",
-          "content-type,authorization,cf-turnstile-response",
+          "content-type,authorization,cf-turnstile-response,x-edit-leases",
         );
       }
       if (req.method === "OPTIONS") {

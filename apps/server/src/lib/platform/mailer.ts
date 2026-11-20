@@ -1,7 +1,9 @@
 import { COLLECTIONS, getDbSync, idIn } from "../db/db.js";
 import { env } from "./env.js";
-import { background } from "./background.js";
-import { integrationConfigured, integrationEnabled } from "./integration-settings.js";
+import {
+  integrationConfigured,
+  integrationEnabled,
+} from "./integration-settings.js";
 
 export type MailMessage = {
   to: string;
@@ -43,7 +45,8 @@ export async function sendMail(message: MailMessage): Promise<boolean> {
         subject: message.subject,
         textContent: message.text,
         htmlContent:
-          message.html ?? `<p>${escapeHtml(message.text).replace(/\n/g, "<br>")}</p>`,
+          message.html ??
+          `<p>${escapeHtml(message.text).replace(/\n/g, "<br>")}</p>`,
       }),
     });
     if (!response.ok) {
@@ -63,7 +66,7 @@ export async function sendMail(message: MailMessage): Promise<boolean> {
 export const siteOrigin = () => env.PUBLIC_SITE_URL || env.BETTER_AUTH_URL;
 
 export function mailUser(userId: string, subject: string, text: string): void {
-  background(getDbSync()
+  void getDbSync()
     .collection<{ email?: string }>(COLLECTIONS.user)
     .findOne(idIn([userId]) as never)
     .then((user) =>
@@ -71,5 +74,7 @@ export function mailUser(userId: string, subject: string, text: string): void {
         ? sendMail({ to: user.email.trim(), subject, text })
         : false,
     )
-    .catch((error) => console.error(`[mailer] could not mail "${subject}"`, error)));
+    .catch((error) =>
+      console.error(`[mailer] could not mail "${subject}"`, error),
+    );
 }

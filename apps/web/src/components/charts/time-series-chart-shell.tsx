@@ -102,7 +102,7 @@ import {
 function resolveStackedComposedYDomain(
   data: Record<string, unknown>[],
   barKeys: string[],
-  otherKeys: string[]
+  otherKeys: string[],
 ): YDomain {
   const bars = collectBarValueExtents(data, barKeys, true);
   const others =
@@ -304,7 +304,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
     (
       sourceData: Record<string, unknown>[],
       dataKeys: string[],
-      axisId: string
+      axisId: string,
     ): YDomain => {
       if (floatingYAxisIds?.includes(axisId)) {
         return resolveFloatingYDomain(sourceData, dataKeys);
@@ -317,13 +317,13 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
       }
       if (composedStacked && composedBarDataKeys?.length) {
         const barKeys = dataKeys.filter((key) =>
-          composedBarDataKeys.includes(key)
+          composedBarDataKeys.includes(key),
         );
         if (barKeys.length > 0) {
           return resolveStackedComposedYDomain(
             sourceData,
             barKeys,
-            dataKeys.filter((key) => !barKeys.includes(key))
+            dataKeys.filter((key) => !barKeys.includes(key)),
           );
         }
       }
@@ -335,20 +335,20 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
       floatingYAxisIds,
       lines,
       yScaleDomainMax,
-    ]
+    ],
   );
 
   const resolveYDomain = useCallback(
     (
       sourceData: Record<string, unknown>[],
       dataKeys: string[],
-      axisId: string
+      axisId: string,
     ): YDomain =>
       applyYDomainOverride(
         resolveAutoYDomain(sourceData, dataKeys, axisId),
-        yDomainOverrides?.[axisId]
+        yDomainOverrides?.[axisId],
       ),
-    [resolveAutoYDomain, yDomainOverrides]
+    [resolveAutoYDomain, yDomainOverrides],
   );
 
   const skeletonData = useMemo(() => {
@@ -387,12 +387,12 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
       const value = d[xDataKey];
       return value instanceof Date ? value : new Date(value as string | number);
     },
-    [xDataKey]
+    [xDataKey],
   );
 
   const bisectDate = useMemo(
     () => bisector<Record<string, unknown>, Date>((d) => xAccessor(d)).left,
-    [xAccessor]
+    [xAccessor],
   );
 
   const visiblePlotData = useMemo(() => {
@@ -404,7 +404,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
 
   const projectionConfigs = useMemo(
     () => extractProjectionLineConfigs(children),
-    [children]
+    [children],
   );
 
   // `<Band>` edges extend the y-domain and survive decimation, but are not
@@ -414,11 +414,11 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
   // `children` so hover re-renders skip it.
   const bandConfigsSignature = useMemo(
     () => JSON.stringify(extractBandConfigs(children)),
-    [children]
+    [children],
   );
   const bandConfigs = useMemo(
     () => JSON.parse(bandConfigsSignature) as BandConfig[],
-    [bandConfigsSignature]
+    [bandConfigsSignature],
   );
   const bandKeysByAxisId = useMemo(() => {
     const byAxis = bandKeysByAxis(bandConfigs);
@@ -469,7 +469,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
     return decimateTimeSeries(
       seriesSourceData,
       maxRenderPointsForWidth(innerWidth),
-      valueKeys
+      valueKeys,
     );
   }, [seriesSourceData, innerWidth, lines, bandKeysByAxisId]);
 
@@ -491,7 +491,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
         resolveDomain: (dataKeys, axisId) =>
           resolveYDomain(skeletonData, dataKeys, axisId),
       }),
-    [lines, resolveYDomain, skeletonData]
+    [lines, resolveYDomain, skeletonData],
   );
 
   const yDomainTargetByAxis = useMemo(() => {
@@ -509,7 +509,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
       merged[axisId] = mergeProjectionYDomain(
         base[axisId] ?? [0, 100],
         projectionConfigs,
-        axisId
+        axisId,
       );
     }
     for (const config of projectionConfigs) {
@@ -517,7 +517,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
         merged[config.yAxisId] = mergeProjectionYDomain(
           [0, 100],
           projectionConfigs,
-          config.yAxisId
+          config.yAxisId,
         );
       }
     }
@@ -552,12 +552,12 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
         innerHeight,
         lines,
       }),
-    [yDomainsForScales, innerHeight, lines]
+    [yDomainsForScales, innerHeight, lines],
   );
 
   const fallbackYScale = useMemo(
     () => scaleLinear().domain([0, 100]).nice().range([innerHeight, 0]),
-    [innerHeight]
+    [innerHeight],
   );
   const yScale = getPrimaryYScale(yScales, fallbackYScale);
 
@@ -565,10 +565,10 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
     () =>
       lazyLabels(visiblePlotData.length, (index) =>
         shortDateFmt.format(
-          xAccessor(visiblePlotData[index] as Record<string, unknown>)
-        )
+          xAccessor(visiblePlotData[index] as Record<string, unknown>),
+        ),
       ),
-    [visiblePlotData, xAccessor]
+    [visiblePlotData, xAccessor],
   );
 
   const canInteract = isLoaded && isChartInteractionPhase(chartPhase);
@@ -591,7 +591,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
 
   const memoizedLayers = useMemo(
     () => classifyChartChildren(children),
-    [children]
+    [children],
   );
   // A lazy child that hasn't loaded can't be classified yet: re-classify on
   // every render until it resolves (the pre-memo behaviour).
@@ -606,7 +606,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
     : memoizedLayers;
 
   const [registeredReferenceAreas, setRegisteredReferenceAreas] = useState(
-    () => new Map<string, ReferenceAreaConfig>()
+    () => new Map<string, ReferenceAreaConfig>(),
   );
 
   const registerReferenceArea = useCallback(
@@ -627,7 +627,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
         return next;
       });
     },
-    []
+    [],
   );
 
   const unregisterReferenceArea = useCallback((id: string) => {
@@ -643,7 +643,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
 
   const referenceAreaRegistration = useMemo(
     () => ({ registerReferenceArea, unregisterReferenceArea }),
-    [registerReferenceArea, unregisterReferenceArea]
+    [registerReferenceArea, unregisterReferenceArea],
   );
 
   const referenceAreas = useMemo(() => {
@@ -738,7 +738,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
       composedStacked,
       composedStackOffsets,
       composedStackGap,
-    ]
+    ],
   );
 
   const useClipReveal =
@@ -757,7 +757,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
         ...DEFAULT_CHART_ENTER_TRANSITION,
         duration: animationDuration / 1000,
       } satisfies Transition),
-    [animationDuration, enterTransition]
+    [animationDuration, enterTransition],
   );
 
   const barRevealClipPadding = useMemo(() => {
@@ -796,7 +796,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
     : Math.max(barRevealClipPadding, SERIES_CLIP_EDGE_BLEED);
   const revealClipPaddingY = Math.max(
     barRevealClipPadding,
-    SERIES_CLIP_EDGE_BLEED
+    SERIES_CLIP_EDGE_BLEED,
   );
 
   return (

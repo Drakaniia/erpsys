@@ -9,7 +9,6 @@ import {
 } from "../../config/steps.js";
 import { getDbSync } from "../../lib/db/db.js";
 import { genId } from "../../lib/db/ids.js";
-import { background } from "../../lib/platform/background.js";
 import { deleteR2Object } from "../../lib/storage/client.js";
 import { configuredR2Client } from "../../lib/storage/configured-client.js";
 import { addStoredBytes, monthKey } from "../../lib/storage/quota.js";
@@ -22,7 +21,7 @@ import {
 import { catchAsync } from "../../middleware/catchAsync.js";
 import { okOne, parseBody, parseQuery } from "../../middleware/http.js";
 import { AcademicYearModel } from "../../models/AcademicYearModel.js";
-import { StepModel } from "../../models/StepModel.js";
+import { findStepByCode } from "../../config/constants.js";
 import { StepVerificationModel } from "../../models/StepVerificationModel.js";
 import { UploadModel, externalLinkKey } from "../../models/UploadModel.js";
 import {
@@ -43,10 +42,8 @@ const student = [requireSession, requireSurface("student")];
 const stepCodeParams = z.object({ code: uploadStepCodeSchema });
 
 async function stepContext(req: Request, code: string) {
-  const { profile, year } = await requireStudentContext(
-    sessionUser(req),
-  );
-  const step = await StepModel.findByCode(code);
+  const { profile, year } = await requireStudentContext(sessionUser(req));
+  const step = findStepByCode(code);
   if (!step) {
     throw new ApiError("NOT_FOUND", { message: "Step not configured." });
   }
@@ -138,9 +135,7 @@ evidenceRouter.delete(
   student,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(z.object({ id: z.string().min(1) }), req);
-    const { profile } = await requireStudentContext(
-      sessionUser(req),
-    );
+    const { profile } = await requireStudentContext(sessionUser(req));
     const upload = await UploadModel.findForProfile(id, profile._id);
     if (!upload) {
       throw new ApiError("NOT_FOUND", { message: "Upload not found." });
@@ -154,7 +149,9 @@ evidenceRouter.delete(
         existing?.status === "VERIFIED" &&
         evidenceUploadIds(existing.evidence).includes(id)
       ) {
-        throw new ApiError("CONFLICT", { message: "Verified steps are locked." });
+        throw new ApiError("CONFLICT", {
+          message: "Verified steps are locked.",
+        });
       }
     }
     await UploadModel.deleteById(id);
@@ -162,15 +159,13 @@ evidenceRouter.delete(
       okOne(res, { deleted: true });
       return;
     }
-    const deletion = (async () => {
+    void (async () => {
       const client = configuredR2Client();
       const parsed = parseR2FileKey(upload.fileKey);
       if (!client || !parsed) return;
       await deleteR2Object(client, parsed);
       await addStoredBytes(getDbSync(), monthKey(), -(upload.sizeBytes ?? 0));
-    })();
-    background(deletion);
-    void deletion.catch((error: unknown) =>
+    })().catch((error: unknown) =>
       console.error(
         `[evidence] R2 delete failed for upload ${id} — row already deleted`,
         error,
@@ -301,11 +296,24 @@ evidenceRouter.post(
           message: "The profiling form isn't set up yet.",
         });
       }
+      const response = await profilingAnswers(
+        form.formId,
+        sessionUser(req).email,
+      );
+      if (response.status !== "COMPLETE") {
+        throw new ApiError("PRECONDITION_FAILED", {
+          message:
+            response.status === "NOT_SUBMITTED"
+              ? `No Google Form response from ${sessionUser(req).email} yet — submit the form signed in with that account.`
+              : "Your profiling response is incomplete — fill in all required questions.",
+        });
+      }
       await StepVerificationModel.upsertSubmission(
         key,
         [],
         new Date(),
-        await profilingAnswers(form.formId, sessionUser(req).email),
+        response.answers,
+        response.submittedAt,
       );
       return okOne(res, { status: "SUBMITTED", evidence: [] }, 201);
     }

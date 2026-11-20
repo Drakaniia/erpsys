@@ -112,12 +112,9 @@ academicYearsRouter.get(
         .collection<{ academicYearId: string }>(COLLECTIONS.enrollmentQueue)
         .find({} as never, { projection: { academicYearId: 1 } })
         .toArray(),
-
     ]);
     const withData = new Set(
-      [...verifications, ...queues].map((row) =>
-        String(row.academicYearId),
-      ),
+      [...verifications, ...queues].map((row) => String(row.academicYearId)),
     );
     const items = years.map((year) => ({
       id: String(year._id),
@@ -226,7 +223,6 @@ academicYearsRouter.delete(
       db
         .collection(COLLECTIONS.enrollmentQueue)
         .countDocuments({ academicYearId: id } as never),
-
     ]);
     if (verifications > 0 || queues > 0 || existing.profilingForm) {
       throw new ApiError("CONFLICT", {

@@ -36,16 +36,20 @@ Every guarded document gains two fields, `readTs: number` and `writeTs: number`.
 
 A transaction T is one logical read-modify-write, and `TS(T)` comes from a monotonic oracle. For a document X:
 
-| Operation | Abort when | On pass |
-| --- | --- | --- |
-| read(X) | `TS(T) < writeTs(X)` | `readTs(X) = max(readTs(X), TS(T))` |
-| write(X) | `TS(T) < readTs(X)` or `TS(T) < writeTs(X)` | `writeTs(X) = TS(T)` |
+| Operation | Abort when                                  | On pass                             |
+| --------- | ------------------------------------------- | ----------------------------------- |
+| read(X)   | `TS(T) < writeTs(X)`                        | `readTs(X) = max(readTs(X), TS(T))` |
+| write(X)  | `TS(T) < readTs(X)` or `TS(T) < writeTs(X)` | `writeTs(X) = TS(T)`                |
 
 Each check and its stamp run as **one** conditional Mongo update, so they are atomic per document:
 
 ```ts
 updateOne(
-  { ...idIn([id]), writeTs: { $not: { $gt: ts } }, readTs: { $not: { $gt: ts } } },
+  {
+    ...idIn([id]),
+    writeTs: { $not: { $gt: ts } },
+    readTs: { $not: { $gt: ts } },
+  },
   { $set: { ...patch, writeTs: ts }, $max: { readTs: ts } },
 );
 ```

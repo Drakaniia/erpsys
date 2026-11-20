@@ -221,7 +221,7 @@ const ChartCore = memo(function ChartCore({
   // A zero-duration reveal is loaded from the first render, so static charts
   // don't re-render (cursor / interaction wiring) after their first paint.
   const [isLoaded, setIsLoaded] = useState(
-    () => animationDuration <= 0 && status !== "loading"
+    () => animationDuration <= 0 && status !== "loading",
   );
   const [revealEpoch, setRevealEpoch] = useState(1);
   const hoveredBarIndex = tooltipData?.index ?? null;
@@ -245,7 +245,7 @@ const ChartCore = memo(function ChartCore({
       }
       return String(value ?? "");
     },
-    [xDataKey]
+    [xDataKey],
   );
 
   // For compatibility with ChartContext, provide a Date-based xAccessor
@@ -257,7 +257,7 @@ const ChartCore = memo(function ChartCore({
       }
       return new Date();
     },
-    [xDataKey]
+    [xDataKey],
   );
 
   // Category scale (band) - for the categorical axis
@@ -277,9 +277,9 @@ const ChartCore = memo(function ChartCore({
       collectBarValueExtents(
         data,
         lines.map((line) => line.dataKey),
-        stacked
+        stacked,
       ),
-    [data, lines, stacked]
+    [data, lines, stacked],
   );
 
   // Value scale (linear) - for the value axis. Always includes zero so bars
@@ -343,7 +343,7 @@ const ChartCore = memo(function ChartCore({
   // Pre-compute labels for ticker animation
   const dateLabels = useMemo(
     () => data.map((d) => categoryAccessor(d)),
-    [data, categoryAccessor]
+    [data, categoryAccessor],
   );
 
   // Create a fake time scale for compatibility with ChartContext
@@ -547,7 +547,7 @@ const ChartCore = memo(function ChartCore({
       primaryYScale,
       squareSnap,
       innerHeight,
-    ]
+    ],
   );
 
   const handleMouseLeave = useCallback(() => {
@@ -587,7 +587,7 @@ const ChartCore = memo(function ChartCore({
 
   const referenceAreas = useMemo(
     () => extractReferenceAreaConfigs(children),
-    [children]
+    [children],
   );
 
   const contextValue = {

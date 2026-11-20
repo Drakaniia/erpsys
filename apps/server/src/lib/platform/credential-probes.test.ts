@@ -115,9 +115,9 @@ describe("r2", () => {
     const [url, init] = mock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe(`${R2_ENDPOINT}/erpsys-prod`);
     expect(init.method).toBe("HEAD");
-    expect(
-      (init.headers as Record<string, string>).authorization,
-    ).toContain("AWS4-HMAC-SHA256");
+    expect((init.headers as Record<string, string>).authorization).toContain(
+      "AWS4-HMAC-SHA256",
+    );
   });
 
   it("maps 403 to the key and 404 to the bucket", async () => {
@@ -142,10 +142,74 @@ describe("r2", () => {
 describe("cloudflareChat", () => {
   const values = { CLOUDFLARE_ACCOUNT_ID: "acct", CLOUDFLARE_API_TOKEN: "tok" };
 
-  it("accepts success:true", async () => {
-    stubFetch(json(200, { success: true }));
+  it("checks credentials against the Workers AI model-search endpoint", async () => {
+    const mock = stubFetch(json(200, { success: true, result: [] }));
     await expect(probeCredentials("cloudflareChat", values)).resolves.toEqual({
       ok: true,
+    });
+    expect(mock).toHaveBeenCalledExactlyOnceWith(
+      "https://api.cloudflare.com/client/v4/accounts/acct/ai/models/search?per_page=1",
+      expect.objectContaining({
+        method: "GET",
+        headers: {
+          authorization: "Bearer tok",
+          "content-type": "application/json",
+        },
+      }),
+    );
+  });
+
+  it("accepts a valid response larger than the old 8192-character cap", async () => {
+    const body = {
+      result: [{ description: "x".repeat(72_000) }],
+      success: true,
+    };
+    stubFetch(json(200, body));
+    await expect(probeCredentials("cloudflareChat", values)).resolves.toEqual({
+      ok: true,
+    });
+  });
+
+  it("rejects an oversized response explicitly instead of parsing truncated JSON", async () => {
+    stubFetch(json(200, { result: ["x".repeat(262_144)], success: true }));
+    await expect(probeCredentials("cloudflareChat", values)).resolves.toEqual({
+      ok: false,
+      failures: [
+        {
+          key: "CLOUDFLARE_API_TOKEN",
+          reason: "provider response exceeded the size limit",
+        },
+      ],
+    });
+  });
+
+  it.each([
+    "<html>bad gateway</html>",
+    '{"success":true',
+    JSON.stringify({ success: false, errors: [{ code: 10000 }] }),
+  ])(
+    "rejects malformed or unsuccessful HTTP 200 responses: %s",
+    async (body) => {
+      stubFetch(new Response(body, { status: 200 }));
+      await expect(probeCredentials("cloudflareChat", values)).resolves.toEqual(
+        {
+          ok: false,
+          failures: [
+            {
+              key: "CLOUDFLARE_API_TOKEN",
+              reason: "provider returned an unexpected response",
+            },
+          ],
+        },
+      );
+    },
+  );
+
+  it.each([401, 403])("rejects an unauthorized token (%s)", async (status) => {
+    stubFetch(json(status, {}));
+    await expect(probeCredentials("cloudflareChat", values)).resolves.toEqual({
+      ok: false,
+      failures: [{ key: "CLOUDFLARE_API_TOKEN", reason: "token rejected" }],
     });
   });
 
@@ -158,7 +222,8 @@ describe("cloudflareChat", () => {
     stubFetch(json(404, {}));
     const account = await probeCredentials("cloudflareChat", values);
     expect(account.ok).toBe(false);
-    if (!account.ok) expect(account.failures[0].key).toBe("CLOUDFLARE_ACCOUNT_ID");
+    if (!account.ok)
+      expect(account.failures[0].key).toBe("CLOUDFLARE_ACCOUNT_ID");
   });
 });
 

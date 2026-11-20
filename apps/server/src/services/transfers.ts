@@ -3,15 +3,13 @@ import {
   departmentAcceptsLevel,
   deriveDepartmentCode,
   normalizeYearLevels,
-  subtractYearLevels,
   yearLevelsOverlap,
   type YearLevel,
 } from "../config/constants.js";
 import { PRESENCE_STALE_MS, type TransferRow } from "../config/transfers.js";
 import { genId } from "../lib/db/ids.js";
 import { AdminActionLogModel } from "../models/AdminActionLogModel.js";
-import { AdviserAvailabilityModel } from "../models/AdviserAvailabilityModel.js";
-import { AdviserDepartmentModel } from "../models/AdviserDepartmentModel.js";
+import { AdviserScheduleModel } from "../models/AdviserScheduleModel.js";
 import { AcademicYearModel } from "../models/AcademicYearModel.js";
 import { DepartmentModel } from "../models/DepartmentModel.js";
 import { DepartmentTransferModel } from "../models/DepartmentTransferModel.js";
@@ -87,15 +85,30 @@ export async function runTransfer(opts: {
   ownerNoticeBody?: string;
 }): Promise<string | null> {
   const requested = normalizeYearLevels(opts.yearLevels ?? []);
-  const holders = (await AdviserDepartmentModel.listOtherHolders(opts.departmentId, opts.adviserId))
-    .filter((holder) => yearLevelsOverlap(holder.yearLevels ?? [], requested));
+  const holders = (
+    await DepartmentModel.listOtherAdviserHolders(
+      opts.departmentId,
+      opts.adviserId,
+    )
+  ).filter((holder) => yearLevelsOverlap(holder.yearLevels ?? [], requested));
   if (holders.length > 1) {
-    throw new ApiError("CONFLICT", { message: "Request year levels from one instructor at a time." });
+    throw new ApiError("CONFLICT", {
+      message: "Request year levels from one instructor at a time.",
+    });
   }
   const owner = holders[0] ?? null;
 
-  await AdviserDepartmentModel.deleteOthers(opts.adviserId, opts.departmentId);
-  await AdviserAvailabilityModel.closeOpenForAdviser(opts.adviserId, [
+  await DepartmentModel.transferAdviserLevels(
+    opts.departmentId,
+    { _id: genId("adviser-dept"), adviserId: opts.adviserId },
+    requested,
+    owner?.adviserId ?? null,
+  );
+  await DepartmentModel.deleteOtherAdviserAssignments(
+    opts.adviserId,
+    opts.departmentId,
+  );
+  await AdviserScheduleModel.closeOpenForAdviser(opts.adviserId, [
     opts.departmentId,
   ]);
   await EnrollmentQueueModel.releaseServingExcept(opts.adviserId, [
@@ -103,13 +116,12 @@ export async function runTransfer(opts: {
   ]);
 
   if (owner) {
-    const remaining = subtractYearLevels(owner.yearLevels ?? [], requested);
-    if (remaining.length === 0) {
-      await AdviserDepartmentModel.deleteOne(
-        owner.adviserId,
-        opts.departmentId,
-      );
-      await AdviserAvailabilityModel.closeForDepartment(
+    const remaining = await DepartmentModel.findAdviserLink(
+      owner.adviserId,
+      opts.departmentId,
+    );
+    if (!remaining) {
+      await AdviserScheduleModel.closeForDepartment(
         owner.adviserId,
         opts.departmentId,
         opts.now,
@@ -119,11 +131,9 @@ export async function runTransfer(opts: {
         owner.adviserId,
       );
     } else {
-      await EnrollmentQueueModel.releaseServingBy(opts.departmentId, owner.adviserId);
-      await AdviserDepartmentModel.setLevels(
-        owner.adviserId,
+      await EnrollmentQueueModel.releaseServingBy(
         opts.departmentId,
-        remaining,
+        owner.adviserId,
       );
     }
     await AdminActionLogModel.log(
@@ -141,27 +151,10 @@ export async function runTransfer(opts: {
     );
   }
 
-  const mine = await AdviserDepartmentModel.findLink(
-    opts.adviserId,
+  await EnrollmentQueueModel.releaseServingBy(
     opts.departmentId,
+    opts.adviserId,
   );
-  if (mine) {
-    await EnrollmentQueueModel.releaseServingBy(opts.departmentId, opts.adviserId);
-    await AdviserDepartmentModel.setLevels(
-      opts.adviserId,
-      opts.departmentId,
-      requested.length === 0
-        ? []
-        : normalizeYearLevels([...(mine.yearLevels ?? []), ...requested]),
-    );
-  } else {
-    await AdviserDepartmentModel.insert({
-      _id: genId("adviser-dept"),
-      adviserId: opts.adviserId,
-      departmentId: opts.departmentId,
-      yearLevels: requested,
-    });
-  }
 
   return owner ? userName(owner.adviserId) : null;
 }
@@ -177,7 +170,7 @@ export async function listTransfers(userId: string) {
   const activeOwners = year
     ? await Promise.all(
         ownerIds.map((ownerId) =>
-          AdviserAvailabilityModel.isActive(
+          AdviserScheduleModel.isActive(
             ownerId,
             String(year._id),
             new Date(),
@@ -213,7 +206,9 @@ export async function resolveExpiredTransfers(
     if (latest?.status !== "PENDING") continue;
     const department = await DepartmentModel.findById(row.departmentId);
     const deptName = department?.name;
-    const offered = (row.yearLevels ?? []).every((level) => departmentAcceptsLevel(department?.yearLevels ?? [], level));
+    const offered = (row.yearLevels ?? []).every((level) =>
+      departmentAcceptsLevel(department?.yearLevels ?? [], level),
+    );
     if (!deptName || !department?.isActive || !offered) {
       await DepartmentTransferModel.update(row._id, {
         status: "EXPIRED",
@@ -223,19 +218,32 @@ export async function resolveExpiredTransfers(
     }
     const requested = normalizeYearLevels(row.yearLevels ?? []);
     const [ownerLink, requesterLink] = await Promise.all([
-      AdviserDepartmentModel.findLink(row.ownerId, row.departmentId),
-      AdviserDepartmentModel.findLink(row.requesterId, row.departmentId),
+      DepartmentModel.findAdviserLink(row.ownerId, row.departmentId),
+      DepartmentModel.findAdviserLink(row.requesterId, row.departmentId),
     ]);
     const stillOwner =
       ownerLink !== null &&
       yearLevelsOverlap(ownerLink.yearLevels ?? [], requested);
     const requesterAlreadyOwns =
-      requesterLink !== null && (requested.length === 0
+      requesterLink !== null &&
+      (requested.length === 0
         ? normalizeYearLevels(requesterLink.yearLevels ?? []).length === 0
-        : requested.every((level) => departmentAcceptsLevel(requesterLink.yearLevels ?? [], level)));
-    const holders = await AdviserDepartmentModel.listOtherHolders(row.departmentId, row.requesterId);
-    const conflictingOwners = holders.filter((holder) => yearLevelsOverlap(holder.yearLevels ?? [], requested));
-    if (!stillOwner || requesterAlreadyOwns || conflictingOwners.length !== 1 || conflictingOwners[0].adviserId !== row.ownerId) {
+        : requested.every((level) =>
+            departmentAcceptsLevel(requesterLink.yearLevels ?? [], level),
+          ));
+    const holders = await DepartmentModel.listOtherAdviserHolders(
+      row.departmentId,
+      row.requesterId,
+    );
+    const conflictingOwners = holders.filter((holder) =>
+      yearLevelsOverlap(holder.yearLevels ?? [], requested),
+    );
+    if (
+      !stillOwner ||
+      requesterAlreadyOwns ||
+      conflictingOwners.length !== 1 ||
+      conflictingOwners[0].adviserId !== row.ownerId
+    ) {
       await DepartmentTransferModel.update(row._id, {
         status: "EXPIRED",
         resolvedAt: now,

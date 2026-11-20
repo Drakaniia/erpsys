@@ -46,7 +46,10 @@ describe("normalizeOverview", () => {
   it("orders steps, labels them, and totals the desk", () => {
     const model = normalizeOverview(officerPayload)!;
     expect(model.steps.map((s) => s.code)).toEqual(["ASSESSMENT", "PROFILING"]);
-    expect(model.steps[0]).toMatchObject({ name: "Assessment", tab: "assessment" });
+    expect(model.steps[0]).toMatchObject({
+      name: "Assessment",
+      tab: "assessment",
+    });
     expect(model.totals).toEqual({
       awaitingReview: 7,
       returned: 1,
@@ -71,14 +74,19 @@ describe("normalizeOverview", () => {
         { code: "ASSESSMENT", name: "A", order: 1, verified: 2, unverified: 3 },
         { code: "ENROLLMENT", name: "E", order: 6, verified: 1, unverified: 0 },
       ],
-      recentActivity: [{ id: "l", actorName: "Admin", action: "Did", targetRef: "X", at: "" }],
+      recentActivity: [
+        { id: "l", actorName: "Admin", action: "Did", targetRef: "X", at: "" },
+      ],
     })!;
     expect(model.hasActiveYear).toBe(true);
     expect(model.steps.map((s) => s.code)).toEqual(["ASSESSMENT"]);
     expect(model.steps[0]!.awaitingReview).toBe(3);
     expect(model.students).toBeNull();
     expect(model.trend).toEqual([]);
-    expect(model.decisions[0]).toMatchObject({ studentName: "Admin", stepName: "X" });
+    expect(model.decisions[0]).toMatchObject({
+      studentName: "Admin",
+      stepName: "X",
+    });
   });
 
   it("returns null for a missing payload", () => {

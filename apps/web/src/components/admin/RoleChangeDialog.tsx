@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { dialogTrap } from "$lib/ui/dialog-trap";
 
 export default function RoleChangeDialog({
@@ -7,14 +7,18 @@ export default function RoleChangeDialog({
   names,
   excludedCount = 0,
   busy = false,
+  confirmDisabled = false,
+  children,
   onconfirm,
   onclose,
 }: {
   open: boolean;
-  role: "SBO_OFFICER" | "STUDENT";
+  role: "SBO_OFFICER" | "STUDENT" | "ADMIN";
   names: string[];
   excludedCount?: number;
   busy?: boolean;
+  confirmDisabled?: boolean;
+  children?: ReactNode;
   onconfirm: () => void;
   onclose: () => void;
 }) {
@@ -32,17 +36,21 @@ export default function RoleChangeDialog({
 
   const isBulk = names.length > 1;
   const title =
-    role === "SBO_OFFICER"
-      ? isBulk
-        ? `Promote ${names.length} students to SBO Officer?`
-        : `Promote ${names[0] ?? "this student"} to SBO Officer?`
-      : isBulk
-        ? `Demote ${names.length} students to Student?`
-        : `Demote ${names[0] ?? "this student"} to Student?`;
+    role === "ADMIN"
+      ? `Promote ${names[0] ?? "this account"} to admin?`
+      : role === "SBO_OFFICER"
+        ? isBulk
+          ? `Promote ${names.length} students to SBO Officer?`
+          : `Promote ${names[0] ?? "this student"} to SBO Officer?`
+        : isBulk
+          ? `Demote ${names.length} students to Student?`
+          : `Demote ${names[0] ?? "this student"} to Student?`;
   const body =
-    role === "SBO_OFFICER"
-      ? "This grants access to student verification data (evidence, stamps, mugshots)."
-      : "Officer access is removed. Their past stamps remain attributed to them in the audit trail.";
+    role === "ADMIN"
+      ? "This grants access to administrative controls and signs the account out of its active sessions."
+      : role === "SBO_OFFICER"
+        ? "This grants access to student verification data (evidence, stamps, mugshots)."
+        : "Officer access is removed. Their past stamps remain attributed to them in the audit trail.";
 
   return (
     <div
@@ -76,6 +84,7 @@ export default function RoleChangeDialog({
             non-lever roles).
           </p>
         )}
+        {children}
         <div className="mt-4 flex justify-end gap-2">
           <button
             type="button"
@@ -88,10 +97,16 @@ export default function RoleChangeDialog({
           <button
             type="button"
             onClick={onconfirm}
-            disabled={busy}
+            disabled={busy || confirmDisabled}
             className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
           >
-            {busy ? "Working…" : role === "SBO_OFFICER" ? "Promote" : "Demote"}
+            {busy
+              ? "Working…"
+              : role === "ADMIN"
+                ? "Promote to admin"
+                : role === "SBO_OFFICER"
+                  ? "Promote"
+                  : "Demote"}
           </button>
         </div>
       </div>

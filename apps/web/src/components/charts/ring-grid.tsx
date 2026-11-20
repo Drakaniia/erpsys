@@ -55,7 +55,7 @@ function resolveTicks(ticks: number | number[], fullCircle: boolean) {
     typeof ticks === "number"
       ? Array.from(
           { length: Math.max(1, Math.round(ticks)) + 1 },
-          (_, i) => i / Math.max(1, Math.round(ticks))
+          (_, i) => i / Math.max(1, Math.round(ticks)),
         )
       : ticks;
   const clamped = list.filter((t) => t >= 0 && t <= 1);
@@ -123,10 +123,10 @@ export const RingGrid = memo(function RingGrid({
             outer,
             labelOffset,
             text.length * fontSize * 0.62,
-            fontSize
+            fontSize,
           ),
         };
-      }
+      },
     );
   }, [
     ringCount,
@@ -147,7 +147,7 @@ export const RingGrid = memo(function RingGrid({
   const spokeStagger = GRID_SPOKE_STAGGER_S * enterStaggerScale;
   const labelDelay = gridLabelDelay(
     ringCount,
-    GRID_RING_STAGGER_S * enterStaggerScale
+    GRID_RING_STAGGER_S * enterStaggerScale,
   );
   const labelStagger = GRID_ANGLE_LABEL_STAGGER_S * enterStaggerScale;
 
@@ -165,12 +165,12 @@ export const RingGrid = memo(function RingGrid({
             transition={transitionWithDelay(
               enterTransition,
               i * spokeStagger,
-              GRID_SPOKE_SPRING
+              GRID_SPOKE_SPRING,
             )}
             x1={t.a.x}
             y1={t.a.y}
           />
-        )
+        ),
       )}
     </g>
   ) : null;

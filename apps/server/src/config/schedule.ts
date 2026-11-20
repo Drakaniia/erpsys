@@ -1,6 +1,5 @@
 import { ApiError } from "./errors.js";
 
-
 export const SCHEDULE_TZ = "Asia/Manila";
 const SLOT_MINUTES = 30;
 const MAX_WINDOWS_PER_DEPARTMENT = 30;
@@ -69,9 +68,7 @@ function validDate(date: string | undefined): date is string {
 
 function sameDay(a: ScheduleWindow, b: ScheduleWindow, cancelled: Set<string>) {
   if (a.kind === b.kind) {
-    return a.kind === "WEEKLY"
-      ? a.weekday === b.weekday
-      : a.date === b.date;
+    return a.kind === "WEEKLY" ? a.weekday === b.weekday : a.date === b.date;
   }
   const weekly = a.kind === "WEEKLY" ? a : b;
   const extra = a.kind === "WEEKLY" ? b : a;
@@ -148,7 +145,9 @@ export function upcomingIntervals(
 ): Interval[] {
   const today = manilaDate(nowMs);
   const cancelled = new Set(
-    rows.filter((r) => r.kind === "CANCEL").map((r) => `${r.adviserId}|${r.date}`),
+    rows
+      .filter((r) => r.kind === "CANCEL")
+      .map((r) => `${r.adviserId}|${r.date}`),
   );
   const out: Interval[] = [];
   for (let i = 0; i < days; i++) {

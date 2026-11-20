@@ -27,7 +27,7 @@ export interface UseChartPhaseOrchestratorOptions {
 function resolveInitialChartPhase(
   chartStatus: ChartStatus,
   skipEnterReveal: boolean,
-  animationDuration: number
+  animationDuration: number,
 ): ChartPhase {
   if (chartStatus === "ready" && !skipEnterReveal && animationDuration > 0) {
     return "revealing";
@@ -40,7 +40,7 @@ function resolvePlotData<T>(
   chartPhase: ChartPhase,
   chartStatus: ChartStatus,
   skeletonData: T,
-  targetData: T
+  targetData: T,
 ): T {
   if (chartPhase === "exiting") {
     return skeletonData;
@@ -81,7 +81,7 @@ function resolveStatusTransition(
   prevStatus: ChartStatus,
   chartStatus: ChartStatus,
   animationDuration: number,
-  yDomainTweenDuration: number
+  yDomainTweenDuration: number,
 ): { phase: ChartPhase; conceal: boolean } | null {
   if (chartStatus === "ready" && prevStatus === "loading") {
     if (animationDuration > 0) {
@@ -126,7 +126,7 @@ function shouldReplayReveal(prev: PhaseInputs, next: PhaseInputs): boolean {
 function resolvePhaseTransition(
   prev: PhaseInputs,
   next: PhaseInputs,
-  yDomainTweenDuration: number
+  yDomainTweenDuration: number,
 ): PhaseTransition {
   let nextPhase = next.chartPhase;
   let resetLoaded = false;
@@ -142,7 +142,7 @@ function resolvePhaseTransition(
       prev.chartStatus,
       next.chartStatus,
       next.animationDuration,
-      yDomainTweenDuration
+      yDomainTweenDuration,
     );
     if (status) {
       nextPhase = status.phase;
@@ -182,14 +182,15 @@ export function useChartPhaseOrchestrator({
   skipEnterReveal = false,
 }: UseChartPhaseOrchestratorOptions) {
   const [chartPhase, setChartPhase] = useState<ChartPhase>(() =>
-    resolveInitialChartPhase(chartStatus, skipEnterReveal, animationDuration)
+    resolveInitialChartPhase(chartStatus, skipEnterReveal, animationDuration),
   );
   const [revealEpoch, setRevealEpoch] = useState(() =>
-    chartStatus === "ready" && !skipEnterReveal ? 1 : 0
+    chartStatus === "ready" && !skipEnterReveal ? 1 : 0,
   );
   const [concealEpoch, setConcealEpoch] = useState(0);
   const [isLoaded, setIsLoaded] = useState(
-    () => chartStatus === "ready" && (skipEnterReveal || animationDuration <= 0)
+    () =>
+      chartStatus === "ready" && (skipEnterReveal || animationDuration <= 0),
   );
 
   // Previous inputs — compared during render to derive transitions.
@@ -212,7 +213,7 @@ export function useChartPhaseOrchestrator({
     const transition = resolvePhaseTransition(
       prev,
       current,
-      yDomainTweenDuration
+      yDomainTweenDuration,
     );
     if (transition.resetLoaded) {
       setIsLoaded(false);
@@ -233,7 +234,7 @@ export function useChartPhaseOrchestrator({
     chartPhase,
     chartStatus,
     skeletonData,
-    targetData
+    targetData,
   );
 
   /** Loading pulse exit finished — tween grid to ready spacing next. */
@@ -244,7 +245,7 @@ export function useChartPhaseOrchestrator({
   /** Ready series conceal finished — tween grid to loading spacing next. */
   const notifyRevealConcealComplete = useCallback(() => {
     setChartPhase((phase) =>
-      phase === "exitingReady" ? "gridTweenLoading" : phase
+      phase === "exitingReady" ? "gridTweenLoading" : phase,
     );
   }, []);
 
@@ -271,7 +272,7 @@ export function useChartPhaseOrchestrator({
         setChartPhase("ready");
         setIsLoaded(true);
       },
-      Math.max(0, animationDuration)
+      Math.max(0, animationDuration),
     );
     return () => window.clearTimeout(timer);
   }, [animationDuration, chartPhase]);

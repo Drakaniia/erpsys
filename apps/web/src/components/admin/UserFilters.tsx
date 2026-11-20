@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { OutsideFilter, RoleFilter } from "$lib/admin/types";
+import { roleLabel } from "$lib/auth/role-label";
 import FilterDropdown from "../ui/FilterDropdown";
 
 export default function UserFilters({
@@ -25,7 +26,7 @@ export default function UserFilters({
     { value: "ALL", label: "All roles" },
     { value: "STUDENT", label: "Student" },
     { value: "SBO_OFFICER", label: "SBO Officer" },
-    { value: "ENROLLMENT_ADVISER", label: "Instructor" },
+    { value: "ENROLLMENT_ADVISER", label: roleLabel("ENROLLMENT_ADVISER") },
     { value: "ADMIN", label: "Admin" },
   ];
 

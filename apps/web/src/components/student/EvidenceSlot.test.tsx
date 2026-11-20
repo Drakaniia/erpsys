@@ -1,10 +1,21 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import EvidenceSlot from "./EvidenceSlot";
 
 vi.mock("$lib/integrations/use-integrations", () => ({
   useIntegrations: () => ({
-    flags: { turnstile: true, r2: true, googleAuth: true, cloudflareChat: true },
+    flags: {
+      turnstile: true,
+      r2: true,
+      googleAuth: true,
+      cloudflareChat: true,
+    },
     pending: false,
   }),
 }));

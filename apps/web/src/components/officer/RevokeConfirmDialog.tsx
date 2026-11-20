@@ -20,12 +20,14 @@ export default function RevokeConfirmDialog({
   onconfirm,
   oncancel,
   busy,
+  confirmDisabled = false,
 }: {
   open: boolean;
   studentName: string;
   onconfirm: () => void;
   oncancel: () => void;
   busy: boolean;
+  confirmDisabled?: boolean;
 }) {
   const cardRef = useDialogFocus(open, oncancel);
   const presence = usePresence(open, {
@@ -76,7 +78,7 @@ export default function RevokeConfirmDialog({
             type="button"
             className="rounded-lg px-4 py-1.5 text-sm font-semibold text-error hover:bg-error/5 disabled:opacity-50"
             onClick={onconfirm}
-            disabled={busy}
+            disabled={busy || confirmDisabled}
           >
             {busy ? "Revoking…" : "Revoke"}
           </button>

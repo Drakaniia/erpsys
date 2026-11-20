@@ -15,26 +15,26 @@ dedicated calendar in their own Google account.
 
 ### Interview decisions (locked)
 
-| Topic | Decision |
-| --- | --- |
-| Purpose | Scheduled availability (planned hours students can read). Not appointments, not busy-sync. |
-| Direction | ERPSYS → Google, one-way write. ERPSYS DB is the source of truth. |
-| Optionality | Per instructor. Schedule works standalone; Google is an optional mirror. |
-| Admin control | New `googleCalendar` integration (admin toggle, setup guide, credential probe). |
-| Relation to live switch | **Informational only.** The "Accepting students" switch, heartbeat and 1-hour idle auto-close are unchanged and remain the only thing that opens the queue. |
-| Window scope | Per instructor per department. |
-| Window kinds | Weekly recurring windows plus one-off exceptions. |
-| Authorization | Separate "Connect Calendar" OAuth consent (incremental), works for password and Google-login instructors. |
-| Where events live | A dedicated "ERPSYS Office Hours" calendar created by the app in the instructor's account. |
-| Audience | Students, in-app only, on each department queue card. |
-| Instructor naming | Department-level only; students never see which instructor holds a window. |
-| Sync | Inline on save, with a retry queue picked up by a sweep when Google fails. |
-| Token storage | Refresh token encrypted at rest (AES-GCM) with a new env key; never returned by any API. |
-| Event audience | No attendees, no notifications, calendar not public. |
-| Time zone | Pinned to `Asia/Manila` (matches `apps/web/src/lib/report/format.ts`). |
-| Overlaps | Rejected server-side per instructor + department. |
-| Editor location | Per-department tab header, next to the existing "Accepting students" switch. |
-| Edge case required in v1 | Token revoked/expired → "Reconnect Calendar" banner, schedule and queue keep working. |
+| Topic                    | Decision                                                                                                                                                    |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Purpose                  | Scheduled availability (planned hours students can read). Not appointments, not busy-sync.                                                                  |
+| Direction                | ERPSYS → Google, one-way write. ERPSYS DB is the source of truth.                                                                                           |
+| Optionality              | Per instructor. Schedule works standalone; Google is an optional mirror.                                                                                    |
+| Admin control            | New `googleCalendar` integration (admin toggle, setup guide, credential probe).                                                                             |
+| Relation to live switch  | **Informational only.** The "Accepting students" switch, heartbeat and 1-hour idle auto-close are unchanged and remain the only thing that opens the queue. |
+| Window scope             | Per instructor per department.                                                                                                                              |
+| Window kinds             | Weekly recurring windows plus one-off exceptions.                                                                                                           |
+| Authorization            | Separate "Connect Calendar" OAuth consent (incremental), works for password and Google-login instructors.                                                   |
+| Where events live        | A dedicated "ERPSYS Office Hours" calendar created by the app in the instructor's account.                                                                  |
+| Audience                 | Students, in-app only, on each department queue card.                                                                                                       |
+| Instructor naming        | Department-level only; students never see which instructor holds a window.                                                                                  |
+| Sync                     | Inline on save, with a retry queue picked up by a sweep when Google fails.                                                                                  |
+| Token storage            | Refresh token encrypted at rest (AES-GCM) with a new env key; never returned by any API.                                                                    |
+| Event audience           | No attendees, no notifications, calendar not public.                                                                                                        |
+| Time zone                | Pinned to `Asia/Manila` (matches `apps/web/src/lib/report/format.ts`).                                                                                      |
+| Overlaps                 | Rejected server-side per instructor + department.                                                                                                           |
+| Editor location          | Per-department tab header, next to the existing "Accepting students" switch.                                                                                |
+| Edge case required in v1 | Token revoked/expired → "Reconnect Calendar" banner, schedule and queue keep working.                                                                       |
 
 ### Out of scope (explicit)
 
@@ -103,6 +103,7 @@ dedicated calendar in their own Google account.
 ## 4. User flows
 
 ### 4.1 Instructor: set a schedule (no Google needed)
+
 1. Instructor opens a department tab → "Schedule" button in `DeptTabHeader`
    opens a schedule dialog.
 2. Adds weekly windows: weekday(s), start, end (Asia/Manila).
@@ -112,6 +113,7 @@ dedicated calendar in their own Google account.
    to Google, sync runs inline (§7).
 
 ### 4.2 Instructor: connect Google Calendar (optional)
+
 1. Dialog (or banner) shows "Connect Google Calendar".
 2. `GET /api/v1/me/calendar/connect` returns a Google consent URL with a signed,
    single-use `state` (bound to session user, short TTL, PKCE if practical).
@@ -122,11 +124,13 @@ dedicated calendar in their own Google account.
    Disconnect action.
 
 ### 4.3 Disconnect
+
 Disconnect deletes the mirrored events and the dedicated calendar (best effort),
 revokes the token at Google, deletes the stored connection. The ERPSYS schedule
 is untouched.
 
 ### 4.4 Student: see availability
+
 Each department queue card shows a department-level line, for example
 "Open now until 12:00 PM" / "Next: Mon 9:00 AM – 12:00 PM" / "No schedule posted".
 This is **additional** to the existing live open/closed indicator and never
@@ -134,6 +138,7 @@ changes it. Merged across all instructors holding windows for that department
 and active academic year; no names.
 
 ### 4.5 Token revoked or expired
+
 Any Google call returning `invalid_grant`/401-after-refresh marks the connection
 `NEEDS_RECONNECT`. The instructor sees a "Reconnect Calendar" banner. Schedule
 editing and the queue continue to work; sync is paused until reconnect, then a
@@ -145,6 +150,7 @@ All new collections are added to `COLLECTIONS` in `lib/db/db.js`, one model clas
 each (static methods only), indexes in `lib/db/indexes.ts`, ids via `genId`.
 
 ### 5.1 `calendarConnection` (one per instructor)
+
 - `_id`, `userId` (unique), `status`: `CONNECTED | NEEDS_RECONNECT`
 - `refreshTokenEnc` (AES-256-GCM: iv + tag + ciphertext, base64), `keyVersion`
 - `scope`, `googleCalendarId` (the dedicated calendar), `googleEmail`
@@ -152,6 +158,7 @@ each (static methods only), indexes in `lib/db/indexes.ts`, ids via `genId`.
 - Never returned by any API; API exposes only `{ status, googleEmail, lastSyncAt, lastError }`.
 
 ### 5.2 `availabilityWindow`
+
 - `_id`, `adviserId`, `departmentId`, `academicYearId`
 - `kind`: `WEEKLY | EXTRA`
 - `WEEKLY`: `weekday` (0–6, Mon=0 or ISO 1–7; pick one and mirror it on web), `startMinute`, `endMinute` (minutes from local midnight, Asia/Manila)
@@ -159,18 +166,22 @@ each (static methods only), indexes in `lib/db/indexes.ts`, ids via `genId`.
 - `createdAt`, `updatedAt`
 
 ### 5.3 `availabilityException` (cancellations)
+
 - `_id`, `windowId` or (`adviserId`,`departmentId`,`date`), `date`, `type: CANCELLED`
 - Rationale: cancelling one occurrence of a weekly window without deleting it.
 
 ### 5.4 `calendarSyncItem` (mirror state + retry queue)
+
 - `_id`, `userId`, `windowId`, `googleEventId`, `state`: `SYNCED | PENDING | FAILED`
 - `op`: `UPSERT | DELETE`, `attempts`, `nextAttemptAt`, `lastError`
 - Keeps Google bookkeeping out of the window documents.
 
 ### 5.5 Lifecycle independence from department links
+
 Windows are keyed on `adviserId + departmentId + academicYearId`, **not** on
 `adviserDepartment`. Because sign-out deletes links, students would otherwise see
 the schedule vanish daily. Rules:
+
 - Student view includes a window regardless of current link/sign-in state.
 - Editing/creating windows requires a current link (reuse the `FORBIDDEN`
   "Department not assigned to you" check from `AdviserAvailabilityService`).
@@ -191,10 +202,10 @@ the schedule vanish daily. Rules:
 - Department must be assigned to the instructor at write time.
 - `EXTRA` and exceptions must be dated inside the active academic year.
 - Defaults chosen where the interview did not decide (confirm or change):
-  - 30-minute grid, 30-minute minimum duration — *assumption*.
-  - Weekly recurrence ends at the academic year end date (`UNTIL`) — *assumption*,
+  - 30-minute grid, 30-minute minimum duration — _assumption_.
+  - Weekly recurrence ends at the academic year end date (`UNTIL`) — _assumption_,
     needed so the Google RRULE is finite.
-  - Max windows per instructor + department (e.g. 30) to bound sync work — *assumption*.
+  - Max windows per instructor + department (e.g. 30) to bound sync work — _assumption_.
 - Zod schemas for bodies, matching existing controller validation style.
 
 ## 7. Google sync design
@@ -216,7 +227,7 @@ No new npm dependency is required; plain REST via `fetch` is consistent with
   - Title `Enrollment advising – <Department name>`; description a fixed
     generic line plus a link back to ERPSYS. **No student data, no instructor
     PII** in events. No attendees, `sendUpdates: "none"`, no reminders (reminders
-    were not selected — *assumption*, confirm).
+    were not selected — _assumption_, confirm).
   - Store ERPSYS ids in `extendedProperties.private` (`erpsysWindowId`) so
     reconciliation can find orphaned events.
 - **Inline then retry:** on save, ERPSYS writes its own data first, then tries
@@ -281,6 +292,7 @@ Web: add paths to `apps/web/src/lib/api-routes.ts`.
 ## 10. Integration plumbing (admin)
 
 Add `googleCalendar` alongside `googleForms`:
+
 - `IntegrationKey`, labels, descriptions in `integration-settings.ts` and
   `IntegrationSettingService.ts`; availability rule: required creds present
   (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `CALENDAR_TOKEN_KEY`).
@@ -339,9 +351,11 @@ Add `googleCalendar` alongside `googleForms`:
 ## 13. Edge cases
 
 Required in v1:
+
 - Token revoked/expired → `NEEDS_RECONNECT`, banner, sync paused, resync on reconnect.
 
 Not selected in the interview, so default behavior below unless you say otherwise:
+
 - **Instructor unassigned by admin:** delete that department's windows and events.
 - **Academic year rollover:** windows are tied to `academicYearId`; the new year
   starts empty, old ones are retained read-only or purged by sweep (decide), and
@@ -368,6 +382,7 @@ Not selected in the interview, so default behavior below unless you say otherwis
 ## 14. Testing
 
 Server (`apps/server/tests/<layer>/<resource>/`, node env, run via `tsconfig.test.json`):
+
 - `config/schedule` pure tests: overlap detection, grid, next-window, midnight edges.
 - `ScheduleService`: validation, FORBIDDEN without link, replace-whole semantics,
   independence from link deletion (regression for sign-out).
@@ -378,9 +393,9 @@ Server (`apps/server/tests/<layer>/<resource>/`, node env, run via `tsconfig.tes
 - Route tests: auth/surface gating, integration flag off, state mismatch on
   callback, rate limit.
 - Purge/deletion cleanup tests.
-Web (colocated, jsdom): `ScheduleDialog` validation and states, student queue
-card schedule line, integration panel/setup-guide updates.
-Before finishing: `pnpm check` and `pnpm test`; `pnpm --filter web build` for UI.
+  Web (colocated, jsdom): `ScheduleDialog` validation and states, student queue
+  card schedule line, integration panel/setup-guide updates.
+  Before finishing: `pnpm check` and `pnpm test`; `pnpm --filter web build` for UI.
 
 ## 15. Rollout
 
@@ -425,7 +440,7 @@ Where the build differs from the draft above:
   events have no `UNTIL`. The sweep deletes windows from non-active years (and
   resyncs those instructors) when the active year changes.
 - **Student view.** `GET /api/v1/me/departments` gains `schedule: { current,
-  next }`; there is no new student route. The join card and the waiting-in-line
+next }`; there is no new student route. The join card and the waiting-in-line
   card both show it. The wording is "Office hours now until …" so it is not
   mistaken for the live open state (open question 9 stays strictly separate).
 - **Cleanup.** Only the admin mapping replace, department deletion and account

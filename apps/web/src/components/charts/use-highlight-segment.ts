@@ -58,14 +58,14 @@ export function useHighlightSegment({
             xAccessor,
             hover.tooltipData,
             hover.selection,
-            span
+            span,
           )
         : INACTIVE_SEGMENT,
-    [enabled, data, xScale, xAccessor, span]
+    [enabled, data, xScale, xAccessor, span],
   );
 
   const isActive = useChartHoverSelector(
-    (hover) => resolveBounds(hover).isActive
+    (hover) => resolveBounds(hover).isActive,
   );
 
   const xSpring = useSpring(0, highlightSpring);

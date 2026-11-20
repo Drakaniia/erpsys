@@ -1,5 +1,7 @@
 import { COLLECTIONS, getDbSync, idIn } from "../lib/db/db.js";
 
+type ActiveEditor = { userId: string; name: string; expiresAt: Date };
+
 export type StepVerificationRow = {
   _id: string;
   studentProfileId: string;
@@ -19,7 +21,9 @@ export type StepVerificationRow = {
   evidence?: unknown;
   evidenceCount?: number;
   answers?: { label: string; value: string }[];
+  profilingSubmittedAt?: string | null;
   updatedAt?: Date | null;
+  activeEditors?: ActiveEditor[];
 };
 
 type StepKey = {
@@ -116,20 +120,17 @@ export class StepVerificationModel {
     if (stepIds.length === 0) return [];
     return getDbSync()
       .collection<StepVerificationRow>(COLLECTIONS.stepVerification)
-      .find(
-        { academicYearId, stepId: { $in: stepIds } } as never,
-        {
-          projection: {
-            studentProfileId: 1,
-            stepId: 1,
-            status: 1,
-            appliedAt: 1,
-            createdAt: 1,
-            verifiedAt: 1,
-            respondedAt: 1,
-          },
+      .find({ academicYearId, stepId: { $in: stepIds } } as never, {
+        projection: {
+          studentProfileId: 1,
+          stepId: 1,
+          status: 1,
+          appliedAt: 1,
+          createdAt: 1,
+          verifiedAt: 1,
+          respondedAt: 1,
         },
-      )
+      })
       .toArray();
   }
 
@@ -137,6 +138,24 @@ export class StepVerificationModel {
     return getDbSync()
       .collection<StepVerificationRow>(COLLECTIONS.stepVerification)
       .countDocuments(where as never);
+  }
+
+  static async syncProfiling(
+    existing: StepVerificationRow,
+    patch: Partial<StepVerificationRow>,
+  ): Promise<StepVerificationRow | null> {
+    return getDbSync()
+      .collection<StepVerificationRow>(COLLECTIONS.stepVerification)
+      .findOneAndUpdate(
+        {
+          ...idIn([existing._id]),
+          status: existing.status,
+          updatedAt: existing.updatedAt ?? null,
+          profilingSubmittedAt: existing.profilingSubmittedAt ?? null,
+        } as never,
+        { $set: patch } as never,
+        { returnDocument: "after" },
+      );
   }
 
   static async insert(row: StepVerificationRow): Promise<void> {
@@ -241,11 +260,93 @@ export class StepVerificationModel {
       .findOne(idIn([id]) as never);
   }
 
+  static async reviewEditors(
+    id: string,
+    academicYearId: string,
+    stepIds: string[],
+    editor?: Pick<ActiveEditor, "userId" | "name">,
+  ): Promise<ActiveEditor[] | null> {
+    const now = new Date();
+    const collection = getDbSync().collection<StepVerificationRow>(
+      COLLECTIONS.stepVerification,
+    );
+    const filter = {
+      ...idIn([id]),
+      academicYearId,
+      stepId: { $in: stepIds },
+    } as never;
+    const projection = { activeEditors: 1, _id: 0 };
+    const row = editor
+      ? await collection.findOneAndUpdate(
+          filter,
+          [
+            {
+              $set: {
+                activeEditors: {
+                  $concatArrays: [
+                    {
+                      $filter: {
+                        input: { $ifNull: ["$activeEditors", []] },
+                        as: "editor",
+                        cond: {
+                          $and: [
+                            { $gt: ["$$editor.expiresAt", now] },
+                            {
+                              $not: [
+                                {
+                                  $and: [
+                                    {
+                                      $eq: [
+                                        "$$editor.userId",
+                                        { $literal: editor.userId },
+                                      ],
+                                    },
+                                    {
+                                      $eq: [
+                                        { $ifNull: ["$$editor.leaseId", null] },
+                                        null,
+                                      ],
+                                    },
+                                  ],
+                                },
+                              ],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                    {
+                      $literal: [
+                        {
+                          ...editor,
+                          expiresAt: new Date(now.getTime() + 30_000),
+                        },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+          { projection, returnDocument: "after" },
+        )
+      : await collection.findOne(filter, { projection });
+    if (!row) return null;
+    return [
+      ...new Map(
+        (row.activeEditors ?? [])
+          .filter((item) => item.expiresAt > now)
+          .map((item) => [item.userId, item]),
+      ).values(),
+    ];
+  }
+
   static async upsertSubmission(
     step: StepKey,
     uploadIds: string[],
     now: Date,
     answers?: { label: string; value: string }[],
+    profilingSubmittedAt?: string | null,
   ): Promise<void> {
     await getDbSync()
       .collection(COLLECTIONS.stepVerification)
@@ -258,6 +359,9 @@ export class StepVerificationModel {
             evidence: { uploadIds },
             evidenceCount: uploadIds.length,
             ...(answers ? { answers } : {}),
+            ...(profilingSubmittedAt !== undefined
+              ? { profilingSubmittedAt }
+              : {}),
           },
           $setOnInsert: {
             _id: `verification-${crypto.randomUUID()}`,

@@ -3,6 +3,7 @@ import { env } from "../platform/env.js";
 import { getR2Client } from "./client.js";
 
 export function configuredR2Client(): S3Client | null {
+  if (env.LOCAL_ONLY) return null;
   const { R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET } =
     env;
   if (!R2_ENDPOINT || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) return null;

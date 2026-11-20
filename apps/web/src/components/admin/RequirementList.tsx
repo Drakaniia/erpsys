@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ConfirmDialog from "../ConfirmDialog";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import AppleSwitch from "../ui/AppleSwitch";
 import { api, queryClient } from "$lib/api";
 import type { RequirementItem } from "$lib/admin/types";
@@ -53,6 +54,7 @@ export default function RequirementList({
   }
 
   async function submitAdd() {
+    if (addLock.blocked) return;
     if (!newLabel.trim()) {
       setAddError("Enter a requirement label.");
       return;
@@ -70,7 +72,13 @@ export default function RequirementList({
   }
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const presence = useEditTimestamp("requirement", editingId, items.find((item) => item.id === editingId));
+  const editLock = useEditingLock(editingId);
+  const addLock = useEditingLock(adding);
+  const presence = useEditTimestamp(
+    "requirement",
+    editingId,
+    items.find((item) => item.id === editingId),
+  );
   const [editLabel, setEditLabel] = useState("");
 
   function startEdit(item: RequirementItem) {
@@ -79,6 +87,7 @@ export default function RequirementList({
   }
 
   async function commitEdit() {
+    if (editLock.blocked) return;
     if (!editingId) return;
     const label = editLabel.trim();
     const id = editingId;
@@ -153,7 +162,6 @@ export default function RequirementList({
 
   return (
     <div className="flex flex-col gap-4">
-
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted">
           Shown to students at step 1 (Assessment). Edits go live immediately;
@@ -177,6 +185,20 @@ export default function RequirementList({
             Retry
           </button>
         </div>
+      )}
+
+      {editingId && (
+        <ActiveEditors
+          resource="requirement"
+          id={editingId}
+          onBlockedChange={editLock.onBlockedChange}
+        />
+      )}
+      {adding && (
+        <ActiveEditors
+          resource="requirement"
+          onBlockedChange={addLock.onBlockedChange}
+        />
       )}
 
       <div className="overflow-hidden rounded-xl border border-border bg-surface-raised">
@@ -258,17 +280,28 @@ export default function RequirementList({
                 </div>
 
                 {editingId === item.id ? (
-                  <input
-                    value={editLabel}
-                    onChange={(e) => setEditLabel(e.currentTarget.value)}
-                    aria-label="Requirement label"
-                    className="min-w-0 flex-1 rounded-lg border border-primary/40 bg-surface px-3 py-1.5 text-sm text-ink"
-                    onBlur={commitEdit}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") commitEdit();
-                      if (e.key === "Escape") setEditingId(null);
-                    }}
-                  />
+                  <>
+                    <input
+                      disabled={editLock.blocked}
+                      value={editLabel}
+                      onChange={(e) => setEditLabel(e.currentTarget.value)}
+                      aria-label="Requirement label"
+                      className="min-w-0 flex-1 rounded-lg border border-primary/40 bg-surface px-3 py-1.5 text-sm text-ink"
+                      onBlur={commitEdit}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitEdit();
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => setEditingId(null)}
+                      className="text-xs text-muted"
+                    >
+                      Cancel
+                    </button>
+                  </>
                 ) : (
                   <button
                     type="button"
@@ -316,6 +349,7 @@ export default function RequirementList({
         {adding && (
           <div className="flex items-center gap-2 border-t border-border bg-surface px-4 py-3">
             <input
+              disabled={addLock.blocked}
               value={newLabel}
               onChange={(e) => setNewLabel(e.currentTarget.value)}
               aria-label="New requirement label"
@@ -332,7 +366,7 @@ export default function RequirementList({
             )}
             <button
               onClick={submitAdd}
-              disabled={addMutation.isPending}
+              disabled={addLock.blocked || addMutation.isPending}
               className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
             >
               Add

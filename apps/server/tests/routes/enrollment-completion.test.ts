@@ -50,24 +50,14 @@ function seed(): Record<string, Row[]> {
       },
     ],
     [COLLECTIONS.department]: [
-      { _id: "dept-1", name: "College of Technologies", isActive: true },
-    ],
-    [COLLECTIONS.adviserDepartment]: [
       {
-        _id: "link-1",
-        adviserId: "adv1",
-        departmentId: "dept-1",
-        yearLevels: ["FIRST"],
+        _id: "dept-1",
+        name: "College of Technologies",
+        isActive: true,
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: ["FIRST"] }],
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "profile-1",
-        userId: "stud1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-    ],
+
     [COLLECTIONS.studentEnrollment]: [
       {
         _id: "enr-1",
@@ -85,27 +75,23 @@ function seed(): Record<string, Row[]> {
       },
     ],
     [COLLECTIONS.user]: [
-      { _id: "stud1", name: "Ana", email: "12345@student.buksu.edu.ph" },
+      {
+        _id: "stud1",
+        name: "Ana",
+        email: "12345@student.buksu.edu.ph",
+        studentProfile: {
+          _id: "profile-1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
+      },
       { _id: "adv1", name: "Adviser", email: "adv@buksu.edu.ph" },
     ],
-    [COLLECTIONS.step]: [
-      ...PRE_STEPS.map((code, index) => ({
-        _id: `step-${code}`,
-        code,
-        name: code,
-        order: index + 1,
-      })),
-      {
-        _id: "step-ENROLLMENT",
-        code: "ENROLLMENT",
-        name: "Enrollment",
-        order: 6,
-      },
-    ],
+
     [COLLECTIONS.stepVerification]: PRE_STEPS.map((code) => ({
       _id: `ver-${code}`,
       studentProfileId: "profile-1",
-      stepId: `step-${code}`,
+      stepId: code,
       academicYearId: "ay-1",
       status: "VERIFIED",
     })),
@@ -177,15 +163,28 @@ const queueRow = (id: string) =>
 
 describe("enrollment completion", () => {
   it("does not complete after the serving owner changes during validation", async () => {
-    const transition = EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
-    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(async (...args) => {
-      context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
-      return transition(...args);
+    const transition =
+      EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
+    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(
+      async (...args) => {
+        context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
+        return transition(...args);
+      },
+    );
+    const response = await call("/enrollments/q-serving/completion", {
+      method: "POST",
+      body: JSON.stringify({ departmentId: "dept-1" }),
     });
-    const response = await call("/enrollments/q-serving/completion", { method: "POST", body: JSON.stringify({ departmentId: "dept-1" }) });
     expect(response.status).toBe(409);
-    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "IN_PROGRESS", servedById: "adv2" });
-    expect(context.store[COLLECTIONS.stepVerification].some((row) => row.stepId === "step-ENROLLMENT")).toBe(false);
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
+      status: "IN_PROGRESS",
+      servedById: "adv2",
+    });
+    expect(
+      context.store[COLLECTIONS.stepVerification].some(
+        (row) => row.stepId === "ENROLLMENT",
+      ),
+    ).toBe(false);
   });
   it("marks the entry completed and verifies ENROLLMENT", async () => {
     const response = await complete();
@@ -202,7 +201,7 @@ describe("enrollment completion", () => {
     expect(queueRow("q-serving")!.completedAt).toBeInstanceOf(Date);
     expect(
       context.store[COLLECTIONS.stepVerification].find(
-        (row) => row.stepId === "step-ENROLLMENT",
+        (row) => row.stepId === "ENROLLMENT",
       ),
     ).toMatchObject({ status: "VERIFIED", verifiedById: "adv1" });
     expect(
@@ -227,7 +226,7 @@ describe("enrollment completion", () => {
   it("refuses while a pre-enrollment step is unverified", async () => {
     context.store[COLLECTIONS.stepVerification] = context.store[
       COLLECTIONS.stepVerification
-    ].filter((row) => row.stepId !== "step-PROFILING");
+    ].filter((row) => row.stepId !== "PROFILING");
     const response = await complete();
     expect(response.status).toBe(409);
     expect((await response.json()).error).toBe(
@@ -267,7 +266,7 @@ describe("enrollment revert", () => {
 
     expect(
       context.store[COLLECTIONS.stepVerification].find(
-        (row) => row.stepId === "step-ENROLLMENT",
+        (row) => row.stepId === "ENROLLMENT",
       ),
     ).toMatchObject({ status: "PENDING", revokedById: "adv1" });
     expect(

@@ -135,6 +135,7 @@ export default function EnrolledTab({
             onChange={onSearchInput}
             placeholder="Search name or student #"
             aria-label="Search enrolled students"
+            data-onboarding-tip="enrolled-search"
             className="w-full rounded-xl border border-border bg-surface py-1.5 pl-8 pr-3 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
@@ -144,9 +145,14 @@ export default function EnrolledTab({
       </div>
 
       {error ? (
-        <div role="alert" className="rounded-xl border border-border p-4 text-sm text-error">
+        <div
+          role="alert"
+          className="rounded-xl border border-border p-4 text-sm text-error"
+        >
           Could not load enrolled students.
-          <button type="button" onClick={onretry} className="ml-3 underline">Retry</button>
+          <button type="button" onClick={onretry} className="ml-3 underline">
+            Retry
+          </button>
         </div>
       ) : entries.length === 0 && !loading ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-surface-raised py-12 text-center">

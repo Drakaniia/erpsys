@@ -3,7 +3,10 @@ import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "$lib/api";
+import { newPasswordSchema, PASSWORD_REQUIREMENTS } from "$lib/auth/password";
+import PasswordStrengthMeter from "../auth/PasswordStrengthMeter";
 import Skeleton from "../ui/Skeleton";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 
 type SelectedUser = {
   id: string;
@@ -23,6 +26,7 @@ export default function PasswordManagement({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
   const [showResetModal, setShowResetModal] = useState(false);
+  const lock = useEditingLock(showResetModal ? selectedUser?.id : null);
 
   // Search users query
   const searchResult = useQuery(
@@ -36,7 +40,7 @@ export default function PasswordManagement({
   const resetForm = useForm({
     defaultValues: { newPassword: "" },
     onSubmit: async ({ value }) => {
-      if (!selectedUser) return;
+      if (lock.blocked || !selectedUser) return;
       await resetPasswordMutation.mutateAsync({
         userId: selectedUser.id,
         newPassword: value.newPassword,
@@ -44,9 +48,7 @@ export default function PasswordManagement({
     },
     validators: {
       onSubmit: z.object({
-        newPassword: z
-          .string()
-          .min(8, "Password must be at least 8 characters"),
+        newPassword: newPasswordSchema,
       }),
     },
   });
@@ -264,55 +266,74 @@ export default function PasswordManagement({
                 void resetForm.handleSubmit();
               }}
             >
-              <resetForm.Field name="newPassword">
-                {(field) => {
-                  const rawErr = field.state.meta.isTouched
-                    ? field.state.meta.errors[0]
-                    : undefined;
-                  const errorMessage =
-                    rawErr === undefined
-                      ? ""
-                      : typeof rawErr === "string"
-                        ? rawErr
-                        : ((rawErr as { message?: string })?.message ?? "");
-                  const hasError =
-                    field.state.meta.isTouched && errorMessage.length > 0;
-                  return (
-                    <div className="space-y-1.5">
-                      <label
-                        htmlFor={field.name}
-                        className="text-sm font-medium text-auth-ink"
-                      >
-                        New Password
-                      </label>
-                      <input
-                        id={field.name}
-                        name={field.name}
-                        type="password"
-                        autoComplete="new-password"
-                        placeholder="Enter new password (min. 8 characters)"
-                        className={`h-11 w-full rounded-md border bg-white px-3 text-[15px] text-auth-ink outline-none placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-auth-blue ${
-                          hasError ? "border-error" : "border-auth-border"
-                        }`}
-                        aria-invalid={hasError}
-                        onBlur={field.handleBlur}
-                        value={field.state.value}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          field.handleChange(e.target.value);
-                          field.setMeta((prev) => ({
-                            ...prev,
-                            errors: [],
-                            isTouched: false,
-                          }));
-                        }}
-                      />
-                      {hasError && (
-                        <p className="text-sm text-error">{errorMessage}</p>
-                      )}
-                    </div>
-                  );
-                }}
-              </resetForm.Field>
+              <ActiveEditors
+                resource="user"
+                id={selectedUser.id}
+                onBlockedChange={lock.onBlockedChange}
+              >
+                <resetForm.Field name="newPassword">
+                  {(field) => {
+                    const rawErr = field.state.meta.isTouched
+                      ? field.state.meta.errors[0]
+                      : undefined;
+                    const errorMessage =
+                      rawErr === undefined
+                        ? ""
+                        : typeof rawErr === "string"
+                          ? rawErr
+                          : ((rawErr as { message?: string })?.message ?? "");
+                    const hasError =
+                      field.state.meta.isTouched && errorMessage.length > 0;
+                    return (
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor={field.name}
+                          className="text-sm font-medium text-auth-ink"
+                        >
+                          New Password
+                        </label>
+                        <p
+                          id="admin-password-rules"
+                          className="text-xs text-muted"
+                        >
+                          {PASSWORD_REQUIREMENTS}
+                        </p>
+                        <input
+                          id={field.name}
+                          name={field.name}
+                          type="password"
+                          autoComplete="new-password"
+                          aria-describedby="admin-password-rules"
+                          placeholder="Enter new password"
+                          className={`h-11 w-full rounded-md border bg-white px-3 text-[15px] text-auth-ink outline-none placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-auth-blue ${
+                            hasError ? "border-error" : "border-auth-border"
+                          }`}
+                          aria-invalid={hasError}
+                          onBlur={field.handleBlur}
+                          value={field.state.value}
+                          onChange={(
+                            e: React.ChangeEvent<HTMLInputElement>,
+                          ) => {
+                            field.handleChange(e.target.value);
+                            field.setMeta((prev) => ({
+                              ...prev,
+                              errors: [],
+                              isTouched: false,
+                            }));
+                          }}
+                        />
+                        {hasError && (
+                          <p className="text-sm text-error">{errorMessage}</p>
+                        )}
+                        <PasswordStrengthMeter
+                          value={String(field.state.value ?? "")}
+                          describedBy="admin-password-rules"
+                        />
+                      </div>
+                    );
+                  }}
+                </resetForm.Field>
+              </ActiveEditors>
 
               <div className="flex justify-end gap-3 pt-2">
                 <button
@@ -325,7 +346,7 @@ export default function PasswordManagement({
                 <button
                   type="submit"
                   className="rounded-lg bg-auth-blue px-4 py-2 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out hover:bg-auth-blue/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={resetPasswordMutation.isPending}
+                  disabled={lock.blocked || resetPasswordMutation.isPending}
                 >
                   {resetPasswordMutation.isPending
                     ? "Resetting..."

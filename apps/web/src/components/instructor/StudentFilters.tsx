@@ -156,9 +156,13 @@ export default function StudentFilters({
             value={filters.academicYearId ?? ""}
             onchange={(value) => onpatch({ academicYearId: value || null })}
             options={[
-              { value: "", label: activeYearId ? "Active year" : "Newest year" },
+              {
+                value: "",
+                label: activeYearId ? "Active year" : "Newest year",
+              },
               ...years.map((year) => ({
-                value: year.id, label: `${year.label}${year.isActive ? " · Active" : ""}`,
+                value: year.id,
+                label: `${year.label}${year.isActive ? " · Active" : ""}`,
               })),
             ]}
           />
@@ -218,17 +222,28 @@ export default function StudentFilters({
           <FilterDropdown
             ariaLabel="Requirement step"
             value={filters.stepCode ?? ""}
-            onchange={(value) => onpatch({ stepCode: (value || null) as StudentFilters["stepCode"] })}
+            onchange={(value) =>
+              onpatch({
+                stepCode: (value || null) as StudentFilters["stepCode"],
+              })
+            }
             options={stepOptions}
             compact
           />
           <FilterDropdown
             ariaLabel="Requirement state"
             value={filters.stepState ?? ""}
-            onchange={(value) => onpatch({ stepState: (value || null) as StudentFilters["stepState"] })}
+            onchange={(value) =>
+              onpatch({
+                stepState: (value || null) as StudentFilters["stepState"],
+              })
+            }
             options={[
               { value: "", label: "Any state" },
-              ...STEP_STATES.map((state) => ({ value: state, label: STEP_STATE_LABELS[state] })),
+              ...STEP_STATES.map((state) => ({
+                value: state,
+                label: STEP_STATE_LABELS[state],
+              })),
             ]}
             compact
           />

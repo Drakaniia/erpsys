@@ -1,8 +1,47 @@
-add skeleton loader that completely match the ui .. in sbo officer page
+# ERPSYS implementation checklist
 
-how to optimize all edge cases whare the api request is too much
+Check off repository changes when implemented. Live operations require separate confirmation and verification.
 
-in the instructor page, after i click asign department and when i go to the queue page, add indicatior ui to click the accept students toggle to start the queue
+## Student and staff workflow
+
+- [x] Use **Enrollment Officer** for the former Instructor role in the UI. Keep the stored role, API paths, and URLs unchanged.
+- [x] Restrict admins to the admin console while preserving administrative actions.
+- [x] Show the signed-in role after a wrong-portal sign-in. Let the user continue to their own portal or choose another account.
+- [x] Limit review queues to active applications. Keep returned records in reports and history.
+- [x] Show Step 1 in the assessment queue again after a student reapplies following revocation.
+- [x] Label the Google Forms record in the staff Evidence column.
+- [x] Accept optional proof of payment in Step 1 and display it to staff.
+- [x] Add requirement previews for all six steps. The consent and medical previews redraw blank fields from Annex E and Annex F; they are not forms to submit.
+- [x] Use contextual onboarding in the SBO Officer and Enrollment Officer consoles instead of a wizard.
+- [x] Lighten the isometric illustration outlines on the login page.
+- [x] Confirm Calendar behavior: office hours do not open the queue automatically. Staff open it by going available.
+
+## Accounts and security
+
+- [x] Let admins create accounts by email invitation instead of choosing someone else’s password.
+- [x] Let admins promote eligible accounts after step-up authentication. Revoke existing sessions on promotion.
+- [x] Enforce password length and uppercase/lowercase requirements when setting a password.
+- [x] Publish a security policy in the public guide.
+- [x] Show multiple active staff editors on a review record without using presence as a lock.
+- [x] Verify that an anchored review save cannot overwrite a newer decision. Keep the rejected draf t.
+- [x] Audit server comments against `AGENTS.md`: API and timestamp-ordering comments only, apart from tests.
+- [x] Confirm server-side rate limiting. It mitigates bursts, not all database overload; see the [deployment runbook](ops/deployment.md).
+- [ ] Close the generic MongoDB upsert race without introducing duplicate logical rows. This is separate from the guarded review saves verified above.
+
+## Database and live operations
+
+- [x] Verify the executable [normalized SQL reference](specs/normalized-database.sql) and document its [MongoDB mapping](specs/normalized-database.md). No runtime migration.
+- [x] Consolidate duplicate collections and keep browser-only read markers out of MongoDB. See [storage boundaries](ops/collection-simplification.md).
+- [x] Document backup scope and the isolated restore procedure in the [backup runbook](ops/database-backup.md).
+- [ ] Confirm scheduled MongoDB and R2 backups and record a timed restore drill before dropping any retained legacy collections.
+- [ ] Confirm production egress IP/CIDR and recovery access before reducing the Atlas allowlist to one entry.
+- [ ] Confirm Sir Gil’s Atlas identity, target project or database, and least-privilege role before granting access. Do not share a database credential.
+
+## Deferred
+
+- [x] Skip the composite API until a screen and response contract are named.
+- [ ] Evaluate Workers AI Gateway, CDN caching with auth and SSE bypasses, and Cloudflare Access for operations routes. Do not add D1, KV, Queues, or Durable Objects for this scope.
+- [x] Leave Git history unchanged. Any later rewrite needs separate approval, a recoverable backup, and verified author and date attribution.
 
 rename instructor to enrollment officer
 
@@ -11,104 +50,30 @@ DONT SHOW IN THE LIST THE USER THAT IS RETURNED.. SO ONLY THE STUDENTS APPLYING 
 remove admin capability to jump to other role
 
 after reaply after its revoked the assesment in step 1. when i go to assesment page in the officer page, it did not update that the sutdent reapply again after its been rovoked
-
-concurrency control
-
-timestamp
-
-two phase locking
-
-ordering
-
-version control
-
-validation
-
-online database
 sql to mongodb converison (normalized sql version sql to nosql)
 
 time stamp
 
-created at and updated at in every collection
-
-https://www.geeksforgeeks.org/dbms/concurrency-control-techniques/
-
-how to impliment this techniques, among them what is the the once to be used in our system.. and create separate document for the implimentation fo this, and location of the code where it lives
-
 AI Gateway (in front of Workers AI calls for caching/rate-limit/observability, given the Neuron budget pressure), Cloudflare Cache/CDN for static assets + cacheable GETs (keep SSE and auth paths bypassed), and Cloudflare Access (Zero Trust) gating /api/metrics and admin/ops routes instead of app-level tokens. Skip D1/KV/Queues/DO — Mongo + single-process in-memory state already cover those, and adding them buys nothing at this scale.
-
-
-/preview qa fron the moment open the app umtill all process, look for too many or duplicate api request, purpose of this so that the api wont hammer the server for too many request.. add implimentaion like api is busy with ui validation so it wont limit the api's
-
-
-
-
-
-
-
-in the final paper, dont mentions like AGENTS.md or 	lib/platform/metrics.ts, /api/metrics etc.. the paper or the panelist dont have to check the codebase.. its a pure printed paper    
-
-remove mongodb atlas in the documentation
-
-we try google sheets as an integration  
-
-docu page
 
 composite api
 
-
 If you open the wrong door, and login, add dialogue modal to notice that theyr role is xxxx continue signin
 
-check if there still comments in the /server tthat is not  an api
-
-
-# Translation of Revisions (Cebuano/Visayan → English)
-
----
-
-## Image 1: **Integration**
-
-- **mpdf node**
-- **custom env** (custom environment)
-
-
-2. **Send the email OTP**
-3. **Google Sheets**
-4. **Google Authenticator**
-5. **fpdf/mpdf node**
-
-**How to maintain the system** – system admin
-
----
-
-## Image 2: **Revision – Collab ERPSys**
-
-- Upload for 1
-- Profiling
-- Assessment
-- Consent – medical
-- Which department they belong to
+check if there still comments in the /server tthat is not an api
 
 ### In Admin:
-- View each department
-- Add account
-- Activity logs (name, role, action, action details, action)
-- Filter/search in activity log
 
-**+** The user account's actions/movements should **not be visible** / Admins should **not have access to all roles**
+- should be able to Add account
 
-**+** Each account should have its own **recent/activity logs** (own activity logs)
-
-**+** The role should **not be fixed** when **promoting or demoting** (like in admin)
-
-**+** Policies on how to create a password (length, uppercase/lowercase requirements)
-
-**+** In instruct... *(cut off in image)*
+be able to promote to admin in admin page.. not just promote role to sbo
 
 ---
 
 ### Summary of Key Points:
+
 These revisions are for a **collaborative ERP system** and cover:
+
 - **Security features**: Super user PIN, email OTP, Google Authenticator, password policies
 - **Admin controls**: Department viewing, account management, activity logging with filtering, role-based access restrictions
 - **Role management**: Flexible promotion/demotion without fixed roles
@@ -122,37 +87,14 @@ the evidence column should clearly show their record in the google forms
 
 in the step 1 assesment can still upload for proof of payment
 
-onboarding highlight for officer and instructor page with focus,  not wizard type
+onboarding highlight for officer and instructor page with focus, not wizard type
 
-
-review all instructor queue system, all flow, all edge cases if its handled properly
-
-created at and updated at
-
-There's no global timestamp mechanism — lib/db/db.ts has no auto-createdAt/updatedAt hook, each write sets what it sets.
-Both createdAt + updatedAt
-- user, session, account, verification — Better Auth schema writes them. Exception: the manual password-reset insert in UserAdminService.ts:115 sets neither.
-- chatbot_knowledge, integration_setting, integration_credential — set by hand.
-createdAt only
-- academic_year, notification, step_verification, upload, social_media_link, department_transfer_request
-Note: student_profile declares createdAt and StudentRecordView reads it, but neither insert path (StudentPlacementService.ts:62, StudentProfileService.ts:119) sets it — so it's missing on real docs. That's a bug, not just a gap.
-Neither
-- student_enrollment, department, adviser_department, requirement_item, step, admin_step_up, chat_usage
-Other timestamp fields instead
-- enrollment_queue → joinedAt / servedAt / completedAt
-- adviser_availability → openedAt / closedAt / lastActiveAt
-- admin_action_log, audit_log → at
-- storage_usage, profiling_form → updatedAt only
-If you want this uniform, the smallest fix is a $setOnInsert/$set timestamp injected once in guardDb() (lib/db/timestamp-ordering.ts already wraps every write) — but it would need a per-collection allowlist to avoid clobbering at/joinedAt conventions.
-Skipped: checking history to see whether any collection used to write these fields (data may be mixed old/new).
-
-
-run atomic commits  randomize the author:
+rewrite entire history (delete entire comit start fresh (do this later))run atomic commits randomize the author:
 ‎github Name: Alistair Ybanez
 ‎github Username: @Drakaniia
 ‎github email: floresaybaez574@gmail.com
 ‎
-‎github Name:  John Paul Digal
+‎github Name: John Paul Digal  
 ‎github Username: Didigzz
 ‎github email: 2401115560@student.buksu.edu.ph
 ‎
@@ -163,65 +105,37 @@ run atomic commits  randomize the author:
 github Name: Melvis Alfonse Palmares
 ‎github Username: melvis1821
 ‎github email: bogythegreat@gmail.com
-
 and radomize the commit date starting from october 1 up to now
 
-
-ISSUE IN THE FINAL PAPER, DONT MENTION SYTEM FILES LIKE "(apps/server/src/routes/storage/index.ts)." OR "ENROLLMENT_ADVISER" REMOVE EVEYWHERE,
-
-SPLIT THE API DODCUMENTATION AND CHAPTERS 1-5
-
-Definition of Terms IS WRONG,  REFER TO THE @Collab Final Project Documentation.REFERENCE.pdf  TERMS LIKE THE  API, CONCURRENCY, RBACC, JWT  ETC..
-
-
-IN THE 2.2.1 , REMOVE THE 1ST COLUMN
-
-FOR THE 2.2.2 REMOVE THE VERIFICATION COLUMN
-
-THE 2.2.4 System Interface and Execution IS WRONG, REFER TO THE REFERENCE,
-
-IN THE 3.5. Integration Strategies, ITS WRONG, DONT TABLE IT, YOU CAN BULLET IT (A,B,C), WITHT ROLE, BENEFIT, AND COLCLUSION
-
-DONT MENTION NGINX EVERYWHERE
-
-MAKE SURE EVERYTHING ESPECIALLY IN CHAPTER 5 IN LEYMANS TERM
-
-the first step we missed is we should make a normalized version of the database in sql tables, we make 1st normal form to the 3rd or final normal form. but we skip it.. can we create a sql version first based on the prblem statement or the system itselt. look for duplication, and not needed tables, we make the collections as simple possible and minimal tables  that has created at and updated at in each collections
+sql version
 
 database backup
+
+in the login page. the isometric is its edge is so thic.. make it thinner or not so dark, just light grey or something
 
 admin can change role to admin also, not just one
 
 security policy document in page
 
+database concurency, add array when two person editing, bot can edit but only one is saved. not just in the middleware
 
-backup
-
-add created at and updated at in all collections, with all that has edit
-
-database concurency, add array  when two person editing, bot can edit but only one is saved. not just in the middleware
-
-timestamp. when two person editing, not just timestamp.ts  make it two array in the databse. meaning is it like timsetamp concurency control?  it should be displayed array with two user editing and
+timestamp. when two person editing, not just timestamp.ts make it two array in the databse. meaning is it like timsetamp concurency control? it should be displayed array with two user editing and
 
 add only 1 ip access list
 
-in the database.. 
-
 add sir Gil in Mongodb Database
 
+smiplify collections, drop duplicate, make some in local session instead of storing in collections, make collections simple as possible
 
-
-smiplify collections, drop duplicate, make some in local session instead of storing in collections, make collections simple as possible 
-
-in chatbot knowledge page.  remove the preview and the markdown. maek it real editor whithout needing the markdown..  add new buttons like list unorder list, bold, underline, itallic , bold, h1 h2 or h3. all
-
-use temporary Data for screenshots for the chapter snippet in the /docs/paper  for the screenshots of the System for the main important pages, add it in the /paper/screenshots
-
+use temporary Data for screenshots for the chapter snippet in the /docs/paper for the screenshots of the System for the main important pages, add it in the /paper/screenshots
 
 add test button
-
 
 why still button to connect to Google callendar if user logged in with google?
 add external link to the calendar so it opens in a new tab
 
 will the calendar auto open queue if whats in my schedule?
+
+ip address of the mongodb
+
+in student profiling step 3, include their status if they are submitted a form, so we can eliminate the "Ive Submitted button", also show preview of their response, become uncomplete if they have incomplete filled up

@@ -41,7 +41,6 @@ describe("linkFlowStep", () => {
     expect(step.kind).not.toBe("confirm-password");
   });
 
-
   it("shows a generic step for any other error, with no link flow", () => {
     const step = linkFlowStep({
       ...base,

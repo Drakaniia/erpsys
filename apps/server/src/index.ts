@@ -1,11 +1,16 @@
 import { closeDb, getDb } from "./lib/db/db.js";
 import { ensureIndexes } from "./lib/db/indexes.js";
+import { assertCollectionReadiness } from "./lib/db/collection-readiness.js";
 import { startSweeps } from "./lib/db/sweeps.js";
 import {
   loadCredentialOverrides,
   snapshotAppliedFingerprints,
 } from "./lib/platform/credentials.js";
-import { applyEnvOverrides, assertProductionEnv, env } from "./lib/platform/env.js";
+import {
+  applyEnvOverrides,
+  assertProductionEnv,
+  env,
+} from "./lib/platform/env.js";
 import { sweepCalendars } from "./services/calendar.js";
 
 process.on("unhandledRejection", (error) =>
@@ -13,7 +18,9 @@ process.on("unhandledRejection", (error) =>
 );
 
 try {
-  await (await getDb()).command({ ping: 1 });
+  const db = await getDb();
+  await db.command({ ping: 1 });
+  await assertCollectionReadiness(db);
   await ensureIndexes();
   const overrides = await loadCredentialOverrides();
   applyEnvOverrides(overrides.values);
@@ -28,7 +35,7 @@ assertProductionEnv();
 const { buildApp } = await import("./app.js");
 const app = buildApp();
 
-const server = app.listen(env.PORT, () => {
+const server = app.listen(env.PORT, "127.0.0.1", () => {
   console.log(`[server] listening on :${env.PORT}`);
   startSweeps();
   startSweeps(sweepCalendars, "calendar-sweep");

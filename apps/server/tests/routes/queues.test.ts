@@ -60,14 +60,7 @@ function seed(): Record<string, Row[]> {
         createdAt: new Date("2025-06-01"),
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "profile-1",
-        userId: "stud1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-    ],
+
     [COLLECTIONS.studentEnrollment]: [
       {
         _id: "enr-1",
@@ -80,28 +73,25 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.department]: [
       {
         _id: "dept-1",
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: ["FIRST"] }],
         name: "College of Technologies",
         isActive: true,
         yearLevels: ["FIRST"],
       },
     ],
-    [COLLECTIONS.step]: STEP_CODES.map((code, index) => ({
-      _id: `step-${index + 1}`,
-      code,
-      name: code,
-      order: index + 1,
-    })),
+
     [COLLECTIONS.stepVerification]: STEP_CODES.slice(0, 5).map(
       (code, index) => ({
         _id: `v-${index + 1}`,
         studentProfileId: "profile-1",
-        stepId: `step-${index + 1}`,
+        stepId: code,
         academicYearId: "ay-1",
         status: "VERIFIED",
       }),
     ),
-    [COLLECTIONS.adviserAvailability]: [
+    [COLLECTIONS.adviserSchedule]: [
       {
+        kind: "presence",
         _id: "av-1",
         adviserId: "adv1",
         departmentId: "dept-1",
@@ -110,19 +100,17 @@ function seed(): Record<string, Row[]> {
         lastActiveAt: recent,
       },
     ],
-    [COLLECTIONS.adviserDepartment]: [
-      {
-        _id: "link-1",
-        adviserId: "adv1",
-        departmentId: "dept-1",
-        yearLevels: ["FIRST"],
-      },
-    ],
+
     [COLLECTIONS.enrollmentQueue]: [],
     [COLLECTIONS.notification]: [],
     [COLLECTIONS.user]: [
       {
         _id: "stud1",
+        studentProfile: {
+          _id: "profile-1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
@@ -219,7 +207,9 @@ describe("joining the queue", () => {
   });
 
   it("refuses when no adviser has the queue open", async () => {
-    context.store[COLLECTIONS.adviserAvailability][0].isOpen = false;
+    context.store[COLLECTIONS.adviserSchedule].find(
+      (row) => row.kind === "presence",
+    )!.isOpen = false;
     const response = await join();
     expect(response.status).toBe(409);
     expect((await response.json()).error).toBe(
@@ -228,7 +218,8 @@ describe("joining the queue", () => {
   });
 
   it("refuses a year level the live advisers do not cover", async () => {
-    context.store[COLLECTIONS.adviserDepartment][0].yearLevels = ["SECOND"];
+    (context.store[COLLECTIONS.department][0].advisers as Row[])[0].yearLevels =
+      ["SECOND"];
     const response = await join();
     expect(response.status).toBe(409);
     expect((await response.json()).error).toBe(
@@ -339,36 +330,66 @@ describe("officer serving", () => {
 
   it("cannot release or move a serving student after another adviser takes ownership", async () => {
     pushWaiting("entry-1", "2025-07-01T00:00:00Z");
-    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], { status: "IN_PROGRESS", servedById: "adv1" });
-    const transition = EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
-    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(async (...args) => {
-      context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
-      return transition(...args);
+    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], {
+      status: "IN_PROGRESS",
+      servedById: "adv1",
     });
-    const response = await call("/queues/serving", { method: "DELETE", body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }) });
+    const transition =
+      EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
+    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(
+      async (...args) => {
+        context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
+        return transition(...args);
+      },
+    );
+    const response = await call("/queues/serving", {
+      method: "DELETE",
+      body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }),
+    });
     expect(response.status).toBe(409);
-    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "IN_PROGRESS", servedById: "adv2" });
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
+      status: "IN_PROGRESS",
+      servedById: "adv2",
+    });
   });
 
   it("refuses a waiting student whose department changed", async () => {
     pushWaiting("entry-1", "2025-07-01T00:00:00Z");
-    context.store[COLLECTIONS.studentEnrollment][0].departmentId = "other-department";
-    const response = await call("/queues/serving", { method: "POST", body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }) });
+    context.store[COLLECTIONS.studentEnrollment][0].departmentId =
+      "other-department";
+    const response = await call("/queues/serving", {
+      method: "POST",
+      body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }),
+    });
     expect(response.status).toBe(409);
-    expect(context.store[COLLECTIONS.enrollmentQueue][0].status).toBe("WAITING");
+    expect(context.store[COLLECTIONS.enrollmentQueue][0].status).toBe(
+      "WAITING",
+    );
   });
 
   it("does not move a student after a different adviser takes the serving lock", async () => {
     pushWaiting("entry-1", "2025-07-01T00:00:00Z");
-    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], { status: "IN_PROGRESS", servedById: "adv1" });
-    const transition = EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
-    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(async (...args) => {
-      context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
-      return transition(...args);
+    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], {
+      status: "IN_PROGRESS",
+      servedById: "adv1",
     });
-    const response = await call("/queues/serving/position", { method: "POST", body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }) });
+    const transition =
+      EnrollmentQueueModel.transition.bind(EnrollmentQueueModel);
+    vi.spyOn(EnrollmentQueueModel, "transition").mockImplementation(
+      async (...args) => {
+        context.store[COLLECTIONS.enrollmentQueue][0].servedById = "adv2";
+        return transition(...args);
+      },
+    );
+    const response = await call("/queues/serving/position", {
+      method: "POST",
+      body: JSON.stringify({ departmentId: "dept-1", entryId: "entry-1" }),
+    });
     expect(response.status).toBe(409);
-    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "IN_PROGRESS", servedById: "adv2" });
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
+      status: "IN_PROGRESS",
+      servedById: "adv2",
+    });
   });
 
   it("releases the serving slot without enrolling", async () => {
@@ -458,8 +479,11 @@ describe("officer serving", () => {
   });
 
   const removeEntry = async (id: string) =>
-    (await (await call(`/queue-entries/${id}/removal`, { method: "POST" })).json())
-      .data.snapshot;
+    (
+      await (
+        await call(`/queue-entries/${id}/removal`, { method: "POST" })
+      ).json()
+    ).data.snapshot;
   const restore = (id: string, snapshot: Record<string, unknown>) =>
     call(`/queue-entries/${id}/restoration`, {
       method: "POST",
@@ -489,11 +513,16 @@ describe("officer serving", () => {
   });
 
   it("serves the first student in my year levels past one I can't serve", async () => {
-    context.store[COLLECTIONS.studentProfile].push({
-      _id: "profile-2",
-      userId: "stud2",
-      studentNumber: "22222",
-      academicYearId: "ay-1",
+    context.store[COLLECTIONS.user].push({
+      _id: "stud2",
+      name: "Ben",
+      email: "22222@student.buksu.edu.ph",
+      role: "STUDENT",
+      studentProfile: {
+        _id: "profile-2",
+        studentNumber: "22222",
+        academicYearId: "ay-1",
+      },
     });
     context.store[COLLECTIONS.studentEnrollment].push({
       _id: "enr-2",
@@ -502,7 +531,8 @@ describe("officer serving", () => {
       departmentId: "dept-1",
       yearLevel: "SECOND",
     });
-    context.store[COLLECTIONS.adviserDepartment][0].yearLevels = ["SECOND"];
+    (context.store[COLLECTIONS.department][0].advisers as Row[])[0].yearLevels =
+      ["SECOND"];
     pushWaiting("entry-1", "2025-07-01T00:00:00Z"); // 1st year, not mine
     context.store[COLLECTIONS.enrollmentQueue].push({
       _id: "entry-2",

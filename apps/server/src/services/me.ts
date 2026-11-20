@@ -2,6 +2,8 @@ import {
   NOTIFICATION_PAGE_SIZE,
   PRE_ENROLLMENT_STEP_CODES,
   deriveDepartmentCode,
+  listSteps,
+  listStepsByCodes,
 } from "../config/constants.js";
 import { ApiError } from "../config/errors.js";
 import { landingSurfaceForRole } from "../config/roles.js";
@@ -10,9 +12,9 @@ import { AdminActionLogModel } from "../models/AdminActionLogModel.js";
 import { DepartmentModel } from "../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../models/EnrollmentQueueModel.js";
 import { NotificationModel } from "../models/NotificationModel.js";
-import { StepModel } from "../models/StepModel.js";
+
 import { StepVerificationModel } from "../models/StepVerificationModel.js";
-import { StudentProfileModel } from "../models/StudentProfileModel.js";
+
 import { UserModel } from "../models/UserModel.js";
 import { publicIntegrationPayload } from "../lib/platform/integration-settings.js";
 import type { SessionUser } from "../middleware/auth.js";
@@ -93,10 +95,15 @@ async function adminOverview() {
   const [users, activeYear, steps, logs] = await Promise.all([
     UserModel.listActiveRoles(),
     AcademicYearModel.findActive(),
-    StepModel.listOrdered(),
+    listSteps(),
     AdminActionLogModel.recent(RECENT_LIMIT),
   ]);
-  const roleCounts = { STUDENT: 0, SBO_OFFICER: 0, ENROLLMENT_ADVISER: 0, ADMIN: 0 };
+  const roleCounts = {
+    STUDENT: 0,
+    SBO_OFFICER: 0,
+    ENROLLMENT_ADVISER: 0,
+    ADMIN: 0,
+  };
   for (const user of users) {
     const role = user.role as keyof typeof roleCounts | undefined;
     if (role && role in roleCounts) roleCounts[role] += 1;
@@ -182,7 +189,7 @@ async function adminOverview() {
 
 async function officerOverview() {
   const [steps, year] = await Promise.all([
-    StepModel.listByCodes([...PRE_ENROLLMENT_STEP_CODES]),
+    listStepsByCodes(PRE_ENROLLMENT_STEP_CODES),
     AcademicYearModel.findActive(),
   ]);
 
@@ -231,11 +238,16 @@ async function officerOverview() {
     );
   const verifiedBy = ofStatus((status) => status === "VERIFIED");
   const unverifiedBy = ofStatus((status) => status !== "VERIFIED");
-  const awaitingBy = ofStatus((status) => AWAITING_REVIEW.has(status));
+  const isAwaiting = (row: TimelineRow) =>
+    AWAITING_REVIEW.has(row.status ?? "") ||
+    (row.status === "PENDING" && Boolean(row.appliedAt));
+  const awaitingBy = countBy(
+    rows.filter(isAwaiting).map((row) => String(row.stepId)),
+  );
   const returnedBy = ofStatus((status) => status === "RETURNED");
   const oldestAwaitingBy = new Map<string, number>();
   for (const row of rows) {
-    if (!AWAITING_REVIEW.has(row.status ?? "")) continue;
+    if (!isAwaiting(row)) continue;
     const at = submittedAtOf(row)?.getTime();
     if (at === undefined) continue;
     const current = oldestAwaitingBy.get(String(row.stepId));
@@ -263,7 +275,7 @@ async function officerOverview() {
     )
     .slice(0, OFFICER_RECENT_LIMIT);
 
-  const profiles = await StudentProfileModel.findByIds([
+  const profiles = await UserModel.findProfilesByIds([
     ...new Set(recent.map((row) => String(row.studentProfileId))),
   ]);
   const users = await UserModel.findByIds(
@@ -274,9 +286,7 @@ async function officerOverview() {
     profiles.map((p) => {
       const user = userById.get(String(p.userId));
       const name =
-        user?.name?.trim() ||
-        user?.email?.split("@")[0]?.trim() ||
-        "Unknown";
+        user?.name?.trim() || user?.email?.split("@")[0]?.trim() || "Unknown";
       return [String(p._id), name];
     }),
   );
@@ -368,14 +378,19 @@ export async function listNotifications(userId: string) {
 async function launchData(user: SessionUser) {
   switch (landingSurfaceForRole(user.role)) {
     case "student": {
-      const [getMySteps, getMyQueueStatus, notifications, profileStatus, integrations] =
-        await Promise.all([
-          loadStudentSteps(user),
-          myQueueStatus(user.id),
-          listNotifications(user.id),
-          studentProfileStatus(user.id),
-          publicIntegrationPayload(),
-        ]);
+      const [
+        getMySteps,
+        getMyQueueStatus,
+        notifications,
+        profileStatus,
+        integrations,
+      ] = await Promise.all([
+        loadStudentSteps(user),
+        myQueueStatus(user.id),
+        listNotifications(user.id),
+        studentProfileStatus(user.id),
+        publicIntegrationPayload(),
+      ]);
       return {
         getMySteps,
         getMyQueueStatus,
@@ -385,18 +400,20 @@ async function launchData(user: SessionUser) {
       };
     }
     case "officer": {
-      const [getOverview, getBell, getProfilingForm, links] = await Promise.all([
-        overview(user.role),
-        submissionPage(
-          submissionListQuery.parse({
-            status: "PENDING",
-            dir: "desc",
-            pageSize: 20,
-          }),
-        ),
-        readProfilingForm(),
-        listSocialLinks(),
-      ]);
+      const [getOverview, getBell, getProfilingForm, links] = await Promise.all(
+        [
+          overview(user.role),
+          submissionPage(
+            submissionListQuery.parse({
+              status: "PENDING",
+              dir: "desc",
+              pageSize: 20,
+            }),
+          ),
+          readProfilingForm(),
+          listSocialLinks(),
+        ],
+      );
       return {
         getOverview,
         getBell,

@@ -5,7 +5,10 @@ import { env } from "../../lib/platform/env.js";
 import { escapeHtml, sendMail } from "../../lib/platform/mailer.js";
 import { createRateLimitBudget } from "../../lib/platform/rate-limit.js";
 import { AccountModel } from "../../models/AccountModel.js";
-import { AdminStepUpModel, type AdminStepUpRow } from "../../models/AdminStepUpModel.js";
+import {
+  AdminStepUpModel,
+  type AdminStepUpRow,
+} from "../../models/AdminStepUpModel.js";
 import { UserModel } from "../../models/UserModel.js";
 
 const STEP_WINDOW_MS = 10 * 60_000;
@@ -17,13 +20,26 @@ export const STEP_UP_REQUIRED = "STEP_UP_REQUIRED";
 
 type StepName = "pin" | "password" | "code" | "totp";
 
-const pinPerUser = createRateLimitBudget({ name: "admin-pin-user", windowMs: 15 * 60_000, max: 8 });
-const pinGlobal = createRateLimitBudget({ name: "admin-pin-global", windowMs: 15 * 60_000, max: 60 });
-const passwordPerUser = createRateLimitBudget({ name: "admin-password", windowMs: 15 * 60_000, max: 8 });
+const pinPerUser = createRateLimitBudget({
+  name: "admin-pin-user",
+  windowMs: 15 * 60_000,
+  max: 8,
+});
+const pinGlobal = createRateLimitBudget({
+  name: "admin-pin-global",
+  windowMs: 15 * 60_000,
+  max: 60,
+});
+const passwordPerUser = createRateLimitBudget({
+  name: "admin-password",
+  windowMs: 15 * 60_000,
+  max: 8,
+});
 
 const digest = (value: string) => createHash("sha256").update(value).digest();
 const same = (a: string, b: string) => timingSafeEqual(digest(a), digest(b));
-const codeHash = (userId: string, code: string) => digest(`${userId}:${code}`).toString("hex");
+const codeHash = (userId: string, code: string) =>
+  digest(`${userId}:${code}`).toString("hex");
 const fresh = (at: Date | null | undefined, now: Date) =>
   !!at && now.getTime() - at.getTime() < STEP_WINDOW_MS;
 const after = (now: Date, ms: number) => new Date(now.getTime() + ms);
@@ -51,23 +67,39 @@ export async function stepUpStatus(userId: string, now = new Date()) {
   };
 }
 
-export async function submitPin(userId: string, pin: string, now = new Date()): Promise<void> {
+export async function submitPin(
+  userId: string,
+  pin: string,
+  now = new Date(),
+): Promise<void> {
   if (!/^\d{6}$/.test(env.SU_PIN)) {
     throw new ApiError("SERVICE_UNAVAILABLE", {
       message: "The administrator PIN is not configured.",
     });
   }
-  if (!(await pinPerUser.checkAsync(userId)).allowed || !(await pinGlobal.checkAsync("all")).allowed) {
+  if (
+    !(await pinPerUser.checkAsync(userId)).allowed ||
+    !(await pinGlobal.checkAsync("all")).allowed
+  ) {
     throw new ApiError("TOO_MANY_REQUESTS", {
       message: "Too many PIN attempts. Wait a few minutes and try again.",
     });
   }
-  if (!same(pin, env.SU_PIN)) throw new ApiError("FORBIDDEN", { message: "Incorrect PIN." });
+  if (!same(pin, env.SU_PIN))
+    throw new ApiError("FORBIDDEN", { message: "Incorrect PIN." });
   const passwordless = !(await AccountModel.hasPassword(userId));
-  await AdminStepUpModel.begin(userId, now, after(now, STEP_WINDOW_MS), passwordless ? now : null);
+  await AdminStepUpModel.begin(
+    userId,
+    now,
+    after(now, STEP_WINDOW_MS),
+    passwordless ? now : null,
+  );
 }
 
-export async function beforePassword(userId: string, now = new Date()): Promise<void> {
+export async function beforePassword(
+  userId: string,
+  now = new Date(),
+): Promise<void> {
   const row = await AdminStepUpModel.find(userId);
   if (!fresh(row?.pinAt, now)) throw order("pin", "Enter the PIN first.");
   if (!(await passwordPerUser.checkAsync(userId)).allowed) {
@@ -77,8 +109,15 @@ export async function beforePassword(userId: string, now = new Date()): Promise<
   }
 }
 
-export async function passwordAccepted(userId: string, now = new Date()): Promise<void> {
-  await AdminStepUpModel.patch(userId, { passwordAt: now }, after(now, STEP_WINDOW_MS));
+export async function passwordAccepted(
+  userId: string,
+  now = new Date(),
+): Promise<void> {
+  await AdminStepUpModel.patch(
+    userId,
+    { passwordAt: now },
+    after(now, STEP_WINDOW_MS),
+  );
 }
 
 function codeEmail(to: string, name: string | null | undefined, code: string) {
@@ -104,7 +143,8 @@ export async function sendCode(
   now = new Date(),
 ): Promise<void> {
   const row = await AdminStepUpModel.find(user.id);
-  if (!fresh(row?.passwordAt, now)) throw order("password", "Confirm your password first.");
+  if (!fresh(row?.passwordAt, now))
+    throw order("password", "Confirm your password first.");
   if (row?.sentAt && now.getTime() - row.sentAt.getTime() < CODE_RESEND_MS) {
     throw new ApiError("TOO_MANY_REQUESTS", {
       message: "Wait a minute before requesting another code.",
@@ -113,7 +153,12 @@ export async function sendCode(
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
   await AdminStepUpModel.patch(
     user.id,
-    { codeHash: codeHash(user.id, code), sentAt: now, attempts: 0, codeAt: null },
+    {
+      codeHash: codeHash(user.id, code),
+      sentAt: now,
+      attempts: 0,
+      codeAt: null,
+    },
     after(now, STEP_WINDOW_MS),
   );
   if (await sendMail(codeEmail(user.email, user.name, code))) return;
@@ -123,12 +168,19 @@ export async function sendCode(
       message: "The code email could not be sent. Check the email integration.",
     });
   }
-  console.log(`[auth] integration confirmation code for ${user.email}: ${code}`);
+  console.log(
+    `[auth] integration confirmation code for ${user.email}: ${code}`,
+  );
 }
 
-export async function verifyCode(userId: string, code: string, now = new Date()): Promise<void> {
+export async function verifyCode(
+  userId: string,
+  code: string,
+  now = new Date(),
+): Promise<void> {
   const before = await AdminStepUpModel.find(userId);
-  if (!fresh(before?.passwordAt, now)) throw order("password", "Confirm your password first.");
+  if (!fresh(before?.passwordAt, now))
+    throw order("password", "Confirm your password first.");
   const row = await AdminStepUpModel.takeCodeAttempt(userId, CODE_MAX_ATTEMPTS);
   if (!row || !row.codeHash || !fresh(row.sentAt, now)) {
     throw new ApiError("BAD_REQUEST", {
@@ -140,15 +192,39 @@ export async function verifyCode(userId: string, code: string, now = new Date())
       message: `Incorrect code. ${CODE_MAX_ATTEMPTS - row.attempts} tries left.`,
     });
   }
-  await AdminStepUpModel.patch(userId, { codeAt: now }, after(now, STEP_WINDOW_MS));
+  await AdminStepUpModel.patch(
+    userId,
+    { codeAt: now },
+    after(now, STEP_WINDOW_MS),
+  );
 }
 
-export async function requireCodeStep(userId: string, now = new Date()): Promise<void> {
+export async function requireCodeStep(
+  userId: string,
+  now = new Date(),
+): Promise<void> {
   const row = await AdminStepUpModel.find(userId);
-  if (!fresh(row?.codeAt, now)) throw order("code", "Confirm the emailed code first.");
+  if (!fresh(row?.codeAt, now))
+    throw order("code", "Confirm the emailed code first.");
 }
 
-export async function beforeAuthenticator(userId: string, now = new Date()): Promise<void> {
+export async function requireAuthenticatorReset(
+  userId: string,
+  now = new Date(),
+): Promise<void> {
+  const row = await AdminStepUpModel.find(userId);
+  if (nextStep(row, now) !== "totp") {
+    throw new ApiError("FORBIDDEN", {
+      message: "Confirm the PIN, your password and the emailed code first.",
+      data: { code: STEP_UP_REQUIRED, authenticatorReset: true },
+    });
+  }
+}
+
+export async function beforeAuthenticator(
+  userId: string,
+  now = new Date(),
+): Promise<void> {
   await requireCodeStep(userId, now);
   if (!(await AdminStepUpModel.takeTotpAttempt(userId, TOTP_MAX_ATTEMPTS))) {
     await AdminStepUpModel.remove(userId);
@@ -160,14 +236,19 @@ export async function beforeAuthenticator(userId: string, now = new Date()): Pro
 
 export async function resetAuthenticator(userId: string): Promise<void> {
   const db = getDbSync();
-  await db.collection("twoFactor").deleteMany({ userId: refIn([userId]) } as never);
+  await db
+    .collection("twoFactor")
+    .deleteMany({ userId: refIn([userId]) } as never);
   await AdminStepUpModel.remove(userId);
   await db
     .collection(COLLECTIONS.user)
     .updateOne(idIn([userId]) as never, { $set: { twoFactorEnabled: false } });
 }
 
-export async function unlockStepUp(userId: string, now = new Date()): Promise<void> {
+export async function unlockStepUp(
+  userId: string,
+  now = new Date(),
+): Promise<void> {
   const until = after(now, UNLOCK_MS);
   await AdminStepUpModel.patch(
     userId,

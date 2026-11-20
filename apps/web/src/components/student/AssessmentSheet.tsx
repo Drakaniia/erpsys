@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation } from "@tanstack/react-query";
+import { useStorageUpload } from "$lib/storage/use-storage-upload";
+import EvidenceLightbox from "./EvidenceLightbox";
+import EvidenceUploadPanel from "./EvidenceUploadPanel";
 import ReplyNotice from "./ReplyNotice";
 import StampDisplay from "./StampDisplay";
 import { api, queryClient } from "$lib/api";
@@ -16,16 +19,52 @@ export default function AssessmentSheet({
   const applyMutation = useMutation(
     api.student.applyAssessment.mutationOptions(),
   );
-  const busy = applyMutation.isPending;
+  const removeMutation = useMutation(
+    api.student.deleteEvidence.mutationOptions(),
+  );
+  const { upload } = useStorageUpload("evidenceImage");
+  const [proof, setProof] = useState<File | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [preview, setPreview] = useState(-1);
+  const busy = applying || removeMutation.isPending;
+  const locked = step.status === "VERIFIED" || step.status === "APPLIED";
+  const proofs = (step.evidence ?? []).filter(
+    (item: StepRow["evidence"][number]) => item.kind === "PAYMENT_PROOF",
+  );
+  const liveProofs = proofs.filter(
+    (item: StepRow["evidence"][number]) => !item.expired,
+  );
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const presence = useEditTimestamp("submission", confirmOpen ? "me~ASSESSMENT" : null, step);
+  const presence = useEditTimestamp(
+    "submission",
+    confirmOpen ? "me~ASSESSMENT" : null,
+    step,
+  );
   const [applyError, setApplyError] = useState<string | null>(null);
+
+  async function removeProof(id: string) {
+    try {
+      await removeMutation.mutateAsync({ id });
+      await queryClient.invalidateQueries({ queryKey: ["student"] });
+    } catch (e) {
+      notify(
+        (e as { message?: string }).message ??
+          "Could not remove proof of payment.",
+        "error",
+      );
+    }
+  }
 
   async function apply() {
     setApplyError(null);
+    setApplying(true);
     try {
-      await applyMutation.mutateAsync({ ts: presence.ts });
+      if (proof) {
+        await upload(proof, { stepCode: "ASSESSMENT" });
+        setProof(null);
+      }
+      await applyMutation.mutateAsync(proof ? {} : { ts: presence.ts });
       setConfirmOpen(false);
       queryClient.invalidateQueries({ queryKey: ["student"] });
       notify("Application received — awaiting officer review");
@@ -35,14 +74,46 @@ export default function AssessmentSheet({
         "Could not apply — please try again.";
       setApplyError(message);
       notify(message, "error");
+      void queryClient.invalidateQueries({ queryKey: ["student"] });
+    } finally {
+      setApplying(false);
     }
   }
 
   return (
     <>
       <div className="flex flex-col gap-4">
-
         {step.reply ? <ReplyNotice reply={step.reply} /> : null}
+
+        {(!locked || proofs.length > 0) && (
+          <section aria-label="Proof of payment">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+              Proof of payment{!locked && " (optional)"}
+            </h3>
+            <EvidenceUploadPanel
+              items={proofs}
+              locked={locked}
+              label="Upload proof of payment"
+              hint="Choose a receipt image or PDF to send with your application."
+              uploading={busy}
+              pending={
+                proof
+                  ? [
+                      {
+                        id: "payment-proof",
+                        name: proof.name,
+                        previewUrl: null,
+                      },
+                    ]
+                  : []
+              }
+              onpick={setProof}
+              onremovepending={() => setProof(null)}
+              ondelete={removeProof}
+              onpreview={setPreview}
+            />
+          </section>
+        )}
 
         {step.status === "VERIFIED" ? (
           step.stamp ? (
@@ -138,6 +209,21 @@ export default function AssessmentSheet({
           </div>
         )}
       </div>
+
+      {preview >= 0 && liveProofs[preview] && (
+        <EvidenceLightbox
+          images={liveProofs.map((item: StepRow["evidence"][number]) => ({
+            id: item.id,
+            fileUrl: item.fileUrl,
+            fileKey: item.fileKey ?? null,
+            mime: item.mime ?? null,
+            name: item.name ?? null,
+            kind: item.kind,
+          }))}
+          index={preview}
+          onclose={() => setPreview(-1)}
+        />
+      )}
 
       {confirmOpen ? (
         <div

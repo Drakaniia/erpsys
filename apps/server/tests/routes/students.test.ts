@@ -49,20 +49,7 @@ function seed(): Record<string, Row[]> {
         createdAt: new Date("2025-06-01"),
       },
     ],
-    [COLLECTIONS.step]: STEP_CODES.map((code, index) => ({
-      _id: `step-${index + 1}`,
-      code,
-      name: code,
-      order: index + 1,
-    })),
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "profile-1",
-        userId: "stud1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-    ],
+
     [COLLECTIONS.studentEnrollment]: [
       {
         _id: "enr-1",
@@ -75,11 +62,16 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.department]: [
       { _id: "dept-1", name: "College of Technologies", isActive: true },
     ],
-    [COLLECTIONS.requirementItem]: [
-      { _id: "req-1", label: "TOR", order: 1, isActive: true },
-    ],
-    [COLLECTIONS.socialMediaLink]: [
+    [COLLECTIONS.content]: [
       {
+        _id: "req-1",
+        kind: "requirement",
+        label: "TOR",
+        order: 1,
+        isActive: true,
+      },
+      {
+        kind: "socialLink",
         _id: "sml-1",
         name: "Facebook",
         url: "https://fb.test",
@@ -105,6 +97,11 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.user]: [
       {
         _id: "stud1",
+        studentProfile: {
+          _id: "profile-1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
@@ -169,7 +166,7 @@ describe("student steps", () => {
       context.store[COLLECTIONS.stepVerification].push({
         _id: `v-${index}`,
         studentProfileId: "profile-1",
-        stepId: `step-${index}`,
+        stepId: STEP_CODES[index - 1],
         academicYearId: "ay-1",
         status: "VERIFIED",
         verifiedById: "off1",
@@ -193,7 +190,7 @@ describe("student steps", () => {
   });
 
   it("derives the number for an institutional address with no profile yet", async () => {
-    context.store[COLLECTIONS.studentProfile] = [];
+    delete context.store[COLLECTIONS.user][0].studentProfile;
     context.store[COLLECTIONS.studentEnrollment] = [];
     context.store[COLLECTIONS.user][0]._id = "stud1";
     const body = await (await call("/me/student")).json();
@@ -216,7 +213,7 @@ describe("student steps", () => {
 
 describe("student number", () => {
   it("creates the profile on first save", async () => {
-    context.store[COLLECTIONS.studentProfile] = [];
+    delete context.store[COLLECTIONS.user][0].studentProfile;
     context.store[COLLECTIONS.user].push({
       _id: "stud2",
       name: "Ben",
@@ -233,7 +230,9 @@ describe("student number", () => {
     });
     expect(response.status).toBe(200);
     expect((await response.json()).data).toEqual({ studentNumber: "54321" });
-    expect(context.store[COLLECTIONS.studentProfile]).toHaveLength(1);
+    expect(
+      context.store[COLLECTIONS.user].filter((user) => user.studentProfile),
+    ).toHaveLength(1);
   });
 
   it("rejects a non-numeric student number", async () => {
@@ -273,7 +272,7 @@ describe("student record", () => {
     context.store[COLLECTIONS.stepVerification].push({
       _id: "v-6",
       studentProfileId: "profile-1",
-      stepId: "step-6",
+      stepId: "ENROLLMENT",
       academicYearId: "ay-1",
       status: "VERIFIED",
       verifiedById: "off1",
@@ -307,7 +306,7 @@ describe("assessment", () => {
     context.store[COLLECTIONS.stepVerification].push({
       _id: "v-1",
       studentProfileId: "profile-1",
-      stepId: "step-1",
+      stepId: "ASSESSMENT",
       academicYearId: "ay-1",
       status: "VERIFIED",
       appliedAt: new Date("2025-07-01"),

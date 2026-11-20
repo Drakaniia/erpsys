@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ConfirmDialog from "../ConfirmDialog";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import ActivateYearDialog from "./ActivateYearDialog";
 import { api, queryClient } from "$lib/api";
 import type { AcademicYearItem } from "$lib/admin/types";
@@ -56,6 +57,7 @@ export default function AcademicYearTable({
   }
 
   async function submitCreate() {
+    if (createLock.blocked) return;
     if (!newLabel.trim() || !newSemester.trim()) {
       setCreateError("Year label and semester label are required.");
       return;
@@ -77,7 +79,13 @@ export default function AcademicYearTable({
 
   // ---- Edit (active year only) ----
   const [editingId, setEditingId] = useState<string | null>(null);
-  const presence = useEditTimestamp("academic-year", editingId, years.find((y) => y.id === editingId));
+  const editLock = useEditingLock(editingId);
+  const createLock = useEditingLock(creating);
+  const presence = useEditTimestamp(
+    "academic-year",
+    editingId,
+    years.find((y) => y.id === editingId),
+  );
   const [editLabel, setEditLabel] = useState("");
   const [editSemester, setEditSemester] = useState("");
   const [editError, setEditError] = useState("");
@@ -90,6 +98,7 @@ export default function AcademicYearTable({
   }
 
   async function submitEdit() {
+    if (editLock.blocked) return;
     if (!editingId) return;
     if (!editLabel.trim() || !editSemester.trim()) {
       setEditError("Both labels are required.");
@@ -139,7 +148,6 @@ export default function AcademicYearTable({
 
   return (
     <div className="flex flex-col gap-4">
-
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted">
           One active year at a time. Activating a new year resets students'
@@ -163,6 +171,20 @@ export default function AcademicYearTable({
             Retry
           </button>
         </div>
+      )}
+
+      {editingId && (
+        <ActiveEditors
+          resource="academic-year"
+          id={editingId}
+          onBlockedChange={editLock.onBlockedChange}
+        />
+      )}
+      {creating && (
+        <ActiveEditors
+          resource="academic-year"
+          onBlockedChange={createLock.onBlockedChange}
+        />
       )}
 
       <div className="apple-scrollbar overflow-x-auto rounded-xl border border-border bg-surface-raised">
@@ -217,6 +239,7 @@ export default function AcademicYearTable({
                   <tr key={y.id} className="bg-surface">
                     <td className="px-4 py-2">
                       <input
+                        disabled={editLock.blocked}
                         value={editLabel}
                         onChange={(e) => setEditLabel(e.currentTarget.value)}
                         aria-label="Year label"
@@ -225,6 +248,7 @@ export default function AcademicYearTable({
                     </td>
                     <td className="px-2 py-2">
                       <input
+                        disabled={editLock.blocked}
                         value={editSemester}
                         onChange={(e) => setEditSemester(e.currentTarget.value)}
                         aria-label="Semester label"
@@ -240,7 +264,9 @@ export default function AcademicYearTable({
                         )}
                         <button
                           onClick={submitEdit}
-                          disabled={updateMutation.isPending}
+                          disabled={
+                            editLock.blocked || updateMutation.isPending
+                          }
                           className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
                         >
                           Save
@@ -333,6 +359,7 @@ export default function AcademicYearTable({
         {creating && (
           <div className="flex flex-wrap items-center gap-2 border-t border-border bg-surface px-4 py-3">
             <input
+              disabled={createLock.blocked}
               value={newLabel}
               onChange={(e) => setNewLabel(e.currentTarget.value)}
               aria-label="Year label"
@@ -343,6 +370,7 @@ export default function AcademicYearTable({
               }}
             />
             <input
+              disabled={createLock.blocked}
               value={newSemester}
               onChange={(e) => setNewSemester(e.currentTarget.value)}
               aria-label="Semester label"
@@ -355,6 +383,7 @@ export default function AcademicYearTable({
             <label className="flex items-center gap-1.5 text-sm text-ink">
               <input
                 type="checkbox"
+                disabled={createLock.blocked}
                 checked={activateImmediately}
                 onChange={(e) =>
                   setActivateImmediately(e.currentTarget.checked)
@@ -370,7 +399,7 @@ export default function AcademicYearTable({
             )}
             <button
               onClick={submitCreate}
-              disabled={addMutation.isPending}
+              disabled={createLock.blocked || addMutation.isPending}
               className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
             >
               Create

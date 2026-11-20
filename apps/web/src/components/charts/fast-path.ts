@@ -77,7 +77,7 @@ class FastPath {
     x2: number,
     y2: number,
     x: number,
-    y: number
+    y: number,
   ) {
     this.d += `C${formatCoordinate(+x1)},${formatCoordinate(+y1)},${formatCoordinate(+x2)},${formatCoordinate(+y2)},${formatCoordinate(+x)},${formatCoordinate(+y)}`;
     this.open = true;
@@ -104,7 +104,7 @@ type Generator<Datum> = Line<Datum> | Area<Datum>;
  */
 export function fastShapePath<Datum>(
   generator: Generator<Datum>,
-  data: Datum[]
+  data: Datum[],
 ): string {
   const context = new FastPath();
   // The path context type is a CanvasRenderingContext2D-like interface;

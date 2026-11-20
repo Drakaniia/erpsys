@@ -37,8 +37,14 @@ let close: () => Promise<void>;
 beforeEach(async () => {
   holder.session = admin;
   const fake = fakeDb({
-    [COLLECTIONS.requirementItem]: [
-      { _id: "req-1", label: "Report Card", order: 0, isActive: true },
+    [COLLECTIONS.content]: [
+      {
+        _id: "req-1",
+        kind: "requirement",
+        label: "Report Card",
+        order: 0,
+        isActive: true,
+      },
     ],
 
     [COLLECTIONS.auditLog]: [],
@@ -70,9 +76,13 @@ describe("audit trail", () => {
     });
     expect(response.status).toBe(200);
     await vi.waitFor(() =>
-      expect(holder.store[COLLECTIONS.auditLog].filter((row) => row.kind === "http")).toHaveLength(1),
+      expect(
+        holder.store[COLLECTIONS.auditLog].filter((row) => row.kind === "http"),
+      ).toHaveLength(1),
     );
-    expect(holder.store[COLLECTIONS.auditLog].find((row) => row.kind === "http")).toMatchObject({
+    expect(
+      holder.store[COLLECTIONS.auditLog].find((row) => row.kind === "http"),
+    ).toMatchObject({
       actorId: "admin1",
       actorName: "Ada Admin",
       role: "ADMIN",

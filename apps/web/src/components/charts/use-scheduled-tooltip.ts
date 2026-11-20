@@ -39,7 +39,7 @@ function defaultDedupeKey<T>(tooltip: T): string {
  * here — read it from the store).
  */
 export function useScheduledTooltip<T>(
-  setExternal?: React.Dispatch<React.SetStateAction<T | null>>
+  setExternal?: React.Dispatch<React.SetStateAction<T | null>>,
 ): ScheduledTooltipControls<T> {
   const [tooltipData, setLocalTooltipData] = useState<T | null>(null);
   const setTooltipData = setExternal ?? setLocalTooltipData;
@@ -64,7 +64,7 @@ export function useScheduledTooltip<T>(
       lastKeyRef.current = dedupeKey;
       setTooltipData(tooltip);
     },
-    [setTooltipData]
+    [setTooltipData],
   );
 
   const scheduleTooltip = useCallback(
@@ -90,7 +90,7 @@ export function useScheduledTooltip<T>(
         }
       });
     },
-    [commitTooltip]
+    [commitTooltip],
   );
 
   const clearTooltip = useCallback(() => {

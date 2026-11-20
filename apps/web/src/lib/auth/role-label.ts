@@ -3,7 +3,7 @@ export function roleLabel(role: string | undefined | null): string {
     case "SBO_OFFICER":
       return "SBO Officer";
     case "ENROLLMENT_ADVISER":
-      return "Instructor";
+      return "Enrollment Officer";
     case "ADMIN":
       return "Admin";
     default:

@@ -89,7 +89,10 @@ export default function Pagination({
               ariaLabel="Per page"
               value={String(pageSize)}
               onchange={(value) => onpagesizechange(Number(value))}
-              options={[25, 50, 100].map((size) => ({ value: String(size), label: String(size) }))}
+              options={[25, 50, 100].map((size) => ({
+                value: String(size),
+                label: String(size),
+              }))}
               compact
             />
           </div>

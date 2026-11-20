@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { COLLECTIONS } from "../../src/lib/db/db.js";
 import {
   beforeAuthenticator,
+  requireAuthenticatorReset,
   sendCode,
   stepUpStatus,
   submitPin,
@@ -12,11 +13,16 @@ import { fakeDb, type Row } from "../helpers/fakeDb.js";
 const holder = vi.hoisted(() => ({ db: null as unknown, code: "" }));
 
 vi.mock("../../src/lib/db/db.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../src/lib/db/db.js")>();
+  const actual =
+    await importOriginal<typeof import("../../src/lib/db/db.js")>();
   return { ...actual, getDbSync: () => holder.db };
 });
 vi.mock("../../src/lib/platform/env.js", () => ({
-  env: { SU_PIN: "123456", NODE_ENV: "test", BETTER_AUTH_URL: "http://localhost" },
+  env: {
+    SU_PIN: "123456",
+    NODE_ENV: "test",
+    BETTER_AUTH_URL: "http://localhost",
+  },
 }));
 vi.mock("../../src/lib/platform/mailer.js", () => ({
   escapeHtml: (value: string) => value,
@@ -46,7 +52,12 @@ describe("submitPin", () => {
 
   it("still asks for the password when the admin has one", async () => {
     seed([
-      { _id: "a2", userId: "password-admin", providerId: "credential", password: "hashed" },
+      {
+        _id: "a2",
+        userId: "password-admin",
+        providerId: "credential",
+        password: "hashed",
+      },
     ]);
     await submitPin("password-admin", "123456");
     expect((await stepUpStatus("password-admin")).next).toBe("password");
@@ -59,8 +70,28 @@ describe("submitPin", () => {
   });
 
   it("does not skip anything when the PIN is wrong", async () => {
-    await expect(submitPin("google-admin-2", "000000")).rejects.toThrow("Incorrect PIN.");
+    await expect(submitPin("google-admin-2", "000000")).rejects.toThrow(
+      "Incorrect PIN.",
+    );
     expect((await stepUpStatus("google-admin-2")).next).toBe("pin");
+  });
+});
+
+describe("authenticator recovery", () => {
+  it("accepts the PIN and emailed code without the lost device for a passwordless admin", async () => {
+    const user = { id: "lost-device-admin", email: "admin@example.test" };
+    await submitPin(user.id, "123456");
+    await expect(requireAuthenticatorReset(user.id)).rejects.toMatchObject({
+      data: { code: "STEP_UP_REQUIRED", authenticatorReset: true },
+    });
+    await sendCode(user);
+    await expect(verifyCode(user.id, "not-the-code")).rejects.toThrow(
+      "Incorrect code",
+    );
+    await expect(requireAuthenticatorReset(user.id)).rejects.toThrow();
+    await verifyCode(user.id, holder.code);
+    await expect(requireAuthenticatorReset(user.id)).resolves.toBeUndefined();
+    expect((await stepUpStatus(user.id)).unlocked).toBe(false);
   });
 });
 
@@ -79,7 +110,9 @@ describe("beforeAuthenticator", () => {
     await sendCode(user, t1);
     await verifyCode(user.id, holder.code, t1);
     await beforeAuthenticator(user.id, t1);
-    await expect(beforeAuthenticator(user.id, t1)).rejects.toThrow("Too many wrong codes");
+    await expect(beforeAuthenticator(user.id, t1)).rejects.toThrow(
+      "Too many wrong codes",
+    );
     expect((await stepUpStatus(user.id, t1)).next).toBe("pin");
   });
 });

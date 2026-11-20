@@ -18,7 +18,7 @@ function meta(overrides: Partial<ReportMeta> = {}): ReportMeta {
     generatedOn: "26 Sep 2026",
     yearLabel: "2025-2026",
     semester: "1st Sem",
-    filterEcho: "Role: Instructor",
+    filterEcho: "Role: Enrollment Officer",
     matchedCount: 3,
     returnedCount: 3,
     truncated: false,
@@ -193,7 +193,7 @@ describe("row mapping", () => {
     expect(dataRows(doc).map((r) => r[4])).toEqual([
       "Student",
       "SBO Officer",
-      "Instructor",
+      "Enrollment Officer",
       "Admin",
     ]);
   });

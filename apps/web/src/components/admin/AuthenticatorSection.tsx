@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ConfirmDialog from "../ConfirmDialog";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import {
   useAuthenticators,
   useResetAuthenticator,
@@ -16,7 +17,11 @@ const SECONDARY_BUTTON =
 export default function AuthenticatorSection() {
   const query = useAuthenticators();
   const reset = useResetAuthenticator();
-  const [resetTarget, setResetTarget] = useState<AdminAuthenticator | null>(null);
+  const [resetTarget, setResetTarget] = useState<AdminAuthenticator | null>(
+    null,
+  );
+
+  const lock = useEditingLock(resetTarget?.userId);
 
   function closeReset() {
     if (reset.isPending) return;
@@ -36,7 +41,9 @@ export default function AuthenticatorSection() {
       <p className="text-sm font-medium text-ink">Authenticator</p>
       <p className="mt-1 text-xs text-muted">
         Google or Microsoft Authenticator, asked for at the end of every admin
-        unlock. Reset it when an admin loses their phone.
+        unlock. Reset it when an admin loses their phone. Resetting your own
+        authenticator uses the PIN, your password if set, and an emailed
+        code—not the lost device.
       </p>
 
       {query.error ? (
@@ -84,8 +91,15 @@ export default function AuthenticatorSection() {
           title="Reset authenticator?"
           body={
             <>
-              Reset the authenticator for {resetTarget.name || resetTarget.email}?
-              They will set up a new one at their next unlock.
+              <ActiveEditors
+                resource="user"
+                id={resetTarget.userId}
+                className="mb-3 block"
+                onBlockedChange={lock.onBlockedChange}
+              />
+              Reset the authenticator for{" "}
+              {resetTarget.name || resetTarget.email}? They will set up a new
+              one at their next unlock.
               {reset.error ? (
                 <span role="alert" className="mt-2 block text-warning">
                   {reset.error.message}
@@ -96,6 +110,7 @@ export default function AuthenticatorSection() {
           confirmLabel="Reset authenticator"
           destructive
           busy={reset.isPending}
+          confirmDisabled={lock.blocked}
           onconfirm={confirmReset}
           onclose={closeReset}
         />

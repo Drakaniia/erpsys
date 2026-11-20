@@ -23,7 +23,7 @@ export const STEP_CODES = [
   "CONSENT",
   "ENROLLMENT",
 ] as const;
-type StepCode = (typeof STEP_CODES)[number];
+export type StepCode = (typeof STEP_CODES)[number];
 
 export const PRE_ENROLLMENT_STEP_CODES = [
   "ASSESSMENT",
@@ -48,6 +48,39 @@ export const STEP_NAMES: Record<StepCode, string> = {
   CONSENT: "Consent / Medical",
   ENROLLMENT: "Enrollment",
 };
+
+export type StepDefinition = {
+  _id: StepCode;
+  code: StepCode;
+  name: string;
+  order: number;
+};
+
+export function listSteps(): StepDefinition[] {
+  return STEP_CODES.map((code, index) => ({
+    _id: code,
+    code,
+    name: STEP_NAMES[code],
+    order: index + 1,
+  }));
+}
+
+export function listStepsByCodes(codes: readonly string[]): StepDefinition[] {
+  const selected = new Set(codes);
+  return listSteps().filter((step) => selected.has(step.code));
+}
+
+export function findStepByCode(code: string): StepDefinition | null {
+  return listSteps().find((step) => step.code === code) ?? null;
+}
+
+export function findStepById(id: string): StepDefinition | null {
+  return findStepByCode(id);
+}
+
+export function listStepCodeMap(): Array<Pick<StepDefinition, "_id" | "code">> {
+  return STEP_CODES.map((code) => ({ _id: code, code }));
+}
 
 export function stepLabel(code: string): string {
   return (STEP_NAMES as Record<string, string>)[code] ?? code;

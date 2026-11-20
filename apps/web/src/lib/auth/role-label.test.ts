@@ -5,7 +5,7 @@ describe("roleLabel", () => {
   it("names every role the way the UI and reports print it", () => {
     expect(roleLabel("STUDENT")).toBe("Student");
     expect(roleLabel("SBO_OFFICER")).toBe("SBO Officer");
-    expect(roleLabel("ENROLLMENT_ADVISER")).toBe("Instructor");
+    expect(roleLabel("ENROLLMENT_ADVISER")).toBe("Enrollment Officer");
     expect(roleLabel("ADMIN")).toBe("Admin");
   });
 

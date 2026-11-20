@@ -55,7 +55,6 @@ export const ADMIN_TABS: ReadonlyArray<{
   },
   { id: "reports", label: "Reports", key: "9", requiresYear: true },
   { id: "audit-log", label: "Audit Log", key: "", requiresYear: false },
-
 ] as const;
 
 export const TAB_BY_ID = new Map(ADMIN_TABS.map((t) => [t.id, t]));

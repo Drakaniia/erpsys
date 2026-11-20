@@ -33,6 +33,7 @@ export default function AvailabilitySwitch({
       disabled={disabled}
       busy={busy}
       label="Accepting students"
+      onboardingTip="accepting"
       description="Closes automatically when you sign out — your department assignment stays."
       onchange={(next) => onchange(next)}
     />

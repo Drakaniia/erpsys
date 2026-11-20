@@ -11,7 +11,14 @@ export type ClientRoute = {
 };
 
 export const ROUTES = {
-
+  presence: {
+    touch: { method: "POST", path: "/api/v1/presence", serverTimestamp: true },
+    leave: {
+      method: "DELETE",
+      path: "/api/v1/presence",
+      serverTimestamp: true,
+    },
+  },
   me: {
     // The aggregate launch read — one round trip for the landing surface.
     getLaunch: { method: "GET", path: "/api/v1/me/launch" },
@@ -21,12 +28,20 @@ export const ROUTES = {
   },
   notifications: {
     listMine: { method: "GET", path: "/api/v1/me/notifications", list: true },
-
-
   },
   admin: {
     getOverview: { method: "GET", path: "/api/v1/me/overview" },
     listUsers: { method: "GET", path: "/api/v1/users", list: true },
+    inviteAccount: { method: "POST", path: "/api/v1/users/invite" },
+    promoteAdmin: {
+      method: "POST",
+      path: "/api/v1/users/:userId/promote-admin",
+    },
+    reactivateAccount: {
+      method: "POST",
+      path: "/api/v1/users/:userId/reactivate",
+      serverTimestamp: true,
+    },
     listAuditLogs: { method: "GET", path: "/api/v1/audit-logs", list: true },
     setRole: { method: "PATCH", path: "/api/v1/users/:userId" },
     setRoleBulk: { method: "PATCH", path: "/api/v1/users" },
@@ -134,6 +149,7 @@ export const ROUTES = {
     resetAuthenticator: {
       method: "DELETE",
       path: "/api/v1/integrations/authenticators/:userId",
+      serverTimestamp: true,
     },
   },
   student: {
@@ -249,6 +265,15 @@ export const ROUTES = {
     getStepDetail: {
       method: "GET",
       path: "/api/v1/submissions/:verificationId",
+    },
+    getActiveEditors: {
+      method: "GET",
+      path: "/api/v1/submissions/:id/active-editors",
+    },
+    renewActiveEditor: {
+      method: "PUT",
+      path: "/api/v1/submissions/:id/active-editors",
+      serverTimestamp: true,
     },
     verifyStep: {
       method: "POST",

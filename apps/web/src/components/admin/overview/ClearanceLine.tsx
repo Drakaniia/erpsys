@@ -27,7 +27,13 @@ export function OverviewHeadline({
       <div className="flex flex-col gap-3 py-2" aria-hidden="true">
         <Skeleton h="1.75rem" w="min(34rem, 90%)" radius="0.375rem" />
         <Skeleton h="1.75rem" w="min(24rem, 70%)" radius="0.375rem" index={1} />
-        <Skeleton h="2.5rem" w="min(28rem, 80%)" radius="0.5rem" index={2} className="mt-3" />
+        <Skeleton
+          h="2.5rem"
+          w="min(28rem, 80%)"
+          radius="0.5rem"
+          index={2}
+          className="mt-3"
+        />
       </div>
     );
   }
@@ -52,7 +58,10 @@ export function OverviewHeadline({
       {figures.length > 0 && (
         <dl className="ov-figures flex flex-wrap gap-y-3">
           {figures.map((f) => (
-            <div key={f.label} className="flex flex-col gap-1 pr-6 sm:px-6 sm:first:pl-0">
+            <div
+              key={f.label}
+              className="flex flex-col gap-1 pr-6 sm:px-6 sm:first:pl-0"
+            >
               <dt className="text-xs text-muted">{f.label}</dt>
               <dd className="text-xl font-semibold tabular-nums tracking-tight text-ink">
                 {f.value.toLocaleString()}
@@ -119,8 +128,14 @@ export function ClearanceLine({
         <>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             {SERIES.map((s) => (
-              <span key={s.key} className="flex items-center gap-1.5 text-xs text-muted">
-                <span className="size-2 rounded-full" style={{ backgroundColor: s.color }} />
+              <span
+                key={s.key}
+                className="flex items-center gap-1.5 text-xs text-muted"
+              >
+                <span
+                  className="size-2 rounded-full"
+                  style={{ backgroundColor: s.color }}
+                />
                 {s.label}
               </span>
             ))}

@@ -10,6 +10,8 @@ export type ProbeResult =
 
 const TIMEOUT_MS = 8_000;
 const MAX_BODY_BYTES = 8_192;
+const MAX_CLOUDFLARE_BODY_BYTES = 262_144;
+
 const R2_ENDPOINT_PATTERN =
   /^https:\/\/([a-f0-9]{32})\.r2\.cloudflarestorage\.com$/;
 
@@ -47,7 +49,10 @@ async function send(url: string, init: RequestInit): Promise<Response> {
 async function probeGoogle(
   values: Record<string, string>,
 ): Promise<ProbeResult> {
-  const origin = (env.PUBLIC_SITE_URL || env.BETTER_AUTH_URL).replace(/\/+$/, "");
+  const origin = (env.PUBLIC_SITE_URL || env.BETTER_AUTH_URL).replace(
+    /\/+$/,
+    "",
+  );
   const body = new URLSearchParams({
     client_id: values.GOOGLE_CLIENT_ID,
     client_secret: values.GOOGLE_CLIENT_SECRET,
@@ -111,7 +116,10 @@ async function probeTurnstile(
   }
 
   if (response.status !== 200) {
-    return failed("TURNSTILE_SECRET_KEY", `Cloudflare answered ${response.status}`);
+    return failed(
+      "TURNSTILE_SECRET_KEY",
+      `Cloudflare answered ${response.status}`,
+    );
   }
   const json = parseJson(await readCapped(response));
   const codes = Array.isArray(json?.["error-codes"])
@@ -130,7 +138,10 @@ async function probeTurnstile(
   if (codes.includes("missing-input-secret")) {
     return failed("TURNSTILE_SECRET_KEY", "secret rejected by Cloudflare");
   }
-  return failed("TURNSTILE_SECRET_KEY", "provider returned an unexpected response");
+  return failed(
+    "TURNSTILE_SECRET_KEY",
+    "provider returned an unexpected response",
+  );
 }
 
 function sha256Hex(value: string): string {
@@ -185,18 +196,15 @@ async function probeR2(values: Record<string, string>): Promise<ProbeResult> {
 
   let response: Response;
   try {
-    response = await send(
-      `${endpoint}/${encodeURIComponent(bucket)}`,
-      {
-        method: "HEAD",
-        headers: signedR2Headers({
-          endpoint,
-          bucket,
-          accessKeyId: values.R2_ACCESS_KEY_ID,
-          secretAccessKey: values.R2_SECRET_ACCESS_KEY,
-        }),
-      },
-    );
+    response = await send(`${endpoint}/${encodeURIComponent(bucket)}`, {
+      method: "HEAD",
+      headers: signedR2Headers({
+        endpoint,
+        bucket,
+        accessKeyId: values.R2_ACCESS_KEY_ID,
+        secretAccessKey: values.R2_SECRET_ACCESS_KEY,
+      }),
+    });
   } catch {
     return failed("R2_ENDPOINT", "could not reach R2");
   }
@@ -218,7 +226,7 @@ async function probeCloudflareChat(
   let response: Response;
   try {
     response = await send(
-      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/models`,
+      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/models/search?per_page=1`,
       {
         method: "GET",
         headers: {
@@ -243,12 +251,43 @@ async function probeCloudflareChat(
       `provider returned an unexpected response (${response.status})`,
     );
   }
-  const json = parseJson(await readCapped(response));
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+  let body = "";
+  let bytes = 0;
+  try {
+    if (reader) {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        bytes += value.byteLength;
+        if (bytes > MAX_CLOUDFLARE_BODY_BYTES) {
+          await reader.cancel().catch(() => {});
+          return failed(
+            "CLOUDFLARE_API_TOKEN",
+            "provider response exceeded the size limit",
+          );
+        }
+        body += decoder.decode(value, { stream: true });
+      }
+      body += decoder.decode();
+    }
+  } catch {
+    return failed("CLOUDFLARE_API_TOKEN", "could not read Cloudflare response");
+  } finally {
+    reader?.releaseLock();
+  }
+  const json = parseJson(body);
   if (json?.success === true) return { ok: true };
-  return failed("CLOUDFLARE_API_TOKEN", "provider returned an unexpected response");
+  return failed(
+    "CLOUDFLARE_API_TOKEN",
+    "provider returned an unexpected response",
+  );
 }
 
-async function probeEmail(values: Record<string, string>): Promise<ProbeResult> {
+async function probeEmail(
+  values: Record<string, string>,
+): Promise<ProbeResult> {
   let response: Response;
   try {
     response = await send("https://api.brevo.com/v3/account", {
@@ -263,7 +302,8 @@ async function probeEmail(values: Record<string, string>): Promise<ProbeResult> 
   }
 
   if (response.status === 200) return { ok: true };
-  if (response.status === 401) return failed("BREVO_API_KEY", "API key rejected");
+  if (response.status === 401)
+    return failed("BREVO_API_KEY", "API key rejected");
   return failed("BREVO_API_KEY", `Brevo answered ${response.status}`);
 }
 
@@ -308,7 +348,10 @@ async function probeGoogleForms(
       "Google sign-in client rejected by Google",
     );
   }
-  return failed("GOOGLE_FORMS_REFRESH_TOKEN", `Google answered ${response.status}`);
+  return failed(
+    "GOOGLE_FORMS_REFRESH_TOKEN",
+    `Google answered ${response.status}`,
+  );
 }
 
 function probeGoogleCalendar(values: Record<string, string>): ProbeResult {
@@ -328,6 +371,8 @@ export async function probeCredentials(
   key: IntegrationKey,
   values: Record<string, string>,
 ): Promise<ProbeResult> {
+  if (env.LOCAL_ONLY && key !== "betterAuth")
+    return failed(key, "Online integrations are disabled in local-only mode.");
   switch (key) {
     case "betterAuth":
       return { ok: true };

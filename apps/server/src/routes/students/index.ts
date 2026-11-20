@@ -2,10 +2,14 @@ import { Router } from "express";
 import { z } from "zod";
 import {
   NOTIFICATION_STEPS_REMINDER,
+  findStepByCode,
+  listStepCodeMap,
   STEP_CODES,
   STUDENT_NUMBER_PATTERN,
 } from "../../config/constants.js";
+import { isDraftExpired } from "../../config/evidence.js";
 import { ApiError } from "../../config/errors.js";
+import { evidenceUploadIds, KIND_FOR_STEP } from "../../config/steps.js";
 import { genId } from "../../lib/db/ids.js";
 import {
   requireSession,
@@ -15,13 +19,13 @@ import {
 import { catchAsync } from "../../middleware/catchAsync.js";
 import { okList, okOne, parseBody, parseQuery } from "../../middleware/http.js";
 import { AcademicYearModel } from "../../models/AcademicYearModel.js";
-import { AdviserDepartmentModel } from "../../models/AdviserDepartmentModel.js";
+import { DepartmentModel } from "../../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../../models/EnrollmentQueueModel.js";
 import { NotificationModel } from "../../models/NotificationModel.js";
-import { StepModel } from "../../models/StepModel.js";
 import { StepVerificationModel } from "../../models/StepVerificationModel.js";
 import { StudentEnrollmentModel } from "../../models/StudentEnrollmentModel.js";
-import { StudentProfileModel } from "../../models/StudentProfileModel.js";
+import { UserModel } from "../../models/UserModel.js";
+import { UploadModel } from "../../models/UploadModel.js";
 import { resolveYear } from "../../services/academic-years.js";
 import {
   listStudents,
@@ -128,7 +132,7 @@ studentsRouter.get(
 
 /**
  * `GET /api/v1/students/board`
- * Access: session + instructor surface.
+ * Access: session + instructor or admin surface.
  * Use: the students tab in one call — the roster page and its bucket stats,
  * from the same filters `/students` and `/reports/roster-stats` take, plus
  * `sort`, `dir`, `limit` and `cursor`.
@@ -136,7 +140,11 @@ studentsRouter.get(
  */
 studentsRouter.get(
   "/students/board",
-  instructor,
+  requireSession,
+  (req, res, next) => {
+    const surface = sessionUser(req).role === "ADMIN" ? "admin" : "instructor";
+    requireSurface(surface)(req, res, next);
+  },
   catchAsync(async (req, res) => {
     const input = parseQuery(boardQuery, req);
     const user = sessionUser(req);
@@ -199,12 +207,12 @@ studentsRouter.post(
     const ids = [...new Set(input.studentProfileIds)];
     const [links, enrollments, verifications, completed, profiles, steps] =
       await Promise.all([
-        AdviserDepartmentModel.listForAdviser(adviserId),
+        DepartmentModel.listAssignmentsForAdviser(adviserId),
         StudentEnrollmentModel.listByProfiles(ids, yearId),
         StepVerificationModel.listByProfiles(ids, yearId),
         EnrollmentQueueModel.listCompletedProfiles(ids, yearId),
-        StudentProfileModel.findByIds(ids),
-        StepModel.listCodeMap(),
+        UserModel.findProfilesByIds(ids),
+        listStepCodeMap(),
       ]);
     const myDepartments = new Set(links.map((link) => link.departmentId));
     const departmentOf = new Map(
@@ -217,7 +225,9 @@ studentsRouter.post(
       profiles.map((profile) => [String(profile._id), String(profile.userId)]),
     );
     const completedProfiles = new Set(completed);
-    const codeById = new Map(steps.map((step) => [String(step._id), step.code]));
+    const codeById = new Map(
+      steps.map((step) => [String(step._id), step.code]),
+    );
     const verifiedByProfile = new Map<string, Set<string>>();
     for (const row of verifications) {
       const code = codeById.get(String(row.stepId));
@@ -262,8 +272,9 @@ studentsRouter.post(
 /**
  * `GET /api/v1/me/student`
  * Access: session + student surface.
- * Use: my step chart.
- * Returns: `{ data: steps }`.
+ * Concurrency: timestamp ordering — server-anchored; stale writes restart up to 3×.
+ * Use: my step chart; synchronizes the latest profiling response by session email.
+ * Returns: `{ data: steps }`, including profiling submission status and answer preview.
  */
 studentsRouter.get(
   "/me/student",
@@ -407,17 +418,15 @@ studentsRouter.get(
  * `POST /api/v1/me/assessment`
  * Access: session + student surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
- * Use: apply for assessment.
+ * Use: apply or reapply for assessment with any completed payment proof uploads.
  * Returns: `{ data: assessment }`.
  */
 studentsRouter.post(
   "/me/assessment",
   student,
   catchAsync(async (req, res) => {
-    const { profile, year } = await requireStudentContext(
-      sessionUser(req),
-    );
-    const step = await StepModel.findByCode("ASSESSMENT");
+    const { profile, year } = await requireStudentContext(sessionUser(req));
+    const step = findStepByCode("ASSESSMENT");
     if (!step) {
       throw new ApiError("NOT_FOUND", {
         message: "Assessment step not configured.",
@@ -429,22 +438,43 @@ studentsRouter.post(
       academicYearId: String(year._id),
     };
     const existing = await StepVerificationModel.findByStep(key);
+    if (existing?.status === "VERIFIED") {
+      okOne(res, { status: "VERIFIED" });
+      return;
+    }
+    const now = new Date();
+    const retained = new Set(evidenceUploadIds(existing?.evidence));
+    const proofs = await UploadModel.listByProfileAndKind(
+      profile._id,
+      KIND_FOR_STEP.ASSESSMENT,
+    );
+    const uploadIds = proofs
+      .filter(
+        (proof) =>
+          proof.r2Status === "complete" &&
+          Boolean(proof.fileKey) &&
+          (retained.has(String(proof._id)) ||
+            !isDraftExpired(proof, now.getTime())),
+      )
+      .map((proof) => String(proof._id));
+    const evidence = {
+      evidence: { uploadIds },
+      evidenceCount: uploadIds.length,
+    };
     if (!existing) {
-      const now = new Date();
       await StepVerificationModel.insert({
+        ...evidence,
         _id: genId("verification"),
         ...key,
         status: "PENDING",
         appliedAt: now,
         createdAt: now,
       });
-    } else if (existing.status === "VERIFIED") {
-      okOne(res, { status: "VERIFIED" });
-      return;
     } else if (!existing.appliedAt || existing.status === "RETURNED") {
       await StepVerificationModel.updateById(existing._id, {
+        ...evidence,
         status: "PENDING",
-        appliedAt: existing.appliedAt ?? new Date(),
+        appliedAt: now,
       });
     }
     okOne(res, { status: "APPLIED" });

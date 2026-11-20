@@ -6,9 +6,11 @@ import type { UserItem } from "$lib/admin/types";
 
 type RoleLever = "SBO_OFFICER" | "STUDENT";
 
+export type UseUserAdminReturn = ReturnType<typeof useUserAdmin>;
+
 /**
- * The admin-user mutations and the three confirmation dialogs they drive:
- * set-role (single + bulk), delete (soft/hard), and permanent purge. Split out
+ * The admin-user mutations and their confirmation dialogs:
+ * set-role (single + bulk), delete (soft/hard), reactivate, and permanent purge. Split out
  * of `UserTable` so the table reads as query + selection + rows.
  */
 export function useUserAdmin({
@@ -29,6 +31,12 @@ export function useUserAdmin({
   ontoast: (message: string, kind?: "success" | "error") => void;
 }) {
   const setRoleMutation = useMutation(api.admin.setRole.mutationOptions());
+  const promoteAdminMutation = useMutation(
+    api.admin.promoteAdmin.mutationOptions(),
+  );
+  const reactivateAccountMutation = useMutation(
+    api.admin.reactivateAccount.mutationOptions(),
+  );
   const setRoleBulkMutation = useMutation(
     api.admin.setRoleBulk.mutationOptions(),
   );
@@ -44,7 +52,7 @@ export function useUserAdmin({
   }
 
   const [roleDialog, setRoleDialog] = useState<{
-    role: RoleLever;
+    role: RoleLever | "ADMIN";
     targets: UserItem[];
     excluded: number;
   } | null>(null);
@@ -52,9 +60,12 @@ export function useUserAdmin({
     targets: UserItem[];
   } | null>(null);
   const [purgeTarget, setPurgeTarget] = useState<UserItem | null>(null);
+  const [reactivateTarget, setReactivateTarget] = useState<UserItem | null>(
+    null,
+  );
   const [busy, setBusy] = useState(false);
 
-  function askSingle(item: UserItem, role: RoleLever) {
+  function askSingle(item: UserItem, role: RoleLever | "ADMIN") {
     setRoleDialog({ role, targets: [item], excluded: 0 });
   }
 
@@ -70,7 +81,13 @@ export function useUserAdmin({
     const { role: targetRole, targets } = roleDialog;
     setBusy(true);
     try {
-      if (targets.length === 1) {
+      if (targetRole === "ADMIN") {
+        await promoteAdminMutation.mutateAsync({
+          userId: targets[0].id,
+          ts: timestampOf(targets[0]),
+        });
+        ontoast(`Promoted ${targets[0].name} to admin`);
+      } else if (targets.length === 1) {
         await setRoleMutation.mutateAsync({
           userId: targets[0].id,
           ts: timestampOf(targets[0]),
@@ -110,17 +127,19 @@ export function useUserAdmin({
   function skipMessage(
     skipped: readonly {
       userId: string;
-      reason: "ADMIN" | "BLOCKED" | "NOT_FOUND";
+      reason: "SELF" | "LAST_ADMIN" | "BLOCKED" | "NOT_FOUND";
     }[],
   ): string {
     if (skipped.length === 0) return "Could not delete account";
-    const n = (reason: "ADMIN" | "BLOCKED" | "NOT_FOUND") =>
+    const n = (reason: "SELF" | "LAST_ADMIN" | "BLOCKED" | "NOT_FOUND") =>
       skipped.filter((s) => s.reason === reason).length;
     const parts: string[] = [];
-    const admins = n("ADMIN");
+    const self = n("SELF");
+    const lastAdmin = n("LAST_ADMIN");
     const blocked = n("BLOCKED");
     const missing = n("NOT_FOUND");
-    if (admins > 0) parts.push(`${admins} admin`);
+    if (self > 0) parts.push("you cannot delete yourself");
+    if (lastAdmin > 0) parts.push("the last active admin cannot be deleted");
     if (blocked > 0) parts.push(`${blocked} already disabled`);
     if (missing > 0) parts.push(`${missing} not found`);
     const label = parts.join(", ");
@@ -180,6 +199,27 @@ export function useUserAdmin({
     }
   }
 
+  async function confirmReactivate() {
+    const target = reactivateTarget;
+    if (!target || busy) return;
+    setBusy(true);
+    try {
+      await reactivateAccountMutation.mutateAsync({ userId: target.id });
+      ontoast(`Reactivated ${target.name}`);
+      invalidate();
+      setReactivateTarget(null);
+      removeSelected(target.id);
+    } catch (e) {
+      ontoast(
+        e instanceof Error ? e.message : "Could not reactivate account",
+        "error",
+      );
+      setReactivateTarget(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function confirmPurge() {
     const target = purgeTarget;
     if (!target) return;
@@ -205,6 +245,7 @@ export function useUserAdmin({
     roleDialog,
     deleteDialog,
     purgeTarget,
+    reactivateTarget,
     busy,
     selectedPromotableCount: selectedPromotable.length,
     selectedDemotableCount: selectedDemotable.length,
@@ -215,11 +256,16 @@ export function useUserAdmin({
     askDelete,
     askBulkDelete,
     setPurgeTarget,
+    setReactivateTarget,
+    confirmReactivate,
     confirmRoleChange,
     confirmDelete,
     confirmPurge,
     closeRole: () => setRoleDialog(null),
     closeDelete: () => setDeleteDialog(null),
     closePurge: () => setPurgeTarget(null),
+    closeReactivate: () => {
+      if (!busy) setReactivateTarget(null);
+    },
   };
 }

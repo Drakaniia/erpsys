@@ -9,13 +9,14 @@ import {
 type Props = {
   sitekey: string;
   action: string;
-  onToken: (token: string) => void;
+  onToken?: (token: string) => void;
   onExpire?: () => void;
   onError?: () => void;
 };
 
 export interface TurnstileHandle {
   reset: () => void;
+  execute: () => Promise<string>;
 }
 
 type TurnstileApi = {
@@ -24,54 +25,44 @@ type TurnstileApi = {
   remove: (id: string) => void;
 };
 
-function loadScript(): Promise<void> {
-  if ((window as unknown as { turnstile?: unknown }).turnstile)
-    return Promise.resolve();
-  if (
-    document.querySelector('script[src*="challenges.cloudflare.com/turnstile"]')
-  ) {
-    return new Promise((resolve, reject) => {
-      const existing = document.querySelector(
-        'script[src*="challenges.cloudflare.com/turnstile"]',
-      ) as HTMLScriptElement | null;
-      if (!existing) return resolve();
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () =>
-        reject(new Error("Turnstile script failed")),
-      );
-    });
-  }
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src =
-      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Turnstile script failed"));
-    document.head.appendChild(script);
-  });
-}
+const api = () => (window as unknown as { turnstile?: TurnstileApi }).turnstile;
+let scriptPromise: Promise<void> | undefined;
 
-function scheduleIdle(cb: () => void): number {
-  const ric = (
-    window as unknown as {
-      requestIdleCallback?: (
-        fn: () => void,
-        opts?: { timeout: number },
-      ) => number;
+function loadScript(): Promise<void> {
+  if (api()) return Promise.resolve();
+  if (scriptPromise) return scriptPromise;
+  scriptPromise = new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[src*="challenges.cloudflare.com/turnstile"]',
+    );
+    const script = existing ?? document.createElement("script");
+    const finish = (error?: Error) => {
+      window.clearTimeout(timer);
+      script.removeEventListener("load", loaded);
+      script.removeEventListener("error", failed);
+      if (error) {
+        script.remove();
+        reject(error);
+      } else resolve();
+    };
+    const loaded = () =>
+      finish(api() ? undefined : new Error("Verification unavailable"));
+    const failed = () => finish(new Error("Verification could not load"));
+    const timer = window.setTimeout(failed, 15_000);
+    script.addEventListener("load", loaded);
+    script.addEventListener("error", failed);
+    if (!existing) {
+      script.src =
+        "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
     }
-  ).requestIdleCallback;
-  if (ric) return ric(cb, { timeout: 1200 });
-  return window.setTimeout(cb, 600);
-}
-function cancelIdle(id: number) {
-  if (!id) return;
-  const cic = (
-    window as unknown as { cancelIdleCallback?: (id: number) => void }
-  ).cancelIdleCallback;
-  if (cic) cic(id);
-  else clearTimeout(id);
+  }).catch((error: unknown) => {
+    scriptPromise = undefined;
+    throw error;
+  });
+  return scriptPromise;
 }
 
 export default function Turnstile({
@@ -82,190 +73,224 @@ export default function Turnstile({
   onError,
   ref,
 }: Props & { ref?: Ref<TurnstileHandle> }) {
-  const container = useRef<HTMLDivElement | null>(null);
-  const widgetId = useRef<string | null>(null);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
-  const [loadError, setLoadError] = useState(false);
-  const [widgetError, setWidgetError] = useState(false);
+  const container = useRef<HTMLDivElement>(null);
+  const widget = useRef<string | null>(null);
+  const token = useRef<{ value: string; expires: number } | null>(null);
+  const consumed = useRef(false);
+  const generation = useRef(0);
+  const failure = useRef<string | null>(null);
+  const pending = useRef<{
+    promise: Promise<string>;
+    resolve: (value: string) => void;
+    reject: (error: Error) => void;
+    timer: number;
+  } | null>(null);
+  const callbacks = useRef({ onToken, onExpire, onError });
+  callbacks.current = { onToken, onExpire, onError };
+  const [attempt, setAttempt] = useState(0);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(
+    "loading",
+  );
 
-  const isPlaceholder = !sitekey || sitekey.trim().length === 0;
-  const hasError = loadError || widgetError;
-  const isLoading = !isPlaceholder && !scriptLoaded && !hasError;
+  function settle(error?: Error, value = "") {
+    const call = pending.current;
+    pending.current = null;
+    if (!call) return;
+    window.clearTimeout(call.timer);
+    if (error) call.reject(error);
+    else call.resolve(value);
+  }
 
-  // Latest callbacks without re-running the mount effect.
-  const cb = useRef({ onToken, onExpire, onError });
-  cb.current = { onToken, onExpire, onError };
+  function fail(message: string) {
+    token.current = null;
+    failure.current = message;
+    setStatus("error");
+    callbacks.current.onToken?.("");
+    callbacks.current.onError?.();
+    settle(new Error(message));
+  }
 
-  function renderWidget() {
-    if (isPlaceholder || !container.current || !sitekey) return;
-    const turnstile = (window as unknown as { turnstile?: TurnstileApi })
-      .turnstile;
-    if (!turnstile) return;
-    if (widgetId.current) {
-      try {
-        turnstile.remove(widgetId.current);
-      } catch {
-        /* ignore */
-      }
-      widgetId.current = null;
-    }
-    setWidgetError(false);
-    try {
-      widgetId.current = turnstile.render(container.current, {
-        sitekey,
-        action,
-        theme: "light",
-        callback: (token: string) => {
-          setWidgetError(false);
-          setLoadError(false);
-          cb.current.onToken(token);
-        },
-        "expired-callback": () => {
-          cb.current.onToken("");
-          cb.current.onExpire?.();
-          if (widgetId.current) turnstile.reset(widgetId.current);
-        },
-        "error-callback": () => {
-          cb.current.onToken("");
-          setWidgetError(true);
-          cb.current.onError?.();
-        },
-        "timeout-callback": () => {
-          cb.current.onToken("");
-          setWidgetError(true);
-          cb.current.onError?.();
-        },
-      });
-    } catch {
-      setWidgetError(true);
-      cb.current.onError?.();
-    }
+  function reset() {
+    generation.current++;
+    settle(new Error("Verification reset"));
+    token.current = null;
+    consumed.current = false;
+    failure.current = null;
+    callbacks.current.onToken?.("");
+    setStatus("loading");
+    setAttempt((value) => value + 1);
   }
 
   useImperativeHandle(ref, () => ({
-    reset() {
-      setWidgetError(false);
-      setLoadError(false);
-      if (!widgetId.current) {
-        cb.current.onToken("");
-        if (!isPlaceholder && container.current && scriptLoaded) renderWidget();
-        return;
+    reset,
+    execute() {
+      if (!sitekey.trim())
+        return Promise.reject(new Error("Verification unavailable"));
+      if (failure.current) return Promise.reject(new Error(failure.current));
+      if (pending.current) return pending.current.promise;
+      if (consumed.current)
+        return Promise.reject(new Error("Verification already used"));
+      if (token.current && token.current.expires > Date.now()) {
+        const value = token.current.value;
+        token.current = null;
+        consumed.current = true;
+        callbacks.current.onToken?.("");
+        return Promise.resolve(value);
       }
-      const turnstile = (window as unknown as { turnstile?: TurnstileApi })
-        .turnstile;
-      try {
-        turnstile?.reset(widgetId.current);
-        cb.current.onToken("");
-      } catch {
-        /* ignore */
+      const expired = token.current !== null;
+      token.current = null;
+      let resolve!: (value: string) => void;
+      let reject!: (error: Error) => void;
+      const promise = new Promise<string>((yes, no) => {
+        resolve = yes;
+        reject = no;
+      });
+      pending.current = {
+        promise,
+        resolve,
+        reject,
+        timer: window.setTimeout(
+          () => fail("Verification timed out. Please retry."),
+          120_000,
+        ),
+      };
+      if (expired && widget.current !== null) {
+        callbacks.current.onToken?.("");
+        setStatus("loading");
+        try {
+          api()?.reset(widget.current);
+        } catch {
+          fail("Verification failed. Please retry.");
+        }
       }
+      return promise;
     },
   }));
 
-  function handleRetry() {
-    setLoadError(false);
-    setWidgetError(false);
-    cb.current.onToken("");
-    if (!scriptLoaded) {
-      loadScript()
-        .then(() => {
-          setScriptLoaded(true);
-          renderWidget();
-        })
-        .catch(() => {
-          setLoadError(true);
-          cb.current.onError?.();
-        });
-    } else {
-      renderWidget();
-    }
-  }
-
   useEffect(() => {
-    if (isPlaceholder) {
-      cb.current.onToken("");
-      return;
-    }
-    let cancelled = false;
-    const start = () => {
-      loadScript()
+    const version = ++generation.current;
+    let id: string | null = null;
+    const active = () => generation.current === version;
+    token.current = null;
+    consumed.current = false;
+    failure.current = null;
+    setStatus("loading");
+    callbacks.current.onToken?.("");
+
+    if (!sitekey.trim()) fail("Verification is not configured.");
+    else
+      void loadScript()
         .then(() => {
-          if (cancelled) return;
-          setScriptLoaded(true);
+          if (!active() || !container.current) return;
+          const turnstile = api();
+          if (!turnstile)
+            return fail("Verification unavailable. Please retry.");
+          try {
+            id = turnstile.render(container.current, {
+              sitekey,
+              action,
+              theme: "light",
+              appearance: "always",
+              execution: "render",
+              "response-field": false,
+              retry: "never",
+              "refresh-expired": "manual",
+              "refresh-timeout": "manual",
+              callback: (value: string) => {
+                if (!active() || consumed.current || failure.current) return;
+                if (!value) return fail("Verification failed. Please retry.");
+                failure.current = null;
+                setStatus("ready");
+                if (pending.current) {
+                  consumed.current = true;
+                  callbacks.current.onToken?.("");
+                  settle(undefined, value);
+                } else {
+                  token.current = { value, expires: Date.now() + 290_000 };
+                  callbacks.current.onToken?.(value);
+                }
+              },
+              "expired-callback": () => {
+                if (!active() || consumed.current || failure.current) return;
+                token.current = null;
+                callbacks.current.onToken?.("");
+                callbacks.current.onExpire?.();
+                setStatus("loading");
+                try {
+                  if (id !== null) turnstile.reset(id);
+                } catch {
+                  fail("Verification expired. Please retry.");
+                }
+              },
+              "error-callback": () => {
+                if (active()) fail("Verification failed. Please retry.");
+              },
+              "timeout-callback": () => {
+                if (active()) fail("Verification timed out. Please retry.");
+              },
+              "unsupported-callback": () => {
+                if (active())
+                  fail(
+                    "Your browser cannot run verification. Try another browser.",
+                  );
+              },
+            });
+            widget.current = id;
+          } catch {
+            fail("Verification failed. Please retry.");
+          }
         })
         .catch(() => {
-          if (cancelled) return;
-          setLoadError(true);
-          cb.current.onError?.();
+          if (active())
+            fail(
+              "Verification could not load. Check your connection and retry.",
+            );
         });
-    };
-    const idleId = scheduleIdle(start);
+
     return () => {
-      cancelled = true;
-      cancelIdle(idleId);
-      if (widgetId.current) {
-        const turnstile = (window as unknown as { turnstile?: TurnstileApi })
-          .turnstile;
+      if (active()) generation.current++;
+      settle(new Error("Verification cancelled"));
+      token.current = null;
+      widget.current = null;
+      if (id !== null) {
         try {
-          turnstile?.remove(widgetId.current);
+          api()?.remove(id);
         } catch {
-          /* ignore */
+          // The provider may already have removed the iframe.
         }
       }
     };
+    // Callback refs keep changing form state from recreating the widget.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaceholder]);
-
-  // Render once the script is ready and the container exists.
-  useEffect(() => {
-    if (
-      scriptLoaded &&
-      container.current &&
-      !isPlaceholder &&
-      !widgetId.current &&
-      !hasError
-    ) {
-      renderWidget();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scriptLoaded, isPlaceholder, hasError]);
-
-  if (isPlaceholder) {
-    return (
-      <div className="rounded-xl border border-dashed border-auth-border bg-surface px-3.5 py-2.5 text-xs leading-relaxed text-muted">
-        Verification disabled (placeholder domain — will activate when
-        production domain is set)
-      </div>
-    );
-  }
+  }, [sitekey, action, attempt]);
 
   return (
     <div className="space-y-2">
       <div
         ref={container}
-        className="cf-turnstile flex min-h-[65px] justify-center"
+        className="flex min-h-[65px] justify-center"
         data-sitekey={sitekey}
         data-action={action}
         data-testid="turnstile-container"
-        aria-live="polite"
+        aria-label="Security verification"
+        aria-busy={status === "loading"}
       />
-      {isLoading ? (
-        <p className="sr-only" role="status" aria-live="polite">
-          Loading verification…
+      {status === "loading" ? (
+        <p className="text-center text-xs text-muted" role="status">
+          Loading security verification…
         </p>
       ) : null}
-      {hasError ? (
+      {status === "error" ? (
         <div
           className="auth-alert flex items-center justify-between gap-3"
-          role="status"
-          aria-live="polite"
+          role="alert"
         >
-          <p role="alert">Verification failed — please try again.</p>
+          <p>{failure.current}</p>
           <button
             type="button"
             className="shrink-0 rounded-full border border-error/30 bg-white/70 px-3 py-1 text-xs font-medium text-error transition-colors duration-140 ease-out hover:bg-white"
             aria-label="Retry verification challenge"
-            onClick={handleRetry}
+            onClick={reset}
           >
             Retry
           </button>

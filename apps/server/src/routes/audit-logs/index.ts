@@ -7,7 +7,6 @@ import { catchAsync } from "../../middleware/catchAsync.js";
 import { okList, parsePagination, parseQuery } from "../../middleware/http.js";
 import { AuditLogModel } from "../../models/AuditLogModel.js";
 
-
 /**
  * `/api/v1` — the system-wide audit trail of every signed-in write; admin-only.
  */

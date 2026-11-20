@@ -1,4 +1,5 @@
 import ReplyComposer from "./ReplyComposer";
+import WebcamCapture from "./WebcamCapture";
 import DriveThumb from "../DriveThumb";
 import { absoluteTime, relativeTime } from "$lib/officer/format";
 import type { StepCode, StepDetailData, StepStatus } from "$lib/officer/types";
@@ -36,6 +37,7 @@ function domainBadge(url: string): string {
 
 export default function DetailSheetBody({
   data,
+  editingBlocked = false,
   status,
   reply,
   stamp,
@@ -43,7 +45,7 @@ export default function DetailSheetBody({
   replyOpen,
   replyBusy,
   captureBusy,
-  captureDismissed,
+  cameraOpen,
   onclose,
   onopenlightbox,
   oncapturesave,
@@ -53,6 +55,7 @@ export default function DetailSheetBody({
   onreplysend,
 }: {
   data: StepDetailData;
+  editingBlocked?: boolean;
   status: StepStatus;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   reply: any;
@@ -63,7 +66,7 @@ export default function DetailSheetBody({
   replyOpen: boolean;
   replyBusy: boolean;
   captureBusy: boolean;
-  captureDismissed: boolean;
+  cameraOpen: boolean;
   onclose: () => void;
   onopenlightbox: (i: number) => void;
   oncapturesave: (dataUrl: string) => void;
@@ -157,7 +160,10 @@ export default function DetailSheetBody({
       <div className="flex-1 overflow-y-auto px-5 pb-4">
         {data.step.code === "ASSESSMENT" && (
           <section className="py-4">
-            <h3 className="text-sm font-semibold tracking-tight">
+            <h3
+              className="w-fit text-sm font-semibold tracking-tight"
+              data-onboarding-tip="review"
+            >
               Requirements
             </h3>
             <ul className="mt-2 space-y-1.5">
@@ -187,7 +193,12 @@ export default function DetailSheetBody({
 
         {(data.step.code === "PROFILING" || data.answers?.length > 0) && (
           <section className="border-t border-border py-4">
-            <h3 className="text-sm font-semibold tracking-tight">
+            <h3
+              className="w-fit text-sm font-semibold tracking-tight"
+              data-onboarding-tip={
+                data.evidence.length === 0 ? "review" : undefined
+              }
+            >
               Google Form response
             </h3>
             <p className="mt-1 text-xs text-muted">
@@ -215,7 +226,12 @@ export default function DetailSheetBody({
         {data.step.code !== "ASSESSMENT" && data.evidence.length > 0 && (
           <section className="border-t border-border py-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold tracking-tight">Evidence</h3>
+              <h3
+                className="text-sm font-semibold tracking-tight"
+                data-onboarding-tip="review"
+              >
+                Evidence
+              </h3>
               <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted tabular-nums">
                 {data.evidence.length}{" "}
                 {data.evidence.length === 1 ? "item" : "items"}
@@ -302,12 +318,39 @@ export default function DetailSheetBody({
           </section>
         )}
 
+        {data.step.code === "MUGSHOT" && status !== "VERIFIED" && (
+          <section
+            className="space-y-2 border-t border-border py-4"
+            aria-label="Mugshot camera"
+          >
+            {cameraOpen ? (
+              <WebcamCapture
+                busy={captureBusy}
+                editingBlocked={editingBlocked}
+                onsave={oncapturesave}
+                oncancel={oncapturecancel}
+              />
+            ) : (
+              <button
+                type="button"
+                className="press rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink hover:bg-surface-raised"
+                data-onboarding-tip="mugshot"
+                onClick={onshowcamera}
+                disabled={editingBlocked}
+              >
+                Open camera
+              </button>
+            )}
+          </section>
+        )}
+
         {replyOpen && (
           <section className="border-t border-border py-4">
             <ReplyComposer
               open={true}
               chips={replyChips}
               busy={replyBusy}
+              editingBlocked={editingBlocked}
               onsend={onreplysend}
               oncancel={onreplyclose}
             />

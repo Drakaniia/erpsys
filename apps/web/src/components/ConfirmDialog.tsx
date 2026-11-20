@@ -10,6 +10,7 @@ export default function ConfirmDialog({
   destructive = false,
   warning = false,
   busy = false,
+  confirmDisabled = false,
   onconfirm,
   onclose,
 }: {
@@ -20,6 +21,7 @@ export default function ConfirmDialog({
   destructive?: boolean;
   warning?: boolean;
   busy?: boolean;
+  confirmDisabled?: boolean;
   onconfirm: () => void;
   onclose: () => void;
 }) {
@@ -65,9 +67,9 @@ export default function ConfirmDialog({
           {title}
         </h2>
         {body ? (
-          <p id="confirm-dialog-body" className="mt-1 text-sm text-muted">
+          <div id="confirm-dialog-body" className="mt-1 text-sm text-muted">
             {body}
-          </p>
+          </div>
         ) : null}
         <div className="mt-4 flex justify-end gap-2">
           <button
@@ -81,7 +83,7 @@ export default function ConfirmDialog({
           <button
             type="button"
             onClick={onconfirm}
-            disabled={busy}
+            disabled={busy || confirmDisabled}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
               destructive
                 ? "bg-error text-white"

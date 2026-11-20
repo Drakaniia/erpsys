@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import DetailSheetMain from "./DetailSheetMain";
+import SubmissionActiveEditors from "./SubmissionActiveEditors";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 
 import EvidenceLightbox from "./EvidenceLightbox";
 import Skeleton from "../ui/Skeleton";
@@ -73,6 +75,14 @@ export default function DetailSheet({
   const replyOpen = ds.replyOpen;
   const revokeOpen = ds.revokeOpen;
   const lightboxIndex = ds.lightboxIndex;
+  const editing =
+    lastOpenedId.current === verificationId &&
+    (stampOpen || replyOpen || revokeOpen || ds.cameraOpen || ds.busyAny);
+
+  const { blocked, onBlockedChange } = useEditingLock(
+    `${verificationId}:${editing}`,
+  );
+  const editingBlocked = editing && blocked;
 
   useEffect(() => {
     if (!mounted) return;
@@ -94,6 +104,7 @@ export default function DetailSheet({
       if (
         (e.key === "s" || e.key === "S") &&
         !typing &&
+        !editingBlocked &&
         canStamp &&
         !stampOpen &&
         !replyOpen &&
@@ -116,7 +127,15 @@ export default function DetailSheet({
     window.addEventListener("keydown", onKeydown);
     return () => window.removeEventListener("keydown", onKeydown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, canStamp, stampOpen, replyOpen, revokeOpen, lightboxIndex]);
+  }, [
+    mounted,
+    canStamp,
+    stampOpen,
+    replyOpen,
+    revokeOpen,
+    lightboxIndex,
+    editingBlocked,
+  ]);
 
   if (!mounted) return null;
 
@@ -158,6 +177,24 @@ export default function DetailSheet({
         >
           <div className="h-1 w-8 rounded-full bg-border/60"></div>
         </div>
+
+        {verificationId &&
+          ds.data &&
+          sessionQuery.data?.user.id &&
+          (editing ? (
+            <ActiveEditors
+              key={verificationId}
+              resource="submission"
+              id={verificationId}
+              onBlockedChange={onBlockedChange}
+              className="shrink-0 border-b border-border bg-warning/10 px-5 py-2"
+            />
+          ) : (
+            <SubmissionActiveEditors
+              key={`${verificationId}:${sessionQuery.data.user.id}`}
+              id={verificationId}
+            />
+          ))}
 
         {ds.detailQuery.isPending && !ds.data ? (
           <div className="px-5 py-4" aria-hidden="true">
@@ -207,6 +244,7 @@ export default function DetailSheet({
         ) : ds.data ? (
           <DetailSheetMain
             data={ds.data}
+            editingBlocked={editingBlocked}
             status={ds.status}
             reply={ds.effectiveReply}
             stamp={ds.effectiveStamp}
@@ -214,21 +252,33 @@ export default function DetailSheet({
             replyOpen={ds.replyOpen}
             replyBusy={ds.replyMutation.isPending}
             captureBusy={ds.captureMutation.isPending}
-            captureDismissed={ds.captureDismissed}
+            cameraOpen={ds.cameraOpen}
             isVerified={ds.isVerified}
             busyAny={ds.busyAny}
             sendBackLabel={ds.sendBackLabel}
             revokeBusy={ds.revokeMutation.isPending}
             onclose={() => onclose()}
             onopenlightbox={(i) => ds.setLightboxIndex(i)}
-            oncapturesave={ds.handleCaptureSave}
-            oncapturecancel={() => ds.setCaptureDismissed(true)}
-            onshowcamera={() => ds.setCaptureDismissed(false)}
+            oncapturesave={(url) => {
+              if (editing && !blocked) ds.handleCaptureSave(url);
+            }}
+            oncapturecancel={() => ds.setCameraOpen(false)}
+            onshowcamera={() => {
+              if (!editingBlocked) ds.setCameraOpen(true);
+            }}
             onreplyclose={() => ds.setReplyOpen(false)}
-            onreplysend={ds.handleReply}
-            onstamp={() => ds.setStampOpen(true)}
-            onrevoke={() => ds.setRevokeOpen(true)}
-            ontogglesendback={() => ds.setReplyOpen(!ds.replyOpen)}
+            onreplysend={(chips, note) => {
+              if (editing && !blocked) ds.handleReply(chips, note);
+            }}
+            onstamp={() => {
+              if (!editingBlocked) ds.setStampOpen(true);
+            }}
+            onrevoke={() => {
+              if (!editingBlocked) ds.setRevokeOpen(true);
+            }}
+            ontogglesendback={() => {
+              if (!editingBlocked) ds.setReplyOpen(!ds.replyOpen);
+            }}
             justVerified={ds.justVerified}
             dialogStampName={ds.dialogStampName}
             dialogGraphicUrl={
@@ -247,9 +297,13 @@ export default function DetailSheet({
             revokeOpen={ds.revokeOpen}
             studentName={ds.student?.name ?? ""}
             verifyBusy={ds.verifyMutation.isPending}
-            onconfirm={ds.handleVerify}
+            onconfirm={() => {
+              if (editing && !blocked) ds.handleVerify();
+            }}
             oncancel={() => ds.setStampOpen(false)}
-            onrevokeconfirm={ds.handleRevoke}
+            onrevokeconfirm={() => {
+              if (editing && !blocked) ds.handleRevoke();
+            }}
             onrevokecancel={() => ds.setRevokeOpen(false)}
             onfinish={() => ds.setJustVerified(false)}
           />

@@ -11,7 +11,7 @@ export type ChartLabelCount = number | ResponsiveChartLabelCount;
 export function resolveResponsiveChartLabelCount(
   value: ChartLabelCount,
   containerWidth: number,
-  fallback: number
+  fallback: number,
 ): number {
   if (typeof value === "number") {
     return value;
@@ -27,7 +27,7 @@ export function resolveResponsiveChartLabelCount(
 
   return (
     candidates.find(
-      ([minWidth, count]) => containerWidth >= minWidth && count != null
+      ([minWidth, count]) => containerWidth >= minWidth && count != null,
     )?.[1] ?? fallback
   );
 }

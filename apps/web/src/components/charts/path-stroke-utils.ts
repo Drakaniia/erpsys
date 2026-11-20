@@ -3,7 +3,7 @@ import { type RefObject, useEffect, useState } from "react";
 export function findPathLengthAtX(
   path: SVGPathElement | null,
   pathLength: number,
-  targetX: number
+  targetX: number,
 ): number {
   if (!path || pathLength === 0) {
     return 0;
@@ -48,7 +48,7 @@ export function usePathStrokeMetrics(
    * pulse): `getTotalLength()` on a long path plus the follow-up render is
    * real work on every data update. Flipping to true re-measures.
    */
-  enabled = true
+  enabled = true,
 ): PathStrokeMetrics {
   const [metrics, setMetrics] = useState<PathStrokeMetrics>(EMPTY_METRICS);
 
@@ -62,7 +62,7 @@ export function usePathStrokeMetrics(
     setMetrics((prev) =>
       prev.pathD === d && prev.pathLength === len
         ? prev
-        : { pathD: d, pathLength: len }
+        : { pathD: d, pathLength: len },
     );
   }, [enabled, ...deps]);
 
@@ -71,7 +71,7 @@ export function usePathStrokeMetrics(
 
 export function resolveDashTailBounds(
   dashFromIndex: number | undefined,
-  dataLength: number
+  dataLength: number,
 ): boolean {
   return (
     dashFromIndex != null &&
@@ -84,7 +84,7 @@ export function resolveDashStartX(
   data: Record<string, unknown>[],
   dashFromIndex: number,
   xScale: (value: Date | number) => number | undefined,
-  xAccessor: (datum: Record<string, unknown>) => Date | number
+  xAccessor: (datum: Record<string, unknown>) => Date | number,
 ): number {
   const dashFromPoint = data[dashFromIndex];
   if (!dashFromPoint) {

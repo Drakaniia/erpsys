@@ -1,6 +1,14 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 import { ApiError } from "../config/errors.js";
-import { beginSharedTransaction, restartSharedAborted } from "../lib/db/timestamp-ordering.js";
+import {
+  beginSharedTransaction,
+  restartSharedAborted,
+} from "../lib/db/timestamp-ordering.js";
 import {
   SCHEDULE_TZ,
   clock,
@@ -34,9 +42,9 @@ import {
 import { AcademicYearModel } from "../models/AcademicYearModel.js";
 import { AdminActionLogModel } from "../models/AdminActionLogModel.js";
 import {
-  AvailabilityWindowModel,
+  AdviserScheduleModel,
   type AvailabilityWindowRow,
-} from "../models/AvailabilityWindowModel.js";
+} from "../models/AdviserScheduleModel.js";
 import {
   CalendarConnectionModel,
   type CalendarConnectionRow,
@@ -160,7 +168,7 @@ async function reconcile(conn: CalendarConnectionRow): Promise<string> {
 
   const year = await AcademicYearModel.findActive();
   const rows = year
-    ? await AvailabilityWindowModel.listForAdviser(userId, String(year._id))
+    ? await AdviserScheduleModel.listWindowsForAdviser(userId, String(year._id))
     : [];
   const departments = await DepartmentModel.findByIds([
     ...new Set(rows.map((row) => row.departmentId)),
@@ -262,7 +270,7 @@ export async function syncAfterScheduleChange(
         await CalendarConnectionModel.markDirty(userId, new Date());
         return await syncCalendar(userId);
       } catch (error) {
-        if (!await restartSharedAborted(error, attempt)) throw error;
+        if (!(await restartSharedAborted(error, attempt))) throw error;
       }
     }
   });
@@ -271,7 +279,7 @@ export async function syncAfterScheduleChange(
 export async function sweepCalendars(now: Date = new Date()): Promise<void> {
   const year = await AcademicYearModel.findActive();
   if (year) {
-    const advisers = await AvailabilityWindowModel.deleteStaleYears(
+    const advisers = await AdviserScheduleModel.deleteStaleWindowYears(
       String(year._id),
     );
     for (const adviserId of advisers) {
@@ -330,7 +338,9 @@ export async function calendarStatus(userId: string) {
         : "CONNECTED",
     sync: syncStateOf(conn),
     googleEmail: connected ? (conn.googleEmail ?? null) : null,
-    lastSyncAt: conn?.lastSyncAt ? new Date(conn.lastSyncAt).toISOString() : null,
+    lastSyncAt: conn?.lastSyncAt
+      ? new Date(conn.lastSyncAt).toISOString()
+      : null,
     lastError: connected ? (conn.lastError ?? null) : null,
   };
 }
@@ -396,7 +406,7 @@ export async function disconnectCalendar(
 ): Promise<void> {
   const conn = await CalendarConnectionModel.findByUser(userId);
   if (!conn) return;
-  if (conn.refreshTokenEnc) {
+  if (!env.LOCAL_ONLY && conn.refreshTokenEnc) {
     try {
       const refresh = openToken(conn.refreshTokenEnc);
       if (conn.googleCalendarId) {
@@ -422,5 +432,5 @@ export async function disconnectCalendar(
 
 export async function removeCalendarData(userId: string): Promise<void> {
   await disconnectCalendar(userId);
-  await AvailabilityWindowModel.deleteForAdviser(userId);
+  await AdviserScheduleModel.deleteWindowsForAdviser(userId);
 }

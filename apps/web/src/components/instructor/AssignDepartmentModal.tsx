@@ -8,6 +8,7 @@ import {
 import { dialogTrap } from "$lib/ui/dialog-trap";
 import { usePresence } from "$lib/ui/use-presence";
 import YearLevelChips from "../YearLevelChips";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import {
   resolveAssignScope,
   takenYearLevels,
@@ -40,6 +41,9 @@ export default function AssignDepartmentModal({
   onsubmit: (scope: YearLevel[]) => void | Promise<void>;
   onclose: () => void;
 }) {
+  const lock = useEditingLock(
+    open ? `${mode}:${department?.id}:${myAdviserId}` : null,
+  );
   const [selected, setSelected] = useState<YearLevel[]>([]);
   const seededFor = useRef<string | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -53,8 +57,13 @@ export default function AssignDepartmentModal({
     department && normalizeYearLevels(department.yearLevels).length > 0
       ? normalizeYearLevels(department.yearLevels)
       : [...YEAR_LEVELS];
-  const held = department ? takenYearLevels(department.owners, myAdviserId) : [];
-  const taken = mode === "transfer" ? options.filter((level) => !held.includes(level)) : held;
+  const held = department
+    ? takenYearLevels(department.owners, myAdviserId)
+    : [];
+  const taken =
+    mode === "transfer"
+      ? options.filter((level) => !held.includes(level))
+      : held;
 
   useEffect(() => {
     if (!open || !department) {
@@ -82,7 +91,9 @@ export default function AssignDepartmentModal({
     const panel = panelRef.current;
     if (!panel) return;
     const trap = dialogTrap(panel, {
-      onEscape: () => { if (!busy) onclose(); },
+      onEscape: () => {
+        if (!busy) onclose();
+      },
       initialFocus: "panel",
     });
     return () => trap.destroy();
@@ -116,7 +127,12 @@ export default function AssignDepartmentModal({
           id="assign-level-title"
           className="text-base font-semibold tracking-[-0.01em] text-ink"
         >
-          {mode === "edit" ? "Edit" : mode === "transfer" ? "Request transfer for" : "Assign"} {department.code}
+          {mode === "edit"
+            ? "Edit"
+            : mode === "transfer"
+              ? "Request transfer for"
+              : "Assign"}{" "}
+          {department.code}
         </h2>
         <p id="assign-level-range" className="mt-1 text-sm text-muted">
           {department.name}
@@ -126,20 +142,29 @@ export default function AssignDepartmentModal({
         </p>
         <p className="mt-2 text-xs text-muted">
           {mode === "transfer"
-            ? "Choose levels held by one instructor. They can accept or decline; unanswered requests transfer automatically."
+            ? "Choose levels held by one enrollment officer. They can accept or decline; unanswered requests transfer automatically."
             : "Switching departments closes your previous queue. Changing levels returns any student you are serving to the line."}
         </p>
-        <div className="mt-4">
-          <YearLevelChips
-            selected={selected}
-            options={options}
-            taken={taken}
-            disabled={busy}
-            label="Year levels to serve"
-            emptyNote="Pick at least one year level to serve."
-            onchange={(levels) => setSelected(levels)}
-          />
-        </div>
+        <ActiveEditors
+          resource={mode === "transfer" ? "transfer" : "adviser"}
+          id={mode === "transfer" ? undefined : (myAdviserId ?? undefined)}
+          scope={mode === "transfer" ? department.id : undefined}
+          enabled={open && (mode === "transfer" || Boolean(myAdviserId))}
+          className="mt-3"
+          onBlockedChange={lock.onBlockedChange}
+        >
+          <div className="mt-4">
+            <YearLevelChips
+              selected={selected}
+              options={options}
+              taken={taken}
+              disabled={busy}
+              label="Year levels to serve"
+              emptyNote="Pick at least one year level to serve."
+              onchange={(levels) => setSelected(levels)}
+            />
+          </div>
+        </ActiveEditors>
         <div className="mt-5 flex justify-end gap-2">
           <button
             type="button"
@@ -152,11 +177,25 @@ export default function AssignDepartmentModal({
           <button
             type="button"
             onClick={() => onsubmit(selected)}
-            disabled={busy || selected.length === 0 || (mode === "edit" &&
-              JSON.stringify(normalizeYearLevels(selected)) === JSON.stringify(resolveAssignScope(department.myYearLevels, options)))}
+            disabled={
+              lock.blocked ||
+              busy ||
+              selected.length === 0 ||
+              (mode === "edit" &&
+                JSON.stringify(normalizeYearLevels(selected)) ===
+                  JSON.stringify(
+                    resolveAssignScope(department.myYearLevels, options),
+                  ))
+            }
             className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
           >
-            {busy ? "Saving…" : mode === "edit" ? "Save" : mode === "transfer" ? "Request transfer" : "Assign"}
+            {busy
+              ? "Saving…"
+              : mode === "edit"
+                ? "Save"
+                : mode === "transfer"
+                  ? "Request transfer"
+                  : "Assign"}
           </button>
         </div>
       </div>

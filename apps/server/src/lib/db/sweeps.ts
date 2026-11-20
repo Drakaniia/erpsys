@@ -9,15 +9,15 @@ export async function sweep(): Promise<void> {
   const db = await getDb();
   const now = new Date();
 
-
   const idleCutoff = new Date(now.getTime() - AVAILABILITY_IDLE_MS);
   const idle = {
+    kind: "presence",
     isOpen: true,
     $or: [{ lastActiveAt: { $lt: idleCutoff } }, { lastActiveAt: null }],
   };
   const stale = await db
     .collection<{ _id: string; adviserId: string; departmentId: string }>(
-      COLLECTIONS.adviserAvailability,
+      COLLECTIONS.adviserSchedule,
     )
     .find(idle as never)
     .toArray();
@@ -35,16 +35,20 @@ export async function sweep(): Promise<void> {
     (s) => !busy.has(`${s.adviserId}:${s.departmentId}`),
   );
   if (toClose.length > 0) {
-    await db.collection(COLLECTIONS.adviserAvailability).updateMany(
-      { _id: { $in: toClose.map((s) => s._id) }, ...idle } as never,
-      { $set: { isOpen: false, closedAt: now, autoClosedAt: now } } as never,
-    );
-    await db.collection(COLLECTIONS.adviserDepartment).deleteMany({
-      $or: toClose.map((s) => ({
-        adviserId: s.adviserId,
-        departmentId: s.departmentId,
-      })),
-    } as never);
+    await db
+      .collection(COLLECTIONS.adviserSchedule)
+      .updateMany(
+        { _id: { $in: toClose.map((s) => s._id) }, ...idle } as never,
+        { $set: { isOpen: false, closedAt: now, autoClosedAt: now } } as never,
+      );
+    for (const presence of toClose) {
+      await db
+        .collection(COLLECTIONS.department)
+        .updateOne(
+          { _id: presence.departmentId } as never,
+          { $pull: { advisers: { adviserId: presence.adviserId } } } as never,
+        );
+    }
   }
 
   const servingCutoff = new Date(now.getTime() - STALE_SERVING_MS);
@@ -63,7 +67,9 @@ export async function sweep(): Promise<void> {
   for (const entry of stuck) {
     const reverted = await db.collection(COLLECTIONS.enrollmentQueue).updateOne(
       { _id: entry._id, status: "IN_PROGRESS" } as never,
-      { $set: { status: "WAITING", servedById: null, servedAt: null } } as never,
+      {
+        $set: { status: "WAITING", servedById: null, servedAt: null },
+      } as never,
     );
     if (reverted.matchedCount === 0 || !entry.servedById) continue;
     await db.collection(COLLECTIONS.notification).insertOne({
@@ -78,7 +84,11 @@ export async function sweep(): Promise<void> {
   }
 
   await db.collection(COLLECTIONS.upload).updateMany(
-    { backend: "r2", r2Status: "pending", sessionExpiresAt: { $lte: now } } as never,
+    {
+      backend: "r2",
+      r2Status: "pending",
+      sessionExpiresAt: { $lte: now },
+    } as never,
     { $set: { r2Status: "abandoned" } } as never,
   );
 }

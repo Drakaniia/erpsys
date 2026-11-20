@@ -2,7 +2,7 @@ import type { OfficerTab } from "$lib/officer/tabs";
 
 export type OfficerShortcutContext = {
   isTyping: boolean;
-  guideOpen: boolean;
+
   hasDetailSheet: boolean;
 };
 
@@ -27,7 +27,7 @@ export function getOfficerShortcutAction(
   ctx: OfficerShortcutContext,
 ): OfficerShortcutAction | null {
   if (ctx.isTyping) return null;
-  if (ctx.guideOpen) return null;
+
   if (ctx.hasDetailSheet) return null;
 
   if (key === "?") return { type: "toggleShortcuts" };

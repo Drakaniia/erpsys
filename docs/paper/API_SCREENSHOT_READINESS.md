@@ -4,7 +4,7 @@ Target: http://localhost:3001. This report records observed live requests, not a
 
 ## Enrollment fix
 
-- The enrollment model now puts a new identifier in $setOnInsert instead of replacing _id during an update.
+- The enrollment model now puts a new identifier in $setOnInsert instead of replacing \_id during an update.
 - All 29 focused enrollment, completion, and authentication tests passed. These include updates and repeated saves that keep the original identifier.
 - The compiled API was rebuilt and restarted. Two repeated live POST /api/v1/me/enrollments requests returned 200 with the original placement preserved. Earlier 500 results are superseded by these retests.
 - Repository type checks passed. The full test suite timed out; it is not reported as passing.

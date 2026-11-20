@@ -23,146 +23,147 @@ const GOOGLE_CONSOLE = "https://console.cloud.google.com/apis/credentials";
 const TURNSTILE_DASH = "https://dash.cloudflare.com/?to=/:account/turnstile";
 const R2_TOKENS = "https://dash.cloudflare.com/?to=/:account/r2/api-tokens";
 
-export const CREDENTIAL_FIELDS: Record<IntegrationKey, CredentialFieldSpec[]> = {
-  betterAuth: [],
-  googleAuth: [
-    {
-      envKey: "GOOGLE_CLIENT_ID",
-      label: "Client ID",
-      hint: "OAuth 2.0 client ID from Google Cloud → APIs & Services → Credentials.",
-      helpUrl: GOOGLE_CONSOLE,
-      className: "secret",
-      required: true,
-      pair: "GOOGLE_CLIENT_SECRET",
-    },
-    {
-      envKey: "GOOGLE_CLIENT_SECRET",
-      label: "Client secret",
-      hint: "The client's secret. Authorised redirect URI: /api/auth/callback/google on this site.",
-      helpUrl: GOOGLE_CONSOLE,
-      className: "secret",
-      required: true,
-      pair: "GOOGLE_CLIENT_ID",
-    },
-  ],
-  turnstile: [
-    {
-      envKey: "TURNSTILE_SECRET_KEY",
-      label: "Secret key",
-      hint: "Server-side secret of the Turnstile widget.",
-      helpUrl: TURNSTILE_DASH,
-      className: "secret",
-      required: true,
-      pair: "VITE_TURNSTILE_SITE_KEY",
-    },
-    {
-      envKey: "VITE_TURNSTILE_SITE_KEY",
-      label: "Site key",
-      hint: "Public site key of the same widget. Applies without a restart.",
-      helpUrl: TURNSTILE_DASH,
-      className: "plain",
-      required: true,
-      pair: "TURNSTILE_SECRET_KEY",
-    },
-    {
-      envKey: "TURNSTILE_HOSTNAMES",
-      label: "Allowed hostnames",
-      hint: "Comma-separated hostnames the widget is served on. Empty uses Cloudflare's default check.",
-      className: "plain",
-      required: false,
-    },
-  ],
-  r2: [
-    {
-      envKey: "R2_BUCKET",
-      label: "Bucket",
-      hint: "Standard-class bucket that stores evidence files.",
-      className: "plain",
-      required: true,
-    },
-    {
-      envKey: "R2_ENDPOINT",
-      label: "Endpoint",
-      hint: "https://<account id>.r2.cloudflarestorage.com — no path, query or port.",
-      helpUrl: R2_TOKENS,
-      className: "plain",
-      required: true,
-    },
-    {
-      envKey: "R2_ACCESS_KEY_ID",
-      label: "Access key ID",
-      hint: "R2 API token with Object Read & Write on this bucket only.",
-      helpUrl: R2_TOKENS,
-      className: "secret",
-      required: true,
-      pair: "R2_SECRET_ACCESS_KEY",
-    },
-    {
-      envKey: "R2_SECRET_ACCESS_KEY",
-      label: "Secret access key",
-      hint: "Secret half of the same R2 token.",
-      helpUrl: R2_TOKENS,
-      className: "secret",
-      required: true,
-      pair: "R2_ACCESS_KEY_ID",
-    },
-  ],
-  cloudflareChat: [
-    {
-      envKey: "CLOUDFLARE_ACCOUNT_ID",
-      label: "Account ID",
-      hint: "Cloudflare account that owns Workers AI.",
-      className: "plain",
-      required: true,
-    },
-    {
-      envKey: "CLOUDFLARE_API_TOKEN",
-      label: "API token",
-      hint: "Token with Workers AI run permission.",
-      helpUrl: "https://dash.cloudflare.com/profile/api-tokens",
-      className: "secret",
-      required: true,
-    },
-  ],
-  email: [
-    {
-      envKey: "BREVO_API_KEY",
-      label: "API key",
-      hint: "Brevo transactional API key (v3).",
-      helpUrl: "https://app.brevo.com/settings/keys/api",
-      className: "secret",
-      required: true,
-    },
-    {
-      envKey: "MAIL_FROM",
-      label: "Sender",
-      hint: "A sender verified in Brevo — \"Name <addr>\" or a bare address.",
-      helpUrl: "https://app.brevo.com/senders",
-      className: "plain",
-      required: true,
-    },
-  ],
-  googleForms: [
-    {
-      envKey: "GOOGLE_FORMS_REFRESH_TOKEN",
-      label: "Refresh token",
-      hint: "OAuth refresh token of the account that owns the forms, minted against the Google sign-in client with the forms.body, forms.responses.readonly and drive.file scopes.",
-      helpUrl: "https://developers.google.com/oauthplayground",
-      className: "secret",
-      required: true,
-    },
-  ],
-  googleCalendar: [
-    {
-      envKey: "CALENDAR_TOKEN_KEY",
-      label: "Token encryption key",
-      hint: "Random secret of 32+ characters that encrypts instructors' Calendar refresh tokens. Changing it disconnects every instructor. Authorised redirect URI: /api/v1/calendar/callback on this site.",
-      helpUrl: GOOGLE_CONSOLE,
-      className: "secret",
-      required: true,
-    },
-  ],
-};
+export const CREDENTIAL_FIELDS: Record<IntegrationKey, CredentialFieldSpec[]> =
+  {
+    betterAuth: [],
+    googleAuth: [
+      {
+        envKey: "GOOGLE_CLIENT_ID",
+        label: "Client ID",
+        hint: "OAuth 2.0 client ID from Google Cloud → APIs & Services → Credentials.",
+        helpUrl: GOOGLE_CONSOLE,
+        className: "secret",
+        required: true,
+        pair: "GOOGLE_CLIENT_SECRET",
+      },
+      {
+        envKey: "GOOGLE_CLIENT_SECRET",
+        label: "Client secret",
+        hint: "The client's secret. Authorised redirect URI: /api/auth/callback/google on this site.",
+        helpUrl: GOOGLE_CONSOLE,
+        className: "secret",
+        required: true,
+        pair: "GOOGLE_CLIENT_ID",
+      },
+    ],
+    turnstile: [
+      {
+        envKey: "TURNSTILE_SECRET_KEY",
+        label: "Secret key",
+        hint: "Server-side secret of the Turnstile widget.",
+        helpUrl: TURNSTILE_DASH,
+        className: "secret",
+        required: true,
+        pair: "VITE_TURNSTILE_SITE_KEY",
+      },
+      {
+        envKey: "VITE_TURNSTILE_SITE_KEY",
+        label: "Site key",
+        hint: "Public site key of the same widget. Applies without a restart.",
+        helpUrl: TURNSTILE_DASH,
+        className: "plain",
+        required: true,
+        pair: "TURNSTILE_SECRET_KEY",
+      },
+      {
+        envKey: "TURNSTILE_HOSTNAMES",
+        label: "Allowed hostnames",
+        hint: "Comma-separated hostnames the widget is served on. Empty uses Cloudflare's default check.",
+        className: "plain",
+        required: false,
+      },
+    ],
+    r2: [
+      {
+        envKey: "R2_BUCKET",
+        label: "Bucket",
+        hint: "Standard-class bucket that stores evidence files.",
+        className: "plain",
+        required: true,
+      },
+      {
+        envKey: "R2_ENDPOINT",
+        label: "Endpoint",
+        hint: "https://<account id>.r2.cloudflarestorage.com — no path, query or port.",
+        helpUrl: R2_TOKENS,
+        className: "plain",
+        required: true,
+      },
+      {
+        envKey: "R2_ACCESS_KEY_ID",
+        label: "Access key ID",
+        hint: "R2 API token with Object Read & Write on this bucket only.",
+        helpUrl: R2_TOKENS,
+        className: "secret",
+        required: true,
+        pair: "R2_SECRET_ACCESS_KEY",
+      },
+      {
+        envKey: "R2_SECRET_ACCESS_KEY",
+        label: "Secret access key",
+        hint: "Secret half of the same R2 token.",
+        helpUrl: R2_TOKENS,
+        className: "secret",
+        required: true,
+        pair: "R2_ACCESS_KEY_ID",
+      },
+    ],
+    cloudflareChat: [
+      {
+        envKey: "CLOUDFLARE_ACCOUNT_ID",
+        label: "Account ID",
+        hint: "Cloudflare account that owns Workers AI.",
+        className: "plain",
+        required: true,
+      },
+      {
+        envKey: "CLOUDFLARE_API_TOKEN",
+        label: "API token",
+        hint: "Token with Workers AI run permission.",
+        helpUrl: "https://dash.cloudflare.com/profile/api-tokens",
+        className: "secret",
+        required: true,
+      },
+    ],
+    email: [
+      {
+        envKey: "BREVO_API_KEY",
+        label: "API key",
+        hint: "Brevo transactional API key (v3).",
+        helpUrl: "https://app.brevo.com/settings/keys/api",
+        className: "secret",
+        required: true,
+      },
+      {
+        envKey: "MAIL_FROM",
+        label: "Sender",
+        hint: 'A sender verified in Brevo — "Name <addr>" or a bare address.',
+        helpUrl: "https://app.brevo.com/senders",
+        className: "plain",
+        required: true,
+      },
+    ],
+    googleForms: [
+      {
+        envKey: "GOOGLE_FORMS_REFRESH_TOKEN",
+        label: "Refresh token",
+        hint: "OAuth refresh token of the account that owns the forms, minted against the Google sign-in client with the forms.body, forms.responses.readonly and drive.file scopes.",
+        helpUrl: "https://developers.google.com/oauthplayground",
+        className: "secret",
+        required: true,
+      },
+    ],
+    googleCalendar: [
+      {
+        envKey: "CALENDAR_TOKEN_KEY",
+        label: "Token encryption key",
+        hint: "Random secret of 32+ characters that encrypts instructors' Calendar refresh tokens. Changing it disconnects every instructor. Authorised redirect URI: /api/v1/calendar/callback on this site.",
+        helpUrl: GOOGLE_CONSOLE,
+        className: "secret",
+        required: true,
+      },
+    ],
+  };
 
 export const CREDENTIAL_ENV_KEYS: readonly string[] = Object.values(
   CREDENTIAL_FIELDS,
@@ -204,10 +205,14 @@ function derivedKey(): Buffer {
   return cachedKey;
 }
 
-const aad = (key: IntegrationKey, envKey: string) => Buffer.from(`${key}:${envKey}`);
+const aad = (key: IntegrationKey, envKey: string) =>
+  Buffer.from(`${key}:${envKey}`);
 
 export function fingerprint(value: string): string {
-  return createHmac("sha256", derivedKey()).update(value).digest("hex").slice(0, 16);
+  return createHmac("sha256", derivedKey())
+    .update(value)
+    .digest("hex")
+    .slice(0, 16);
 }
 
 export function encryptField(
@@ -218,7 +223,10 @@ export function encryptField(
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", derivedKey(), iv);
   cipher.setAAD(aad(key, envKey));
-  const ciphertext = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
+  const ciphertext = Buffer.concat([
+    cipher.update(value, "utf8"),
+    cipher.final(),
+  ]);
   return {
     ciphertext: ciphertext.toString("base64"),
     iv: iv.toString("base64"),
@@ -256,10 +264,14 @@ export type IntegrationCredentialDoc = {
 };
 
 export const credentialCollection = () =>
-  getDbSync().collection<IntegrationCredentialDoc>(COLLECTIONS.integrationSetting);
+  getDbSync().collection<IntegrationCredentialDoc>(
+    COLLECTIONS.integrationSetting,
+  );
 
 export const readCredentialDocs = () =>
-  credentialCollection().find({} as never).toArray();
+  credentialCollection()
+    .find({} as never)
+    .toArray();
 
 export function decryptDocValues(doc: IntegrationCredentialDoc): {
   values: Record<string, string>;
@@ -297,7 +309,10 @@ export async function loadCredentialOverrides(): Promise<{
     docs = await readCredentialDocs();
   } catch (error) {
     readFailed = true;
-    console.error("[env] credential overrides could not be loaded — running on .env values", error);
+    console.error(
+      "[env] credential overrides could not be loaded — running on .env values",
+      error,
+    );
     return { values: {}, fingerprints: {} };
   }
   readFailed = false;
@@ -318,11 +333,15 @@ export async function loadCredentialOverrides(): Promise<{
       fingerprints[envKey] = fingerprint(plaintext);
     }
   }
-  console.log(`[env] applied ${Object.keys(values).length} stored credential override(s)`);
+  console.log(
+    `[env] applied ${Object.keys(values).length} stored credential override(s)`,
+  );
   return { values, fingerprints };
 }
 
-export function snapshotAppliedFingerprints(values: Record<string, string>): void {
+export function snapshotAppliedFingerprints(
+  values: Record<string, string>,
+): void {
   booted = { ...values };
 }
 
@@ -337,7 +356,8 @@ export async function pendingRestartFor(key: IntegrationKey): Promise<boolean> {
     return false;
   }
   return credentialKeysOf(key).some((envKey) => {
-    const stored = doc?.values?.[envKey]?.fingerprint ?? fingerprint(baseEnvValue(envKey));
+    const stored =
+      doc?.values?.[envKey]?.fingerprint ?? fingerprint(baseEnvValue(envKey));
     const running = booted[envKey] ?? fingerprint(effectiveValue(envKey));
     return stored !== running;
   });

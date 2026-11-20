@@ -4,6 +4,7 @@ import RoleChip from "./RoleChip";
 import Pagination from "../ui/Pagination";
 import FilterDropdown from "../ui/FilterDropdown";
 import { api } from "$lib/api";
+import { roleLabel } from "$lib/auth/role-label";
 import { absoluteTime, initials, relativeTime } from "$lib/officer/format";
 
 type AuditRow = {
@@ -22,7 +23,7 @@ const ROLE_OPTIONS = [
   { value: "", label: "All roles" },
   { value: "STUDENT", label: "Student" },
   { value: "SBO_OFFICER", label: "SBO Officer" },
-  { value: "ENROLLMENT_ADVISER", label: "Instructor" },
+  { value: "ENROLLMENT_ADVISER", label: roleLabel("ENROLLMENT_ADVISER") },
   { value: "ADMIN", label: "Admin" },
 ];
 

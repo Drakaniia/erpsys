@@ -147,22 +147,22 @@ export function AreaChart({
   const margin = useStableMargin({ ...DEFAULT_MARGIN, ...marginProp });
   const lines = useMemo(() => extractAreaConfigs(children), [children]);
   const [chartPhase, setChartPhase] = useState<ChartPhase>(() =>
-    resolveRestingChartPhase(status)
+    resolveRestingChartPhase(status),
   );
   const handlePhaseChange = useCallback(
     (phase: ChartPhase) => {
       setChartPhase(phase);
       onPhaseChange?.(phase);
     },
-    [onPhaseChange]
+    [onPhaseChange],
   );
 
   const showLoadingLabel = Boolean(
     loadingLabel?.trim() &&
-      (chartPhase === "loading" ||
-        chartPhase === "exiting" ||
-        chartPhase === "gridTweenReady" ||
-        chartPhase === "revealingLoading")
+    (chartPhase === "loading" ||
+      chartPhase === "exiting" ||
+      chartPhase === "gridTweenReady" ||
+      chartPhase === "revealingLoading"),
   );
 
   return (

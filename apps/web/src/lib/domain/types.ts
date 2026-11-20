@@ -8,7 +8,6 @@
  * sync beyond a response-shape change.
  */
 
-
 export type StudentRecordStep = {
   code: string;
   status: "MISSING" | "PENDING" | "SUBMITTED" | "VERIFIED" | "RETURNED";

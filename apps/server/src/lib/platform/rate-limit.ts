@@ -22,10 +22,20 @@ type Store = Map<string, number[]>;
 type Registered = { store: Store; windowMs: number };
 
 const registry = new Set<Registered>();
-let sharedCheck: ((name: string, key: string, windowMs: number, max: number) => Promise<RateLimitDecision>) | undefined;
+let sharedCheck:
+  | ((
+      name: string,
+      key: string,
+      windowMs: number,
+      max: number,
+    ) => Promise<RateLimitDecision>)
+  | undefined;
 let budgetSequence = 0;
 
-export function configureSharedRateLimits(check: NonNullable<typeof sharedCheck>): void {
+// Optional shared check (e.g. cross-process store) backing checkAsync; unset = per-process memory.
+export function configureSharedRateLimits(
+  check: NonNullable<typeof sharedCheck>,
+): void {
   sharedCheck = check;
 }
 
@@ -103,6 +113,7 @@ function assertPositive(label: string, value: number, integer: boolean): void {
   }
 }
 
+// One budget: per-key timestamps; a hit passes while fewer than `max` fall inside `windowMs`.
 export function createRateLimitBudget(opts: {
   windowMs: number;
   max: number;
@@ -123,7 +134,9 @@ export function createRateLimitBudget(opts: {
       return record(store, key, Date.now(), windowMs, max, maxKeys);
     },
     async checkAsync(key) {
-      return sharedCheck ? sharedCheck(name, key, windowMs, max) : this.check(key);
+      return sharedCheck
+        ? sharedCheck(name, key, windowMs, max)
+        : this.check(key);
     },
     reset() {
       store.clear();
@@ -134,6 +147,7 @@ export function createRateLimitBudget(opts: {
   };
 }
 
+// Middleware form of a budget: over-budget requests get 429 with Retry-After.
 export function slidingWindowRateLimit(opts: {
   windowMs: number;
   max: number;
@@ -141,7 +155,11 @@ export function slidingWindowRateLimit(opts: {
   message?: string;
 }): RequestHandler {
   const { windowMs, max, key, message = DEFAULT_MESSAGE } = opts;
-  const budget = createRateLimitBudget({ name: `http:${windowMs}:${max}`, windowMs, max });
+  const budget = createRateLimitBudget({
+    name: `http:${windowMs}:${max}`,
+    windowMs,
+    max,
+  });
 
   return function rateLimit(req, res, next) {
     const keyForRequest = key(req);
@@ -150,16 +168,21 @@ export function slidingWindowRateLimit(opts: {
       return;
     }
     const respond = (decision: RateLimitDecision) => {
-      if (decision.allowed) { next(); return; }
+      if (decision.allowed) {
+        next();
+        return;
+      }
       res.status(429);
       res.setHeader("Retry-After", String(decision.retryAfterSeconds));
       res.json({ error: message });
     };
-    if (sharedCheck) { void budget.checkAsync(keyForRequest).then(respond, next); }
-    else respond(budget.check(keyForRequest));
+    if (sharedCheck) {
+      void budget.checkAsync(keyForRequest).then(respond, next);
+    } else respond(budget.check(keyForRequest));
   };
 }
 
+// Best-effort caller IP: req.ip, then X-Forwarded-For, then the socket.
 export function clientIp(req: Request): string {
   const ip = req.ip;
   if (typeof ip === "string" && ip.length > 0) return ip;
@@ -172,6 +195,7 @@ export function clientIp(req: Request): string {
   return req.socket?.remoteAddress || "unknown";
 }
 
+// Maintenance hooks, used by tests: clear everything, one key, or expired keys.
 export function resetRateLimits(): void {
   for (const { store } of registry) store.clear();
 }
@@ -185,6 +209,8 @@ export function sweepRateLimits(): void {
   for (const { store, windowMs } of registry) sweepStore(store, now, windowMs);
 }
 
+// authRateLimit — used in routes/auth: throttles the /api/auth credential
+// endpoints (sign-in, sign-up, OTP send/verify) to 20 per 5 min per IP.
 const AUTH_RATE_LIMIT_WINDOW_MS = 5 * 60_000;
 export const AUTH_RATE_LIMIT_MAX = 20;
 
@@ -196,7 +222,8 @@ const CREDENTIAL_PATHS = new Set([
   "/sign-up/student",
   "/sign-in/email-otp",
   "/email-otp/send-verification-otp",
-  "/email-otp/verify-email",]);
+  "/email-otp/verify-email",
+]);
 
 function authSubPath(req: Request): string {
   const path = (req.originalUrl ?? req.url ?? "").split("?")[0];
@@ -236,6 +263,8 @@ function sessionFingerprint(req: Request): string {
   return createHash("sha256").update(token).digest("hex").slice(0, 16);
 }
 
+// rpcRateLimit/restRateLimit — mounted on /api in app.ts: global backstop,
+// 300/min per session-cookie hash + IP (IP alone when anonymous).
 export const rpcRateLimit: RequestHandler = slidingWindowRateLimit({
   windowMs: RPC_RATE_LIMIT_WINDOW_MS,
   max: RPC_RATE_LIMIT_MAX,

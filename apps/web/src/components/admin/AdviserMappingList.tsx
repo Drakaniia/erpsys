@@ -1,4 +1,5 @@
 import ConfirmDialog from "../ConfirmDialog";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 
 import YearLevelChips from "../YearLevelChips";
 import { initials } from "$lib/officer/format";
@@ -32,10 +33,10 @@ export default function AdviserMappingList({
     confirmClear,
     savePending,
   } = useAdviserMapping({ ontoast, registerrefresh });
+  const lock = useEditingLock(editingId);
 
   return (
     <div className="flex flex-col gap-4">
-
       {isError && (
         <div className="flex items-center justify-between gap-4 rounded-lg border border-error/30 bg-error/5 px-4 py-3">
           <p className="text-sm text-error">Could not load advisers.</p>
@@ -88,20 +89,19 @@ export default function AdviserMappingList({
             <circle cx="12" cy="7" r="4" />
           </svg>
           <p className="text-sm font-medium text-ink">
-            No instructors have signed in yet
+            No enrollment officers have signed in yet
           </p>
           <p className="max-w-sm text-xs text-muted">
-            Instructors appear here after their first login with a @buksu.edu.ph
-            account.
+            Enrollment officers appear here after their first sign-in with a
+            @buksu.edu.ph account.
           </p>
         </div>
       ) : (
         <>
           <div className="flex flex-col gap-2">
             <p className="text-sm leading-5 tracking-[0.01em] text-muted">
-              Advisers derive their role from the @buksu.edu.ph domain. Assign
-              their departments here — the instructor page picks the mapping up
-              on its next poll.
+              Assign departments to enrollment officers here. Their console
+              picks up changes automatically.
             </p>
             <div
               className="flex items-start gap-2.5 rounded-xl border border-border bg-surface-raised px-3.5 py-2.5"
@@ -143,95 +143,103 @@ export default function AdviserMappingList({
                 <li key={adviser.id} className="px-4 py-3">
                   {editingId === adviser.id ? (
                     <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
-                          aria-hidden="true"
-                        >
-                          {initials(adviser.name)}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-ink">
-                            {adviser.name}
-                          </p>
-                          <p className="truncate text-xs text-muted">
-                            {adviser.email}
-                          </p>
-                        </div>
-                      </div>
-                      <div
-                        className="flex flex-wrap gap-1.5"
-                        role="group"
-                        aria-label={`Departments for ${adviser.name}`}
+                      <ActiveEditors
+                        resource="adviser"
+                        id={adviser.id}
+                        onBlockedChange={lock.onBlockedChange}
                       >
-                        {activeDepartments.map((d) => {
-                          const selected = selectedLevels.has(d.id);
-                          return (
-                            <button
-                              key={d.id}
-                              type="button"
-                              onClick={() => toggleDept(d.id)}
-                              aria-pressed={selected}
-                              className={`rounded-full border px-3 py-1 text-xs font-medium tracking-[0.01em] transition-[transform,background-color,border-color,color] duration-100 ease-out active:scale-[0.97] ${
-                                selected
-                                  ? "border-primary bg-primary text-white"
-                                  : "border-border text-muted hover:border-primary/40 hover:text-primary"
-                              }`}
-                            >
-                              {d.code}
-                            </button>
-                          );
-                        })}
-                        {activeDepartments.length === 0 && (
-                          <p className="text-xs text-muted">
-                            No active departments to assign.
-                          </p>
-                        )}
-                      </div>
-
-                      {selectedLevels.size > 0 && (
-                        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-3 py-2.5">
-                          {[...selectedLevels.keys()].map((deptId) => {
-                            const dept = activeDepartments.find(
-                              (d) => d.id === deptId,
-                            );
-                            if (!dept) return null;
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+                            aria-hidden="true"
+                          >
+                            {initials(adviser.name)}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-ink">
+                              {adviser.name}
+                            </p>
+                            <p className="truncate text-xs text-muted">
+                              {adviser.email}
+                            </p>
+                          </div>
+                        </div>
+                        <div
+                          className="flex flex-wrap gap-1.5"
+                          role="group"
+                          aria-label={`Departments for ${adviser.name}`}
+                        >
+                          {activeDepartments.map((d) => {
+                            const selected = selectedLevels.has(d.id);
                             return (
-                              <div key={deptId} className="flex flex-col">
-                                <div className="flex items-center justify-between gap-2">
-                                  <p className="text-xs font-semibold text-ink">
-                                    {dept.code}
-                                  </p>
-                                  <span className="text-[11px] text-muted">
-                                    {departmentLevelRangeLabel(
-                                      selectedLevels.get(deptId) ?? [],
-                                    )}
-                                  </span>
-                                </div>
-                                <div className="mt-1.5">
-                                  <YearLevelChips
-                                    selected={selectedLevels.get(deptId) ?? []}
-                                    options={
-                                      dept.yearLevels.length > 0
-                                        ? dept.yearLevels
-                                        : YEAR_LEVELS
-                                    }
-                                    label="Year levels"
-                                    emptyNote="No levels selected — every year level this program offers."
-                                    onchange={(levels) =>
-                                      setLevels(deptId, levels)
-                                    }
-                                  />
-                                </div>
-                              </div>
+                              <button
+                                key={d.id}
+                                type="button"
+                                onClick={() => toggleDept(d.id)}
+                                aria-pressed={selected}
+                                className={`rounded-full border px-3 py-1 text-xs font-medium tracking-[0.01em] transition-[transform,background-color,border-color,color] duration-100 ease-out active:scale-[0.97] ${
+                                  selected
+                                    ? "border-primary bg-primary text-white"
+                                    : "border-border text-muted hover:border-primary/40 hover:text-primary"
+                                }`}
+                              >
+                                {d.code}
+                              </button>
                             );
                           })}
+                          {activeDepartments.length === 0 && (
+                            <p className="text-xs text-muted">
+                              No active departments to assign.
+                            </p>
+                          )}
                         </div>
-                      )}
+
+                        {selectedLevels.size > 0 && (
+                          <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-3 py-2.5">
+                            {[...selectedLevels.keys()].map((deptId) => {
+                              const dept = activeDepartments.find(
+                                (d) => d.id === deptId,
+                              );
+                              if (!dept) return null;
+                              return (
+                                <div key={deptId} className="flex flex-col">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="text-xs font-semibold text-ink">
+                                      {dept.code}
+                                    </p>
+                                    <span className="text-[11px] text-muted">
+                                      {departmentLevelRangeLabel(
+                                        selectedLevels.get(deptId) ?? [],
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1.5">
+                                    <YearLevelChips
+                                      selected={
+                                        selectedLevels.get(deptId) ?? []
+                                      }
+                                      options={
+                                        dept.yearLevels.length > 0
+                                          ? dept.yearLevels
+                                          : YEAR_LEVELS
+                                      }
+                                      label="Year levels"
+                                      emptyNote="No levels selected — every year level this program offers."
+                                      onchange={(levels) =>
+                                        setLevels(deptId, levels)
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </ActiveEditors>
                       <div className="flex gap-2">
                         <button
                           onClick={saveEditor}
-                          disabled={savePending}
+                          disabled={lock.blocked || savePending}
                           className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
                         >
                           Save
@@ -307,7 +315,7 @@ export default function AdviserMappingList({
       <ConfirmDialog
         open={clearing !== null}
         title={clearing ? `Remove all departments from ${clearing.name}?` : ""}
-        body="They keep their instructor role — their page just shows the no-departments state until departments are assigned."
+        body="They keep their Enrollment Officer role, but their console won't show any departments until you assign one."
         confirmLabel="Remove all"
         destructive
         busy={savePending}

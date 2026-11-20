@@ -818,7 +818,9 @@ h3 {
   --color-chart-segment-background: var(--chart-segment-background);
   --color-chart-marker-badge-foreground: var(--chart-marker-badge-foreground);
   --color-chart-marker-badge-background: var(--chart-marker-badge-background);
-  --color-chart-indicator-secondary-color: var(--chart-indicator-secondary-color);
+  --color-chart-indicator-secondary-color: var(
+    --chart-indicator-secondary-color
+  );
   --color-chart-indicator-color: var(--chart-indicator-color);
   --color-chart-scale-pattern-color: var(--chart-scale-pattern-color);
   --chart-scale-05: var(--chart-scale-05);
@@ -898,9 +900,21 @@ h3 {
   --chart-label: #6b6b66;
   --chart-scale-mix: oklch(1 0 0);
   --chart-scale-01: oklch(0.922 0 0);
-  --chart-scale-02: color-mix(in oklab, var(--chart-1) 35%, var(--chart-scale-mix));
-  --chart-scale-03: color-mix(in oklab, var(--chart-1) 55%, var(--chart-scale-mix));
-  --chart-scale-04: color-mix(in oklab, var(--chart-1) 78%, var(--chart-scale-mix));
+  --chart-scale-02: color-mix(
+    in oklab,
+    var(--chart-1) 35%,
+    var(--chart-scale-mix)
+  );
+  --chart-scale-03: color-mix(
+    in oklab,
+    var(--chart-1) 55%,
+    var(--chart-scale-mix)
+  );
+  --chart-scale-04: color-mix(
+    in oklab,
+    var(--chart-1) 78%,
+    var(--chart-scale-mix)
+  );
   --chart-scale-05: var(--chart-1);
   --chart-scale-pattern-color: oklch(1 0 0);
   --chart-indicator-color: oklch(0.21 0.006 285);
@@ -936,9 +950,21 @@ h3 {
   --chart-label: oklch(0.75 0.01 260);
   --chart-scale-mix: oklch(0.25 0 0);
   --chart-scale-01: oklch(0.3 0 0);
-  --chart-scale-02: color-mix(in oklab, var(--chart-1) 35%, var(--chart-scale-mix));
-  --chart-scale-03: color-mix(in oklab, var(--chart-1) 55%, var(--chart-scale-mix));
-  --chart-scale-04: color-mix(in oklab, var(--chart-1) 78%, var(--chart-scale-mix));
+  --chart-scale-02: color-mix(
+    in oklab,
+    var(--chart-1) 35%,
+    var(--chart-scale-mix)
+  );
+  --chart-scale-03: color-mix(
+    in oklab,
+    var(--chart-1) 55%,
+    var(--chart-scale-mix)
+  );
+  --chart-scale-04: color-mix(
+    in oklab,
+    var(--chart-1) 78%,
+    var(--chart-scale-mix)
+  );
   --chart-scale-05: var(--chart-1);
   --chart-scale-pattern-color: oklch(0.145 0 0);
   --chart-indicator-color: oklch(1 0 0);

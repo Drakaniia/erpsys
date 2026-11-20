@@ -25,6 +25,7 @@ export default function AuthField({
   autocomplete,
   placeholder,
   hint = null,
+  describedBy,
   clearOnEdit = true,
   labelAction,
   onedit,
@@ -35,6 +36,7 @@ export default function AuthField({
   autocomplete?: string;
   placeholder?: string;
   hint?: string | null;
+  describedBy?: string;
   clearOnEdit?: boolean;
   labelAction?: React.ReactNode;
   onedit?: () => void;
@@ -70,7 +72,11 @@ export default function AuthField({
           className="auth-input auth-float-control"
           data-active={isActive}
           aria-invalid={hasError}
-          aria-describedby={hint ? `${field.name}-hint` : undefined}
+          aria-describedby={
+            [hint ? `${field.name}-hint` : null, describedBy]
+              .filter(Boolean)
+              .join(" ") || undefined
+          }
           onFocus={() => setFocused(true)}
           onBlur={() => {
             setFocused(false);

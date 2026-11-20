@@ -30,7 +30,9 @@ export function ReviewPace({
   const loading = !model;
   const noSeries = !!model && points.length === 0;
   const quiet =
-    !!model && points.length > 0 && totals.submitted + totals.verified + totals.returned === 0;
+    !!model &&
+    points.length > 0 &&
+    totals.submitted + totals.verified + totals.returned === 0;
   const decided = totals.verified + totals.returned;
   const verdict =
     totals.submitted === 0
@@ -66,7 +68,11 @@ export function ReviewPace({
         <>
           {!loading && (
             <div className="flex flex-wrap gap-x-5 gap-y-1">
-              <Key color={AWAITING} label="Submitted" value={totals.submitted} />
+              <Key
+                color={AWAITING}
+                label="Submitted"
+                value={totals.submitted}
+              />
               <Key color={VERIFIED} label="Verified" value={totals.verified} />
               <Key color={RETURNED} label="Returned" value={totals.returned} />
             </div>
@@ -80,15 +86,42 @@ export function ReviewPace({
             margin={{ top: 24, right: 12, bottom: 32, left: 12 }}
           >
             <Grid horizontal numTicksRows={4} />
-            <Area dataKey="submitted" fill={AWAITING} fillOpacity={0.2} strokeWidth={1.75} />
-            <Area dataKey="verified" fill={VERIFIED} fillOpacity={0.28} strokeWidth={2} />
-            <Area dataKey="returned" fill={RETURNED} fillOpacity={0.14} strokeWidth={1.5} />
+            <Area
+              dataKey="submitted"
+              fill={AWAITING}
+              fillOpacity={0.2}
+              strokeWidth={1.75}
+            />
+            <Area
+              dataKey="verified"
+              fill={VERIFIED}
+              fillOpacity={0.28}
+              strokeWidth={2}
+            />
+            <Area
+              dataKey="returned"
+              fill={RETURNED}
+              fillOpacity={0.14}
+              strokeWidth={1.5}
+            />
             <XAxis numTicks={{ base: 4, md: 7 }} />
             <ChartTooltip
               rows={(point) => [
-                { color: AWAITING, label: "Submitted", value: Number(point.submitted ?? 0) },
-                { color: VERIFIED, label: "Verified", value: Number(point.verified ?? 0) },
-                { color: RETURNED, label: "Returned", value: Number(point.returned ?? 0) },
+                {
+                  color: AWAITING,
+                  label: "Submitted",
+                  value: Number(point.submitted ?? 0),
+                },
+                {
+                  color: VERIFIED,
+                  label: "Verified",
+                  value: Number(point.verified ?? 0),
+                },
+                {
+                  color: RETURNED,
+                  label: "Returned",
+                  value: Number(point.returned ?? 0),
+                },
               ]}
             />
           </AreaChart>

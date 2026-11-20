@@ -9,6 +9,7 @@ import {
 import { useStorageUpload } from "$lib/storage/use-storage-upload";
 import { useIntegrations } from "$lib/integrations/use-integrations";
 import { notify } from "$lib/notifications";
+import ActiveEditors, { useEditingLock } from "./ActiveEditors";
 
 export default function StampPanel({
   open,
@@ -24,8 +25,13 @@ export default function StampPanel({
     api.officer.getStamp.queryOptions({ enabled: open && isOfficerSurface }),
   );
   const updateStamp = useMutation(api.officer.updateStamp.mutationOptions());
-  const presence = useEditTimestamp("stamp", open && isOfficerSurface ? "me" : null, stampQuery.data);
+  const presence = useEditTimestamp(
+    "stamp",
+    open && isOfficerSurface ? "me" : null,
+    stampQuery.data,
+  );
 
+  const { blocked, onBlockedChange } = useEditingLock(open && isOfficerSurface);
   const initialized = useRef(false);
   const [stampName, setStampName] = useState("");
   const [stampSignatureUrl, setStampSignatureUrl] = useState<string | null>(
@@ -55,7 +61,7 @@ export default function StampPanel({
   }, [open, stampQuery.data]);
 
   async function onFileSelected(file?: File) {
-    if (!file) return;
+    if (!file || blocked) return;
     const invalid = validateStorageFile(file, "stampImage");
     if (invalid) {
       setErrorMsg(invalid);
@@ -72,6 +78,7 @@ export default function StampPanel({
   }
 
   async function saveStamp() {
+    if (blocked || saving) return;
     setSaving(true);
     setErrorMsg("");
     try {
@@ -112,7 +119,6 @@ export default function StampPanel({
   return (
     <>
       <div className="space-y-3 px-3 py-2">
-
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-ink">My stamp</p>
           <button
@@ -123,53 +129,59 @@ export default function StampPanel({
           </button>
         </div>
 
-        <div>
-          <label
-            htmlFor="stamp-name"
-            className="mb-1 block text-xs font-medium text-ink"
-          >
-            Name on stamp
-          </label>
-          <input
-            id="stamp-name"
-            value={stampName}
-            onChange={(e) => setStampName(e.target.value)}
-            maxLength={80}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-ink"
-            placeholder="e.g. M. Santos"
-          />
-        </div>
-
-        <div>
-          <span className="mb-1 block text-xs font-medium text-ink">
-            Signature (optional)
-          </span>
-          {stampSignatureUrl ? (
-            <img
-              src={stampSignatureUrl}
-              alt="Signature preview"
-              className="mb-1 flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border border-border bg-surface object-contain"
-              style={{ mixBlendMode: "multiply" }}
-            />
-          ) : null}
-          {canUpload ? (
-            <label className="flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-surface text-xs text-muted hover:text-ink">
-              {!stampSignatureUrl ? "Upload" : "Replace"}
-              <input
-                type="file"
-                accept={STORAGE_ACCEPT}
-                className="sr-only"
-                onChange={(e) =>
-                  void onFileSelected(e.currentTarget.files?.[0])
-                }
-              />
+        <ActiveEditors
+          resource="stamp"
+          enabled={open && isOfficerSurface}
+          onBlockedChange={onBlockedChange}
+        >
+          <div>
+            <label
+              htmlFor="stamp-name"
+              className="mb-1 block text-xs font-medium text-ink"
+            >
+              Name on stamp
             </label>
-          ) : !stampSignatureUrl ? (
-            <span className="block text-xs text-muted">
-              Uploads are paused — set the name above to save without one.
+            <input
+              id="stamp-name"
+              value={stampName}
+              onChange={(e) => setStampName(e.target.value)}
+              maxLength={80}
+              className="w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-ink"
+              placeholder="e.g. M. Santos"
+            />
+          </div>
+
+          <div>
+            <span className="mb-1 block text-xs font-medium text-ink">
+              Signature (optional)
             </span>
-          ) : null}
-        </div>
+            {stampSignatureUrl ? (
+              <img
+                src={stampSignatureUrl}
+                alt="Signature preview"
+                className="mb-1 flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border border-border bg-surface object-contain"
+                style={{ mixBlendMode: "multiply" }}
+              />
+            ) : null}
+            {canUpload ? (
+              <label className="flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-surface text-xs text-muted hover:text-ink">
+                {!stampSignatureUrl ? "Upload" : "Replace"}
+                <input
+                  type="file"
+                  accept={STORAGE_ACCEPT}
+                  className="sr-only"
+                  onChange={(e) =>
+                    void onFileSelected(e.currentTarget.files?.[0])
+                  }
+                />
+              </label>
+            ) : !stampSignatureUrl ? (
+              <span className="block text-xs text-muted">
+                Uploads are paused — set the name above to save without one.
+              </span>
+            ) : null}
+          </div>
+        </ActiveEditors>
 
         {errorMsg ? (
           <p className="text-xs text-error" role="alert">
@@ -187,7 +199,7 @@ export default function StampPanel({
           <button
             className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-transform duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
             onClick={() => void saveStamp()}
-            disabled={saving}
+            disabled={saving || blocked}
           >
             {saving ? "Saving…" : "Save"}
           </button>

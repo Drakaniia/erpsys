@@ -3,6 +3,7 @@ import { PRE_ENROLLMENT_STEP_CODES, STEP_NAMES } from "$lib/domain/constants";
 import { dialogTrap } from "$lib/ui/dialog-trap";
 import { usePresence } from "$lib/ui/use-presence";
 import type { QueueEntry } from "$lib/instructor/types";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 
 export default function ConfirmEnrollmentDialog({
   open,
@@ -25,6 +26,7 @@ export default function ConfirmEnrollmentDialog({
   onreturntoqueue: () => void;
   onmovetoend: () => void;
 }) {
+  const lock = useEditingLock(open ? entry?.entryId : null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const presence = usePresence(open && Boolean(entry), {
     fade: true,
@@ -36,7 +38,11 @@ export default function ConfirmEnrollmentDialog({
     if (!open || !entry) return;
     const panel = panelRef.current;
     if (!panel) return;
-    const trap = dialogTrap(panel, { onEscape: () => { if (!busy) onreturntoqueue(); } });
+    const trap = dialogTrap(panel, {
+      onEscape: () => {
+        if (!busy) onreturntoqueue();
+      },
+    });
     return () => trap.destroy();
   }, [open, entry, busy, onreturntoqueue]);
 
@@ -55,7 +61,9 @@ export default function ConfirmEnrollmentDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-enroll-title"
-      onClick={() => { if (!busy) onreturntoqueue(); }}
+      onClick={() => {
+        if (!busy) onreturntoqueue();
+      }}
     >
       <div
         ref={panelRef}
@@ -66,10 +74,18 @@ export default function ConfirmEnrollmentDialog({
       >
         <h2
           id="confirm-enroll-title"
+          data-onboarding-tip={open ? "enrollment" : undefined}
           className="text-base font-semibold text-ink"
         >
           Confirm enrollment
         </h2>
+        <ActiveEditors
+          resource="queue-entry"
+          id={entry.entryId}
+          enabled={open}
+          className="mt-3"
+          onBlockedChange={lock.onBlockedChange}
+        />
         <div className="mt-3 space-y-1.5 text-sm">
           <p className="font-medium text-ink">{entry.name}</p>
           <p className="text-muted tabular-nums">{entry.studentNumber}</p>
@@ -157,8 +173,8 @@ export default function ConfirmEnrollmentDialog({
         <div className="mt-4 flex items-center justify-between gap-2">
           <button
             type="button"
-            onClick={onmovetoend}
-            disabled={busy}
+            onClick={() => !lock.blocked && onmovetoend()}
+            disabled={busy || lock.blocked}
             className="press rounded-lg px-2.5 py-1.5 text-xs text-muted hover:text-ink disabled:opacity-50"
           >
             Not present — move to end
@@ -174,9 +190,9 @@ export default function ConfirmEnrollmentDialog({
             </button>
             <button
               type="button"
-              onClick={onconfirm}
-              disabled={busy || !verified}
-              aria-disabled={!verified}
+              onClick={() => !lock.blocked && onconfirm()}
+              disabled={busy || !verified || lock.blocked}
+              aria-disabled={!verified || lock.blocked}
               className="press rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               {busy ? "Confirming…" : "Confirm Enrollment"}

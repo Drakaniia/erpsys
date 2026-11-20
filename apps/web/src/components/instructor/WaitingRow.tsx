@@ -77,6 +77,7 @@ export default function WaitingRow({
         <button
           type="button"
           onClick={onserve}
+          data-onboarding-tip={busy ? undefined : "serve"}
           disabled={busy}
           aria-busy={busy ? "true" : undefined}
           className="press inline-flex min-w-[5.25rem] shrink-0 items-center justify-center rounded-xl bg-primary px-3 py-1.5 text-xs font-medium text-white transition-[transform,background-color] duration-100 ease-out hover:bg-primary/90 disabled:opacity-60"

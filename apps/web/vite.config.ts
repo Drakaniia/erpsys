@@ -94,7 +94,6 @@ export default defineConfig(({ command }) => {
        * `(/|$)` matches both `/api/students` and a bare `/api`.
        */
       proxy: {
-
         "/api": apiTarget,
         ...Object.fromEntries(
           restPrefixes.map((prefix) => [

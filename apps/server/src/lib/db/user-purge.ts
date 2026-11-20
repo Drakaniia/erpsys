@@ -3,18 +3,20 @@ import { COLLECTIONS, idIn, refIn } from "./db.js";
 
 export async function purgeUserById(db: Db, userId: string): Promise<void> {
   const user = await db
-    .collection<{ _id: string; email?: string }>(COLLECTIONS.user)
+    .collection<{
+      _id: string;
+      email?: string;
+      studentProfile?: { _id: string };
+    }>(COLLECTIONS.user)
     .findOne(idIn([userId]) as never, {
-      projection: { _id: 1, email: 1 },
+      projection: { _id: 1, email: 1, studentProfile: 1 },
     });
 
-  const profiles = await db
-    .collection<{ _id: string }>(COLLECTIONS.studentProfile)
-    .find({ userId: refIn([userId]) } as never, { projection: { _id: 1 } })
-    .toArray();
-  const profileIds = profiles.map((p) => p._id);
+  const profileIds = user?.studentProfile
+    ? [String(user.studentProfile._id)]
+    : [];
 
-  const profileFilter = { studentProfileId: { $in: profileIds } };
+  const profileFilter = { studentProfileId: refIn(profileIds) };
   await db.collection(COLLECTIONS.stepVerification).deleteMany({
     $or: [
       profileFilter,
@@ -34,13 +36,13 @@ export async function purgeUserById(db: Db, userId: string): Promise<void> {
     ],
   } as never);
   await db
-    .collection(COLLECTIONS.adviserDepartment)
-    .deleteMany({ adviserId: refIn([userId]) } as never);
+    .collection(COLLECTIONS.department)
+    .updateMany(
+      { advisers: { $elemMatch: { adviserId: refIn([userId]) } } } as never,
+      { $pull: { advisers: { adviserId: refIn([userId]) } } } as never,
+    );
   await db
-    .collection(COLLECTIONS.adviserAvailability)
-    .deleteMany({ adviserId: refIn([userId]) } as never);
-  await db
-    .collection(COLLECTIONS.availabilityWindow)
+    .collection(COLLECTIONS.adviserSchedule)
     .deleteMany({ adviserId: refIn([userId]) } as never);
   await db
     .collection(COLLECTIONS.calendarConnection)
@@ -51,9 +53,7 @@ export async function purgeUserById(db: Db, userId: string): Promise<void> {
   await db
     .collection(COLLECTIONS.studentEnrollment)
     .deleteMany(profileFilter as never);
-  await db
-    .collection(COLLECTIONS.studentProfile)
-    .deleteMany({ userId: refIn([userId]) } as never);
+
   await db
     .collection(COLLECTIONS.session)
     .deleteMany({ userId: refIn([userId]) } as never);

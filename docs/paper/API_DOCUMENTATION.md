@@ -77,11 +77,11 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 503 | Service Unavailable | The required service is unavailable. |
+| Code | Message                 | Description                          |
+| ---- | ----------------------- | ------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.           |
+| 400  | Invalid Request         | Check the required information.      |
+| 503  | Service Unavailable     | The required service is unavailable. |
 
 **Response (JSON):** A success confirmation is returned, not the code. For sign-in, an unknown email also receives a general confirmation without an email being sent.
 
@@ -122,11 +122,11 @@ This figure shows a rejected request for “Send an Email Sign-In or Verificatio
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 400  | Invalid Request         | Check the required information.                  |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The session token and account details are returned. A session cookie is set. Read the current session to confirm the account's permissions.
 
@@ -167,11 +167,11 @@ This figure shows a rejected request for “Sign In with an Email Code” and th
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 400  | Invalid Request         | Check the required information.                  |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** A successful status and verified user are returned. The token is null; this action does not create a new sign-in session.
 
@@ -213,11 +213,11 @@ This figure shows a rejected request for “Verify an Account Email Address” a
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 401 | Sign-In Required | Sign in or check your sign-in details. |
+| Code | Message                 | Description                            |
+| ---- | ----------------------- | -------------------------------------- |
+| 200  | Request Successful (OK) | The request was completed.             |
+| 400  | Invalid Request         | Check the required information.        |
+| 401  | Sign-In Required        | Sign in or check your sign-in details. |
 
 **Response (JSON):** The account details and sign-in information are returned. The browser receives a session cookie to keep the user signed in.
 
@@ -259,10 +259,10 @@ This figure shows a rejected request for “Sign In with Email and Password” a
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
+| Code | Message                 | Description                     |
+| ---- | ----------------------- | ------------------------------- |
+| 200  | Request Successful (OK) | The request was completed.      |
+| 400  | Invalid Request         | Check the required information. |
 
 **Response (JSON):** The new account details are returned and the student is signed in.
 
@@ -302,9 +302,9 @@ This figure shows a rejected request for “Register a Student Account” and th
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 400 | Registration Disabled | Use the student-registration endpoint instead. |
+| Code | Message               | Description                                    |
+| ---- | --------------------- | ---------------------------------------------- |
+| 400  | Registration Disabled | Use the student-registration endpoint instead. |
 
 **Response (JSON):** The request is refused. Students must use the student-registration endpoint instead.
 
@@ -340,10 +340,10 @@ This figure shows the rejected standard signup request and the message directing
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                  |
+| ---- | --------------------------- | -------------------------------------------- |
+| 200  | Request Successful (OK)     | The request was completed.                   |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step. |
 
 **Response (JSON):** A Google sign-in address is returned. The user must finish the Google steps before sign-in is complete.
 
@@ -383,9 +383,9 @@ This figure shows a rejected request for “Begin Google Sign-In” and the erro
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 302 | Redirect | Continue on the next page. |
+| Code | Message  | Description                |
+| ---- | -------- | -------------------------- |
+| 302  | Redirect | Continue on the next page. |
 
 **Response (Redirect):** The user is sent back to the website. Sign-in information is set only when the Google checks succeed.
 
@@ -425,9 +425,9 @@ This figure shows a rejected request for “Complete Google Sign-In” and the e
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
+| Code | Message                 | Description                |
+| ---- | ----------------------- | -------------------------- |
+| 200  | Request Successful (OK) | The request was completed. |
 
 **Response (JSON):** The current user and session details are returned, or an empty result when the user is signed out.
 
@@ -467,9 +467,9 @@ This figure shows a rejected request for “Read the Current Sign-In Session” 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
+| Code | Message                 | Description                |
+| ---- | ----------------------- | -------------------------- |
+| 200  | Request Successful (OK) | The request was completed. |
 
 **Response (JSON):** The sign-out result is returned and the browser's session cookie is cleared.
 
@@ -509,10 +509,10 @@ This figure shows a rejected request for “Sign Out” and the error message re
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
+| Code | Message                 | Description                     |
+| ---- | ----------------------- | ------------------------------- |
+| 200  | Request Successful (OK) | The request was completed.      |
+| 400  | Invalid Request         | Check the required information. |
 
 **Response (JSON):** A general confirmation is returned without revealing whether the email address belongs to an account. This does not prove the email was delivered.
 
@@ -554,10 +554,10 @@ This figure shows a rejected request for “Request an Emailed Password-Reset Li
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
+| Code | Message                 | Description                     |
+| ---- | ----------------------- | ------------------------------- |
+| 200  | Request Successful (OK) | The request was completed.      |
+| 400  | Invalid Request         | Check the required information. |
 
 **Response (JSON):** A confirmation is returned when the password is changed.
 
@@ -598,9 +598,9 @@ This figure shows a rejected request for “Consume a Password-Reset Token” an
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 302 | Redirect | Continue on the next page. |
+| Code | Message  | Description                |
+| ---- | -------- | -------------------------- |
+| 302  | Redirect | Continue on the next page. |
 
 **Response (Redirect):** The browser is sent to the permitted reset page with the token, or with an invalid-token notice.
 
@@ -640,11 +640,11 @@ This figure shows a rejected request for “Library Password-Reset Callback” a
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 401 | Sign-In Required | Sign in or check your sign-in details. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 401  | Sign-In Required        | Sign in or check your sign-in details.           |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The result shows whether sensitive actions are unlocked, when the unlock ends, the next security step, and whether an authenticator is set up.
 
@@ -684,11 +684,11 @@ This figure shows a rejected request for “Read Sensitive-Action Verification S
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 400  | Invalid Request         | Check the required information.                  |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** A confirmation is returned when the PIN is accepted.
 
@@ -728,11 +728,11 @@ This figure shows a rejected request for “Confirm the Administrator PIN” and
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 400  | Invalid Request         | Check the required information.                  |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** A confirmation is returned when the password is accepted.
 
@@ -772,11 +772,11 @@ This figure shows a rejected request for “Confirm the Administrator Password�
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 429 | Too Many Attempts | Wait before trying again. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 429  | Too Many Attempts       | Wait before trying again.                        |
 
 **Response (JSON):** A confirmation is returned when the email-code request succeeds.
 
@@ -816,11 +816,11 @@ This figure shows a rejected request for “Send Administrator Confirmation Emai
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 400  | Invalid Request         | Check the required information.                  |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** A confirmation is returned when the code is accepted.
 
@@ -861,11 +861,11 @@ This figure shows a rejected request for “Verify the Emailed Administrator Cod
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 400  | Invalid Request         | Check the required information.                  |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** Private setup information and backup codes are returned. Do not include these values in screenshots.
 
@@ -906,11 +906,11 @@ This figure shows a rejected request for “Prepare Authenticator Enrollment” 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 401 | Sign-In Required | Sign in or check your sign-in details. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 401  | Sign-In Required        | Sign in or check your sign-in details.           |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The verified account and session details are returned. Protected integration actions are unlocked for five minutes.
 
@@ -952,11 +952,11 @@ This figure shows a rejected request for “Verify the Authenticator Code” and
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 401 | Sign-In Required | Sign in or check your sign-in details. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 401  | Sign-In Required        | Sign in or check your sign-in details.           |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The verified account and session details are returned. The code is used up and protected actions are unlocked for five minutes.
 
@@ -1016,10 +1016,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The result states whether a profile exists and gives the saved student number when available.
 
@@ -1068,10 +1068,10 @@ This figure shows a rejected request for “Read My Profile-Completion Status”
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** A page of account, roster, or student-search results is returned, depending on the caller and selected filters.
 
@@ -1121,10 +1121,10 @@ This figure shows a rejected request for “Search Students or Read the Roster�
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The student rows, paging information, selected year, and summary totals are returned.
 
@@ -1165,10 +1165,10 @@ This figure shows a rejected request for “Read Roster Rows and Summary Togethe
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                  |
+| ---- | --------------------------- | -------------------------------------------- |
+| 200  | Request Successful (OK)     | The request was completed.                   |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step. |
 
 **Response (JSON):** The counts of sent and skipped reminders are returned. These are website notifications, not email or text messages.
 
@@ -1208,10 +1208,10 @@ This figure shows a rejected request for “Send In-App Requirement Reminders”
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The profile, enrollment periods, requirement states, queue eligibility, progress totals, and queue status are returned.
 
@@ -1251,11 +1251,11 @@ This figure shows a rejected request for “Read My Enrollment Progress” and t
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                      |
+| ---- | --------------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK)     | The request was completed.                       |
+| 409  | Conflicting Change          | Refresh the record or resolve its current state. |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step.     |
 
 **Response (JSON):** The saved student number is returned. An existing number is kept unchanged.
 
@@ -1296,11 +1296,11 @@ This figure shows a rejected request for “Claim My Student Number” and the e
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 404 | Not Found | The requested record cannot be found. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 404  | Not Found               | The requested record cannot be found.            |
 
 **Response (JSON):** The student's details, school year, placement, requirement progress, enrollment completion time, and queue information are returned.
 
@@ -1341,11 +1341,11 @@ This figure shows a rejected request for “Read a Student's Record-Sheet Data�
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                      |
+| ---- | --------------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK)     | The request was completed.                       |
+| 409  | Conflicting Change          | Refresh the record or resolve its current state. |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step.     |
 
 **Response (JSON):** The requirement-review identifier, verified status, and upload identifier are returned.
 
@@ -1386,11 +1386,11 @@ This figure shows a rejected request for “Capture and Verify a Mugshot” and 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 404 | Not Found | The requested record cannot be found. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 404  | Not Found               | The requested record cannot be found.            |
 
 **Response (JSON):** The student's details, selected year, placement, requirements, queue information, and pending items are returned.
 
@@ -1430,10 +1430,10 @@ This figure shows a rejected request for “Read a Student's Enrollment Detail�
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The completed record details are returned, or an empty result when enrollment is not yet verified. The website prepares the PDF.
 
@@ -1473,11 +1473,11 @@ This figure shows a rejected request for “Read My Completed Enrollment Record�
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                  |
+| ---- | --------------------------- | -------------------------------------------- |
+| 200  | Request Successful (OK)     | The request was completed.                   |
+| 404  | Not Found                   | The requested record cannot be found.        |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step. |
 
 **Response (JSON):** The result indicates that review was requested, or that the requirement was already verified.
 
@@ -1531,10 +1531,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The school years, semesters, departments, year levels, and active-period status are returned.
 
@@ -1575,11 +1575,11 @@ This figure shows a rejected request for “List My Enrollment Periods” and th
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 400  | Invalid Request         | Check the required information.                  |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The placement details and saved student number are returned.
 
@@ -1621,10 +1621,10 @@ This figure shows a rejected request for “Save My Enrollment Placement” and 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
+| Code | Message                 | Description                     |
+| ---- | ----------------------- | ------------------------------- |
+| 200  | Request Successful (OK) | The request was completed.      |
+| 400  | Invalid Request         | Check the required information. |
 
 **Response (JSON):** The number and identifiers of reversed enrollments and returned queue entries are returned.
 
@@ -1665,11 +1665,11 @@ This figure shows a rejected request for “Revert Multiple Completed Enrollment
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                      |
+| ---- | --------------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK)     | The request was completed.                       |
+| 409  | Conflicting Change          | Refresh the record or resolve its current state. |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step.     |
 
 **Response (JSON):** The queue-entry identifier, student name, and outcome are returned. An already-completed entry is reported as already enrolled.
 
@@ -1710,11 +1710,11 @@ This figure shows a rejected request for “Complete Enrollment from a Queue Ent
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                      |
+| ---- | --------------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK)     | The request was completed.                       |
+| 409  | Conflicting Change          | Refresh the record or resolve its current state. |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step.     |
 
 **Response (JSON):** The reversal confirmation and returned queue-entry identifier are returned. The student goes back to the front of the waiting line.
 
@@ -1769,11 +1769,11 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 201 | Created | The new record was created. |
-| 404 | Not Found | The requested record cannot be found. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message            | Description                                      |
+| ---- | ------------------ | ------------------------------------------------ |
+| 201  | Created            | The new record was created.                      |
+| 404  | Not Found          | The requested record cannot be found.            |
+| 409  | Conflicting Change | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The file identifiers, links, type, and expiry details are returned. This action records file details; it does not prove a file was uploaded.
 
@@ -1813,11 +1813,11 @@ This figure shows a rejected request for “Attach File Metadata to a Requiremen
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 404  | Not Found               | The requested record cannot be found.            |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** A deletion confirmation is returned.
 
@@ -1857,10 +1857,10 @@ This figure shows a rejected request for “Delete My Upload Metadata” and the
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The student's saved external evidence links are returned. Saving the link does not submit the requirement for review.
 
@@ -1900,11 +1900,11 @@ This figure shows a rejected request for “Save an External Evidence Link” an
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 404  | Not Found               | The requested record cannot be found.            |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The remaining evidence details are returned.
 
@@ -1944,11 +1944,11 @@ This figure shows a rejected request for “Remove External Evidence Links” an
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 201 | Created | The new record was created. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                      |
+| ---- | --------------------------- | ------------------------------------------------ |
+| 201  | Created                     | The new record was created.                      |
+| 409  | Conflicting Change          | Refresh the record or resolve its current state. |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step.     |
 
 **Response (JSON):** The submitted status and attached evidence are returned. Profiling checks the Google Form answer and may have no attached file.
 
@@ -1988,11 +1988,11 @@ This figure shows a rejected request for “Submit a Requirement for Review” a
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 404  | Not Found               | The requested record cannot be found.            |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The requirement returns to pending. Eligible files remain as drafts for 24 hours.
 
@@ -2049,11 +2049,11 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 201 | Created | The new record was created. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                      |
+| ---- | --------------------------- | ------------------------------------------------ |
+| 201  | Created                     | The new record was created.                      |
+| 409  | Conflicting Change          | Refresh the record or resolve its current state. |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step.     |
 
 **Response (JSON):** The upload identifier, upload address, and expiry time are returned. The file must then be sent to that address and the upload finalized.
 
@@ -2094,11 +2094,11 @@ This figure shows a rejected request for “Start an Authorized Upload” and th
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 400  | Invalid Request         | Check the required information.                  |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The file identifier, storage reference, type, and expiry details are returned. A private stored file may have no public file link.
 
@@ -2138,11 +2138,11 @@ This figure shows a rejected request for “Finalize an Upload” and the error 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 404 | Not Found | The requested record cannot be found. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 404  | Not Found               | The requested record cannot be found.            |
 
 **Response (JSON):** The result shows whether the upload is pending, complete, or abandoned. Received size and storage details are included when available.
 
@@ -2183,11 +2183,11 @@ This figure shows a rejected request for “Read Upload Session Status” and th
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | OK / Partial Content (206) | The file or requested part is returned. |
-| 403 | Access Denied | You cannot view this file. |
-| 404 | Not Found | The file cannot be found. |
+| Code | Message                    | Description                             |
+| ---- | -------------------------- | --------------------------------------- |
+| 200  | OK / Partial Content (206) | The file or requested part is returned. |
+| 403  | Access Denied              | You cannot view this file.              |
+| 404  | Not Found                  | The file cannot be found.               |
 
 **Response (File content):** The file itself, or the requested portion of it, is returned rather than a normal information response.
 
@@ -2245,10 +2245,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** Matching submission rows and paging information are returned.
 
@@ -2284,10 +2284,10 @@ This figure shows a rejected request for “List Requirement Submissions” and 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
+| Code | Message                 | Description                           |
+| ---- | ----------------------- | ------------------------------------- |
+| 200  | Request Successful (OK) | The request was completed.            |
+| 404  | Not Found               | The requested record cannot be found. |
 
 **Response (JSON):** The student, requirement, review status, evidence, checklist, stamp, and review history are returned.
 
@@ -2327,11 +2327,11 @@ This figure shows a rejected request for “Read a Submission in Full” and the
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 404  | Not Found               | The requested record cannot be found.            |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The requirement-review identifier and verified status are returned.
 
@@ -2371,11 +2371,11 @@ This figure shows a rejected request for “Verify a Submission” and the error
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 404  | Not Found               | The requested record cannot be found.            |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The requirement-review identifier and pending status are returned.
 
@@ -2416,11 +2416,11 @@ This figure shows a rejected request for “Withdraw a Verification” and the e
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 404  | Not Found               | The requested record cannot be found.            |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The requirement-review identifier and returned status are returned.
 
@@ -2474,10 +2474,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The current queue details are returned, or an empty result when the student is not in a queue.
 
@@ -2517,10 +2517,10 @@ This figure shows a rejected request for “Read My Queue Position” and the er
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 201 | Created | The new record was created. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message            | Description                                      |
+| ---- | ------------------ | ------------------------------------------------ |
+| 201  | Created            | The new record was created.                      |
+| 409  | Conflicting Change | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The queue-entry identifier, department name, and waiting position are returned.
 
@@ -2560,10 +2560,10 @@ This figure shows a rejected request for “Join My Enrollment Queue” and the 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** A confirmation is returned. A student currently being served cannot leave through this action.
 
@@ -2603,10 +2603,10 @@ This figure shows a rejected request for “Leave My Waiting Queue” and the er
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The department queues and information about students being served are returned.
 
@@ -2646,11 +2646,11 @@ This figure shows a rejected request for “Monitor My Department Queues” and 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 201 | Created | The new record was created. |
-| 404 | Not Found | The requested record cannot be found. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message            | Description                                      |
+| ---- | ------------------ | ------------------------------------------------ |
+| 201  | Created            | The new record was created.                      |
+| 404  | Not Found          | The requested record cannot be found.            |
+| 409  | Conflicting Change | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The queue-entry identifier and service status are returned.
 
@@ -2690,11 +2690,11 @@ This figure shows a rejected request for “Serve the Next Eligible Student” a
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 404  | Not Found               | The requested record cannot be found.            |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The queue-entry identifier and updated status are returned.
 
@@ -2735,11 +2735,11 @@ This figure shows a rejected request for “Release the Served Student” and th
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 404  | Not Found               | The requested record cannot be found.            |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The queue-entry identifier and new position are returned.
 
@@ -2779,11 +2779,11 @@ This figure shows a rejected request for “Move the Served Student to the End�
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 404  | Not Found               | The requested record cannot be found.            |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The result states whether removal happened and includes the information needed for Undo. A changed entry may return a reason instead.
 
@@ -2825,11 +2825,11 @@ This figure shows a rejected request for “Remove a Waiting Queue Entry” and 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The restoration confirmation and queue-entry identifier are returned.
 
@@ -2880,11 +2880,11 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 201 | Created | The new record was created. |
-| 404 | Not Found | The requested record cannot be found. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                  |
+| ---- | --------------------------- | -------------------------------------------- |
+| 201  | Created                     | The new record was created.                  |
+| 404  | Not Found                   | The requested record cannot be found.        |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step. |
 
 **Response (JSON):** The invitation link, token, department, inviter, and school-year details are returned.
 
@@ -2924,10 +2924,10 @@ This figure shows a rejected request for “Create a Queue Invitation” and the
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The invitation status and queue details are returned. INVALID means the link is not valid; STALE means it is for a different enrollment period. Neither joins the queue.
 
@@ -2980,10 +2980,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The department details and current and next office hours are returned, or an empty result when no department applies.
 
@@ -3024,11 +3024,11 @@ This figure shows a rejected request for “Read My Student Department” and th
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 400  | Invalid Request         | Check the required information.                  |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The saved assignment result is returned.
 
@@ -3069,10 +3069,10 @@ This figure shows a rejected request for “Set My Department Responsibility” 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** A page of department details and assignment information is returned.
 
@@ -3112,10 +3112,10 @@ This figure shows a rejected request for “List Departments and Assignments” 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 201 | Created | The new record was created. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message            | Description                                      |
+| ---- | ------------------ | ------------------------------------------------ |
+| 201  | Created            | The new record was created.                      |
+| 409  | Conflicting Change | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The department's identifier, name, generated code, year levels, active status, and any new assignment are returned.
 
@@ -3156,11 +3156,11 @@ This figure shows a rejected request for “Create a Department” and the error
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The changed department details are returned.
 
@@ -3201,11 +3201,11 @@ This figure shows a rejected request for “Rename or Change Department Status�
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 404 | Not Found | The requested record cannot be found. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 404  | Not Found               | The requested record cannot be found.            |
 
 **Response (JSON):** The department identifier and saved year levels are returned.
 
@@ -3245,11 +3245,11 @@ This figure shows a rejected request for “Set Offered Department Year Levels�
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The department identifier and deletion confirmation are returned.
 
@@ -3290,10 +3290,10 @@ This figure shows a rejected request for “Delete an Eligible Department” and
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** Enrollment entries and a total are returned. When more entries are available, the X-Next-Cursor response header provides the next-page marker.
 
@@ -3347,10 +3347,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The adviser names, emails, departments, and assigned year levels are returned.
 
@@ -3393,10 +3393,10 @@ This figure shows a rejected request for “List Adviser Assignments” and the 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The saved assignment result is returned.
 
@@ -3436,10 +3436,10 @@ This figure shows a rejected request for “Replace an Adviser's Assignments” 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The department, the adviser's open status, and the department's combined availability are returned.
 
@@ -3479,10 +3479,10 @@ This figure shows a rejected request for “Open or Close My Queue Availability�
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The number of availability records refreshed is returned.
 
@@ -3536,10 +3536,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The incoming and outgoing handover requests are returned.
 
@@ -3579,11 +3579,11 @@ This figure shows a rejected request for “List Incoming and Outgoing Handovers
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 201 | Created | The new record was created. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                      |
+| ---- | --------------------------- | ------------------------------------------------ |
+| 201  | Created                     | The new record was created.                      |
+| 409  | Conflicting Change          | Refresh the record or resolve its current state. |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step.     |
 
 **Response (JSON):** The request details, involved advisers, and response deadline are returned.
 
@@ -3624,11 +3624,11 @@ This figure shows a rejected request for “Request Department or Year-Level Han
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The request identifier, final status, and previous adviser's name are returned.
 
@@ -3668,11 +3668,11 @@ This figure shows a rejected request for “Accept or Decline a Handover” and 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The request identifier and cancellation confirmation are returned.
 
@@ -3713,10 +3713,10 @@ This figure shows a rejected request for “Cancel My Handover Request” and th
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The department details and previous adviser's name are returned.
 
@@ -3767,10 +3767,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The department identifier, schedule entries, and calendar-copy status are returned.
 
@@ -3815,11 +3815,11 @@ This figure shows a rejected request for “Read My Department Office Hours” a
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 400  | Invalid Request         | Check the required information.                  |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The saved schedule entries and calendar-copy status are returned.
 
@@ -3869,10 +3869,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The service availability, connection status, Google email, last update time, and any last error are returned.
 
@@ -3912,10 +3912,10 @@ This figure shows a rejected request for “Read My Calendar Connection” and t
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                  |
+| ---- | --------------------------- | -------------------------------------------- |
+| 200  | Request Successful (OK)     | The request was completed.                   |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step. |
 
 **Response (JSON):** A Google permission-page address is returned. The adviser must open it and complete Google's steps.
 
@@ -3956,11 +3956,11 @@ This figure shows a rejected request for “Start Calendar Authorization” and 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 302 | Redirect | Continue on the next page. |
-| 401 | Sign-In Required | Sign in or check your sign-in details. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message          | Description                                      |
+| ---- | ---------------- | ------------------------------------------------ |
+| 302  | Redirect         | Continue on the next page.                       |
+| 401  | Sign-In Required | Sign in or check your sign-in details.           |
+| 403  | Access Denied    | Permission or security verification is required. |
 
 **Response (Redirect):** The browser returns to the adviser page with a connected or error notice.
 
@@ -4000,10 +4000,10 @@ This figure shows a rejected request for “Complete Calendar Authorization” a
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                  |
+| ---- | --------------------------- | -------------------------------------------- |
+| 200  | Request Successful (OK)     | The request was completed.                   |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step. |
 
 **Response (JSON):** The current calendar connection and update status are returned.
 
@@ -4043,10 +4043,10 @@ This figure shows a rejected request for “Synchronize Calendar Again” and th
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The disconnected calendar status is returned. The ERPSYS office-hour schedule remains saved.
 
@@ -4102,10 +4102,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The school-year list is returned with each period's name, semester, active status, and whether it contains records.
 
@@ -4146,10 +4146,10 @@ This figure shows a rejected request for “List Academic Years” and the error
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 201 | Created | The new record was created. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message            | Description                                      |
+| ---- | ------------------ | ------------------------------------------------ |
+| 201  | Created            | The new record was created.                      |
+| 409  | Conflicting Change | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The new period's details and active status are returned.
 
@@ -4190,11 +4190,11 @@ This figure shows a rejected request for “Create an Academic Year” and the e
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 404 | Not Found | The requested record cannot be found. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 404  | Not Found               | The requested record cannot be found.            |
 
 **Response (JSON):** The updated period's details are returned.
 
@@ -4230,11 +4230,11 @@ This figure shows a rejected request for “Edit the Current Academic Year” an
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 404  | Not Found               | The requested record cannot be found.            |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The identifier of the removed period is returned.
 
@@ -4270,10 +4270,10 @@ This figure shows a rejected request for “Delete an Empty Academic Year” and
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
+| Code | Message                 | Description                           |
+| ---- | ----------------------- | ------------------------------------- |
+| 200  | Request Successful (OK) | The request was completed.            |
+| 404  | Not Found               | The requested record cannot be found. |
 
 **Response (JSON):** The current year name, number of students with progress, and number of open queue entries are returned.
 
@@ -4313,11 +4313,11 @@ This figure shows a rejected request for “Preview Academic-Year Activation” 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 404  | Not Found               | The requested record cannot be found.            |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The selected period's details are returned. Other periods are no longer active.
 
@@ -4372,10 +4372,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The checklist items, display order, and active status are returned.
 
@@ -4411,10 +4411,10 @@ This figure shows a rejected request for “List Assessment Requirements” and 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 201 | Created | The new record was created. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message       | Description                                      |
+| ---- | ------------- | ------------------------------------------------ |
+| 201  | Created       | The new record was created.                      |
+| 403  | Access Denied | Permission or security verification is required. |
 
 **Response (JSON):** The new checklist item's details are returned.
 
@@ -4454,10 +4454,10 @@ This figure shows a rejected request for “Add an Assessment Requirement” and
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
+| Code | Message                 | Description                           |
+| ---- | ----------------------- | ------------------------------------- |
+| 200  | Request Successful (OK) | The request was completed.            |
+| 404  | Not Found               | The requested record cannot be found. |
 
 **Response (JSON):** The submitted list of item identifiers is returned.
 
@@ -4494,10 +4494,10 @@ This figure shows a rejected request for “Reorder Assessment Requirements” a
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
+| Code | Message                 | Description                           |
+| ---- | ----------------------- | ------------------------------------- |
+| 200  | Request Successful (OK) | The request was completed.            |
+| 404  | Not Found               | The requested record cannot be found. |
 
 **Response (JSON):** The updated checklist item's details are returned.
 
@@ -4533,10 +4533,10 @@ This figure shows a rejected request for “Update an Assessment Requirement” 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
+| Code | Message                 | Description                           |
+| ---- | ----------------------- | ------------------------------------- |
+| 200  | Request Successful (OK) | The request was completed.            |
+| 404  | Not Found               | The requested record cannot be found. |
 
 **Response (JSON):** The identifier of the removed item is returned.
 
@@ -4592,10 +4592,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The saved text, revision number, and last editor are returned. The result can be empty if nothing has been saved.
 
@@ -4635,10 +4635,10 @@ This figure shows a rejected request for “Read Assistant Knowledge” and the 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The new revision number and update time are returned.
 
@@ -4674,10 +4674,10 @@ This figure shows a rejected request for “Replace Assistant Knowledge” and t
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The form title, answer link, edit link, and last update details are returned, or an empty result if no form is linked.
 
@@ -4717,11 +4717,11 @@ This figure shows a rejected request for “Read the Linked Profiling Form” an
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 201 | Created | The new record was created. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
-| 412 | Required Step Not Completed | Complete the required setup or earlier step. |
+| Code | Message                     | Description                                      |
+| ---- | --------------------------- | ------------------------------------------------ |
+| 201  | Created                     | The new record was created.                      |
+| 409  | Conflicting Change          | Refresh the record or resolve its current state. |
+| 412  | Required Step Not Completed | Complete the required setup or earlier step.     |
 
 **Response (JSON):** The new form's details and links are returned.
 
@@ -4761,10 +4761,10 @@ This figure shows a rejected request for “Create and Link the Profiling Form�
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** A confirmation is returned. The Google Form itself is not deleted.
 
@@ -4805,10 +4805,10 @@ This figure shows a rejected request for “Unlink the Profiling Form” and the
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The saved links are returned in display order.
 
@@ -4849,11 +4849,11 @@ This figure shows a rejected request for “List Required Social-Media Links” 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Updated / Created (201) | The link was updated or created. |
-| 400 | Invalid Request | Check the link name and address. |
-| 404 | Not Found | The selected existing link cannot be found. |
+| Code | Message                 | Description                                 |
+| ---- | ----------------------- | ------------------------------------------- |
+| 200  | Updated / Created (201) | The link was updated or created.            |
+| 400  | Invalid Request         | Check the link name and address.            |
+| 404  | Not Found               | The selected existing link cannot be found. |
 
 **Response (JSON):** The new or updated link details are returned.
 
@@ -4889,10 +4889,10 @@ This figure shows a rejected request for “Add or Update a Social-Media Link”
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** A confirmation is returned when the order is saved.
 
@@ -4930,10 +4930,10 @@ This figure shows a rejected request for “Reorder Social-Media Links” and th
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
+| Code | Message                 | Description                           |
+| ---- | ----------------------- | ------------------------------------- |
+| 200  | Request Successful (OK) | The request was completed.            |
+| 404  | Not Found               | The requested record cannot be found. |
 
 **Response (JSON):** The updated link details are returned.
 
@@ -4969,10 +4969,10 @@ This figure shows a rejected request for “Edit a Social-Media Link” and the 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** A confirmation is returned when the link is removed.
 
@@ -5012,9 +5012,9 @@ This figure shows a rejected request for “Delete a Social-Media Link” and th
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
+| Code | Message                 | Description                |
+| ---- | ----------------------- | -------------------------- |
+| 200  | Request Successful (OK) | The request was completed. |
 
 **Response (JSON):** The available school years and departments are returned. Year-level choices are included in the department information.
 
@@ -5068,10 +5068,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The dashboard information allowed for the user's working area is returned.
 
@@ -5111,10 +5111,10 @@ This figure shows a rejected request for “Load the Landing-Screen Bundle” an
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The summary for the user's permitted working area is returned.
 
@@ -5150,10 +5150,10 @@ This figure shows a rejected request for “Read the Officer or Administrator Ov
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The saved stamp details are returned.
 
@@ -5190,10 +5190,10 @@ This figure shows a rejected request for “Read My Digital Stamp” and the err
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 404 | Not Found | The requested record cannot be found. |
+| Code | Message                 | Description                           |
+| ---- | ----------------------- | ------------------------------------- |
+| 200  | Request Successful (OK) | The request was completed.            |
+| 404  | Not Found               | The requested record cannot be found. |
 
 **Response (JSON):** The updated stamp details are returned.
 
@@ -5233,10 +5233,10 @@ This figure shows a rejected request for “Update My Digital Stamp” and the e
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** Up to 50 notifications are returned, with the newest first.
 
@@ -5292,10 +5292,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The selected year, matching account rows, total matches, and a notice of any shortened results are returned.
 
@@ -5343,10 +5343,10 @@ This figure shows a rejected request for “Read User-Directory Report Data” a
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The selected year, student rows, summary totals, total matches, and a notice of shortened results are returned.
 
@@ -5394,10 +5394,10 @@ This figure shows a rejected request for “Read Department-Roster Report Data�
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** Totals by course, course and year level, progress group, and unassigned students are returned without the report row limit.
 
@@ -5447,10 +5447,10 @@ This figure shows a rejected request for “Read Uncapped Roster Totals” and t
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The year, selected requirement, matching rows, total matches, and a notice of shortened results are returned.
 
@@ -5509,10 +5509,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** A page of account details is returned, including placement, permissions, and blocked status where available.
 
@@ -5552,10 +5552,10 @@ This figure shows a rejected request for “Search the User Directory” and the
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The number of updated accounts and details of skipped accounts are returned.
 
@@ -5595,10 +5595,10 @@ This figure shows a rejected request for “Change Student or Officer Permission
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** Lists of deleted, blocked, and skipped accounts are returned. Accounts with activity are blocked rather than immediately erased.
 
@@ -5639,11 +5639,11 @@ This figure shows a rejected request for “Block or Delete Selected Accounts”
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The account identifier and saved permission are returned.
 
@@ -5683,11 +5683,11 @@ This figure shows a rejected request for “Change One Student or Officer Permis
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The identifier of the removed account is returned.
 
@@ -5728,11 +5728,11 @@ This figure shows a rejected request for “Permanently Purge a Blocked Account�
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 400  | Invalid Request         | Check the required information.                  |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** A confirmation and message are returned. This changes the password directly rather than sending a reset email.
 
@@ -5789,10 +5789,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** The administrator identifiers, names, emails, and setup status are returned.
 
@@ -5832,11 +5832,11 @@ This figure shows a rejected request for “List Administrator Authenticator Sta
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 404 | Not Found | The requested record cannot be found. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 404  | Not Found               | The requested record cannot be found.            |
 
 **Response (JSON):** The account identifier and not-enrolled status are returned. Fresh setup is needed before the next protected unlock.
 
@@ -5876,10 +5876,10 @@ This figure shows a rejected request for “Reset an Administrator Authenticator
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** A suggested file name and credential text are returned. The text contains real secrets and must never appear in this paper or screenshots.
 
@@ -5919,9 +5919,9 @@ This figure shows a rejected request for “Export Effective Integration Credent
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
+| Code | Message                 | Description                |
+| ---- | ----------------------- | -------------------------- |
+| 200  | Request Successful (OK) | The request was completed. |
 
 **Response (JSON):** General callers receive service availability. Administrators receive detailed service settings. Secret values are hidden. Better Auth is always on and includes feature-status information.
 
@@ -5962,11 +5962,11 @@ This figure shows a rejected request for “Read Integration Availability and Co
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The integration key and saved on-or-off status are returned. Better Auth cannot be turned off.
 
@@ -6008,11 +6008,11 @@ This figure shows a rejected request for “Enable or Disable an Integration” 
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
-| 422 | Details Could Not Be Verified | Check the supplied credentials or file details. |
+| Code | Message                       | Description                                      |
+| ---- | ----------------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK)       | The request was completed.                       |
+| 409  | Conflicting Change            | Refresh the record or resolve its current state. |
+| 422  | Details Could Not Be Verified | Check the supplied credentials or file details.  |
 
 **Response (JSON):** The service key, current revision, and each checked field's saved status and source are returned. Secret values are not returned.
 
@@ -6054,11 +6054,11 @@ This figure shows a rejected request for “Check Integration Credentials Before
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
-| 422 | Details Could Not Be Verified | Check the supplied credentials or file details. |
+| Code | Message                       | Description                                      |
+| ---- | ----------------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK)       | The request was completed.                       |
+| 409  | Conflicting Change            | Refresh the record or resolve its current state. |
+| 422  | Details Could Not Be Verified | Check the supplied credentials or file details.  |
 
 **Response (JSON):** The updated service settings are returned. A restart notice shows whether saved values need a server restart before use.
 
@@ -6098,11 +6098,11 @@ This figure shows a rejected request for “Save Integration Credential Override
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
-| 409 | Conflicting Change | Refresh the record or resolve its current state. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
+| 409  | Conflicting Change      | Refresh the record or resolve its current state. |
 
 **Response (JSON):** The service settings are returned using the server's configured defaults. This does not restart the server or restore an exported backup.
 
@@ -6155,10 +6155,10 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (JSON):** Matching activity entries are returned with the account, action, address, result, and time.
 
@@ -6210,11 +6210,11 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | The request was completed. |
-| 400 | Invalid Request | Check the required information. |
-| 403 | Access Denied | Permission or security verification is required. |
+| Code | Message                 | Description                                      |
+| ---- | ----------------------- | ------------------------------------------------ |
+| 200  | Request Successful (OK) | The request was completed.                       |
+| 400  | Invalid Request         | Check the required information.                  |
+| 403  | Access Denied           | Permission or security verification is required. |
 
 **Response (Event stream):** The answer arrives in parts, followed by a completion or error notice. A reply can start successfully and still report an error later.
 
@@ -6264,9 +6264,9 @@ This module has the following endpoints:
 
 Response codes of this API endpoint:
 
-| Code | Message | Description |
-| --- | --- | --- |
-| 200 | Request Successful (OK) | A simple running confirmation is returned. This does not check database readiness. |
+| Code | Message                 | Description                                                                        |
+| ---- | ----------------------- | ---------------------------------------------------------------------------------- |
+| 200  | Request Successful (OK) | A simple running confirmation is returned. This does not check database readiness. |
 
 **Response (JSON):** A simple running confirmation is returned. This does not check database readiness.
 
@@ -6275,4 +6275,3 @@ Response codes of this API endpoint:
 **Figure 268.** Check Basic Application Health — Request and Response
 
 This figure shows the health-check request and the server response indicating that the application is running.
-

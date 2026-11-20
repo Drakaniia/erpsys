@@ -1,4 +1,8 @@
-import { PRE_ENROLLMENT_STEP_CODES } from "../config/constants.js";
+import {
+  PRE_ENROLLMENT_STEP_CODES,
+  findStepByCode,
+  listStepsByCodes,
+} from "../config/constants.js";
 import { ApiError } from "../config/errors.js";
 import { genId } from "../lib/db/ids.js";
 import { mailUser, siteOrigin } from "../lib/platform/mailer.js";
@@ -9,9 +13,7 @@ import {
   type QueueEntryRow,
 } from "../models/EnrollmentQueueModel.js";
 import { NotificationModel } from "../models/NotificationModel.js";
-import { StepModel } from "../models/StepModel.js";
 import { StepVerificationModel } from "../models/StepVerificationModel.js";
-import { StudentProfileModel } from "../models/StudentProfileModel.js";
 import { UserModel } from "../models/UserModel.js";
 import { activeYearOrThrow } from "./academic-years.js";
 import {
@@ -22,7 +24,6 @@ import {
 
 const ALREADY_REVERTED =
   "This enrollment has already been reverted or is not completed.";
-
 
 export async function complete(
   adviserId: string,
@@ -37,7 +38,7 @@ export async function complete(
   await assertDepartmentAssigned(adviserId, departmentId);
   const entry = await entryOrThrow(entryId, departmentId, yearId);
   const studentProfileId = String(entry.studentProfileId);
-  const profile = await StudentProfileModel.findById(studentProfileId);
+  const profile = await UserModel.findProfileById(studentProfileId);
   const studentName = profile
     ? ((await UserModel.findById(String(profile.userId)))?.name ?? "")
     : "";
@@ -65,7 +66,7 @@ export async function complete(
     });
   }
 
-  const steps = await StepModel.listByCodes([...PRE_ENROLLMENT_STEP_CODES]);
+  const steps = listStepsByCodes(PRE_ENROLLMENT_STEP_CODES);
   const codeById = new Map(steps.map((s) => [String(s._id), s.code]));
   const verified = new Set(
     (await StepVerificationModel.listByProfileYear(studentProfileId, yearId))
@@ -95,7 +96,7 @@ export async function complete(
     });
   }
 
-  const step = await StepModel.findByCode("ENROLLMENT");
+  const step = findStepByCode("ENROLLMENT");
   if (step) {
     await StepVerificationModel.verify(
       studentProfileId,
@@ -120,8 +121,6 @@ export async function complete(
       },
       createdAt: now,
     });
-  }
-  if (profile) {
     mailUser(
       String(profile.userId),
       "Enrollment complete — ERPSYS",
@@ -184,7 +183,7 @@ async function revertOne(
     throw new ApiError("CONFLICT", { message: ALREADY_REVERTED });
   }
 
-  const step = await StepModel.findByCode("ENROLLMENT");
+  const step = findStepByCode("ENROLLMENT");
   if (step) {
     await StepVerificationModel.revoke(
       studentProfileId,
@@ -195,7 +194,7 @@ async function revertOne(
     );
   }
 
-  const profile = await StudentProfileModel.findById(studentProfileId);
+  const profile = await UserModel.findProfileById(studentProfileId);
   if (profile) {
     const userId = String(profile.userId);
     const previous = await NotificationModel.findLatestByType(
@@ -204,7 +203,6 @@ async function revertOne(
     );
     if (previous) {
       await NotificationModel.updateById(previous._id, {
-
         title: `[Retracted] ${previous.title}`,
         action: null,
       });

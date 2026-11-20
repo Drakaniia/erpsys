@@ -7,6 +7,7 @@ import {
 import { dialogTrap } from "$lib/ui/dialog-trap";
 import { usePresence } from "$lib/ui/use-presence";
 import YearLevelChips from "./YearLevelChips";
+import ActiveEditors, { useEditingLock } from "./ActiveEditors";
 
 export default function YearLevelModal({
   open,
@@ -21,6 +22,7 @@ export default function YearLevelModal({
   onsaved: (yearLevels: YearLevel[]) => void | Promise<void>;
   onclose: () => void;
 }) {
+  const lock = useEditingLock(open ? department?.id : null);
   const [selected, setSelected] = useState<YearLevel[]>([]);
   const seededId = useRef<string | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -87,14 +89,21 @@ export default function YearLevelModal({
           {departmentLevelRangeLabel(selected)}
         </p>
 
-        <div className="mt-4">
-          <YearLevelChips
-            selected={selected}
-            disabled={busy}
-            onchange={(levels) => setSelected(levels)}
-          />
-        </div>
-
+        <ActiveEditors
+          resource="department"
+          id={department.id}
+          enabled={open}
+          className="mt-3"
+          onBlockedChange={lock.onBlockedChange}
+        >
+          <div className="mt-4">
+            <YearLevelChips
+              selected={selected}
+              disabled={busy}
+              onchange={(levels) => setSelected(levels)}
+            />
+          </div>
+        </ActiveEditors>
         <div className="mt-5 flex justify-end gap-2">
           <button
             type="button"
@@ -107,7 +116,7 @@ export default function YearLevelModal({
           <button
             type="button"
             onClick={() => onsaved(selected)}
-            disabled={busy}
+            disabled={lock.blocked || busy}
             className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
           >
             {busy ? "Saving…" : "Save"}

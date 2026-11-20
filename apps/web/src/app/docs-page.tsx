@@ -31,7 +31,7 @@ const DOC_NAV: ReadonlyArray<{ group: string; items: readonly DocItem[] }> = [
     group: "For staff",
     items: [
       { id: "officers", label: "SBO officers" },
-      { id: "advisers", label: "Enrollment advisers" },
+      { id: "advisers", label: "Enrollment officers" },
       { id: "admins", label: "Administrators" },
     ],
   },
@@ -39,6 +39,7 @@ const DOC_NAV: ReadonlyArray<{ group: string; items: readonly DocItem[] }> = [
     group: "Help",
     items: [
       { id: "account-help", label: "Account help" },
+      { id: "security-policy", label: "Security policy" },
       { id: "faq", label: "Frequently asked questions" },
     ],
   },
@@ -112,7 +113,7 @@ const STEP_GUIDE: ReadonlyArray<{
     title: "Assessment",
     summary:
       "Checks the requirements and payments the office lists for your assessment. When everything on the list is settled, you apply from inside the step.",
-    todo: "Review the requirements and payments, then tap Apply for assessment.",
+    todo: "Review the requirements and payments. Attach proof of payment if available, then select Apply for assessment.",
   },
   {
     number: 2,
@@ -126,7 +127,7 @@ const STEP_GUIDE: ReadonlyArray<{
     title: "Profiling",
     summary:
       "Collects your student profile through the office's own form. The form link opens from the step, and the page shows your email so you can copy it.",
-    todo: "Fill in and submit the form, then upload a screenshot of the “response recorded” page.",
+    todo: "Submit the form with your school Google account, then select ‘I’ve submitted’. ERPSYS checks your Google Forms record.",
   },
   {
     number: 4,
@@ -301,7 +302,13 @@ function RoleCard({
   );
 }
 
-function FaqItem({ question, answer }: { question: string; answer: ReactNode }) {
+function FaqItem({
+  question,
+  answer,
+}: {
+  question: string;
+  answer: ReactNode;
+}) {
   return (
     <details className="group rounded-xl border border-border bg-surface-raised px-4 py-3 [&_summary::-webkit-details-marker]:hidden">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-medium text-ink">
@@ -538,8 +545,8 @@ export function DocsPage() {
                   </p>
                 </div>
                 <p>
-                  The system works in a browser on a computer or a phone. Nothing
-                  needs to be installed.
+                  The system works in a browser on a computer or a phone.
+                  Nothing needs to be installed.
                 </p>
               </Section>
 
@@ -554,11 +561,14 @@ export function DocsPage() {
                     the six steps, uploads evidence, and joins the queue.
                   </RoleCard>
                   <RoleCard role="SBO officer" door="Officer door">
-                    Reviews submissions for the steps assigned to them, stamps or
-                    returns them, maintains the social media links, the profiling
-                    form and their stamp, and generates reports.
+                    Reviews submissions for the steps assigned to them, stamps
+                    or returns them, maintains the social media links, the
+                    profiling form and their stamp, and generates reports.
                   </RoleCard>
-                  <RoleCard role="Enrollment adviser" door="Instructor door">
+                  <RoleCard
+                    role="Enrollment Officer"
+                    door="Enrollment Officer door"
+                  >
                     Opens department availability, serves students in queue
                     order, completes or reverts enrollment, keeps department
                     details, and reviews the student roster and reports.
@@ -599,9 +609,7 @@ export function DocsPage() {
                       Instructors, officers and administrators
                     </span>{" "}
                     sign in with their{" "}
-                    <span className="font-medium text-ink">
-                      @buksu.edu.ph
-                    </span>{" "}
+                    <span className="font-medium text-ink">@buksu.edu.ph</span>{" "}
                     account. There is no self-registration for these roles.
                   </li>
                   <li>
@@ -683,15 +691,15 @@ export function DocsPage() {
                     asks for and submit.
                   </li>
                   <li>
-                    <span className="font-medium text-ink">Submitted</span> — the
-                    office has it. Nothing to do but wait; the review appears in
-                    the officer&apos;s console immediately.
+                    <span className="font-medium text-ink">Submitted</span> —
+                    the office has it. Nothing to do but wait; the review
+                    appears in the officer&apos;s console immediately.
                   </li>
                   <li>
                     <span className="font-medium text-ink">Verified</span> — an
                     officer checked it and applied a digital stamp. The stamp
-                    shows the officer&apos;s name, stamp name, graphic, signature
-                    and the date. The step is now locked.
+                    shows the officer&apos;s name, stamp name, graphic,
+                    signature and the date. The step is now locked.
                   </li>
                   <li>
                     <span className="font-medium text-ink">Returned</span> — the
@@ -716,14 +724,14 @@ export function DocsPage() {
                   <span className="font-medium text-ink">
                     Before you can join:
                   </span>{" "}
-                  an academic year must be active, your department&apos;s adviser
-                  must have opened availability, and steps 1 to 5 must be
-                  verified. The queue page lists anything still missing and links
-                  back to your progress.
+                  an academic year must be active, your department&apos;s
+                  adviser must have opened availability, and steps 1 to 5 must
+                  be verified. The queue page lists anything still missing and
+                  links back to your progress.
                 </p>
                 <p>
-                  <span className="font-medium text-ink">Joining:</span> open the
-                  Enrollment step in your progress list. You will see your
+                  <span className="font-medium text-ink">Joining:</span> open
+                  the Enrollment step in your progress list. You will see your
                   department, its status and your position. Confirm to join.
                   Joining is per student, so only you can take your place.
                 </p>
@@ -740,7 +748,9 @@ export function DocsPage() {
                   place and will rejoin at the end of the line.
                 </p>
                 <p>
-                  <span className="font-medium text-ink">When you are served:</span>{" "}
+                  <span className="font-medium text-ink">
+                    When you are served:
+                  </span>{" "}
                   the adviser marks you in progress. If everything is in order,
                   they complete your enrollment and the final stamp appears; if
                   not, they can end the turn or move you to the end of the queue
@@ -759,12 +769,12 @@ export function DocsPage() {
                 lede="The bell keeps the trail of what happened, so you never have to ask whether a step moved."
               >
                 <p>
-                  Notifications arrive when a submission is verified or returned,
-                  when a review is needed on the staff side, and when your queue
-                  status changes. Unread items are counted on the bell; open it
-                  to read the details and jump straight to the step or queue it
-                  refers to. Mark all as read clears the count without deleting
-                  anything.
+                  Notifications arrive when a submission is verified or
+                  returned, when a review is needed on the staff side, and when
+                  your queue status changes. Unread items are counted on the
+                  bell; open it to read the details and jump straight to the
+                  step or queue it refers to. Mark all as read clears the count
+                  without deleting anything.
                 </p>
               </Section>
 
@@ -774,10 +784,11 @@ export function DocsPage() {
                 lede="The officer console is where submissions are judged, stamped and returned."
               >
                 <p>
-                  The tabs follow the process: <span className="font-medium text-ink">Overview</span>{" "}
-                  shows what is waiting, then one tab per review step —
-                  Assessment, Social Media, Profiling, Mugshot and Consent — and
-                  finally Social Media Links, Profiling Form and Reports.
+                  The tabs follow the process:{" "}
+                  <span className="font-medium text-ink">Overview</span> shows
+                  what is waiting, then one tab per review step — Assessment,
+                  Social Media, Profiling, Mugshot and Consent — and finally
+                  Social Media Links, Profiling Form and Reports.
                 </p>
                 <Bullets>
                   <li>
@@ -808,15 +819,15 @@ export function DocsPage() {
 
               <Section
                 id="advisers"
-                title="For enrollment advisers"
+                title="For enrollment officers"
                 lede="The instructor console runs the department queue and closes out enrollment."
               >
                 <Bullets>
                   <li>
                     <span className="font-medium text-ink">Availability:</span>{" "}
-                    open your department when you are ready to serve. While it is
-                    open a heartbeat keeps it alive; closing it or signing out
-                    closes it for students.
+                    open your department when you are ready to serve. While it
+                    is open a heartbeat keeps it alive; closing it or signing
+                    out closes it for students.
                   </li>
                   <li>
                     <span className="font-medium text-ink">Queues:</span> see
@@ -836,11 +847,13 @@ export function DocsPage() {
                   </li>
                   <li>
                     <span className="font-medium text-ink">Departments:</span>{" "}
-                    create and update department details, assign the adviser, and
-                    delete an empty department.
+                    create and update department details, assign the adviser,
+                    and delete an empty department.
                   </li>
                   <li>
-                    <span className="font-medium text-ink">Students and reports:</span>{" "}
+                    <span className="font-medium text-ink">
+                      Students and reports:
+                    </span>{" "}
                     review the roster across your departments and generate PDF
                     reports for them.
                   </li>
@@ -855,7 +868,8 @@ export function DocsPage() {
                 <Bullets>
                   <li>
                     <span className="font-medium text-ink">Overview:</span>{" "}
-                    system statistics and the recent administrative activity log.
+                    system statistics and the recent administrative activity
+                    log.
                   </li>
                   <li>
                     <span className="font-medium text-ink">Users:</span> search
@@ -863,19 +877,23 @@ export function DocsPage() {
                     role changes.
                   </li>
                   <li>
-                    <span className="font-medium text-ink">Passwords:</span> find
-                    a student and generate a new password for them.
+                    <span className="font-medium text-ink">Passwords:</span>{" "}
+                    find a student and generate a new password for them.
                   </li>
                   <li>
                     <span className="font-medium text-ink">Departments:</span>{" "}
                     names, codes, and active or inactive status.
                   </li>
                   <li>
-                    <span className="font-medium text-ink">Adviser Mapping:</span>{" "}
+                    <span className="font-medium text-ink">
+                      Adviser Mapping:
+                    </span>{" "}
                     assign enrollment advisers to departments.
                   </li>
                   <li>
-                    <span className="font-medium text-ink">Academic Years:</span>{" "}
+                    <span className="font-medium text-ink">
+                      Academic Years:
+                    </span>{" "}
                     create, edit, preview and activate a year. Activation resets
                     the student checklist for that year.
                   </li>
@@ -884,7 +902,9 @@ export function DocsPage() {
                     the assessment requirements and payments list, in order.
                   </li>
                   <li>
-                    <span className="font-medium text-ink">Profiling Form and Chatbot Knowledge:</span>{" "}
+                    <span className="font-medium text-ink">
+                      Profiling Form and Chatbot Knowledge:
+                    </span>{" "}
                     the form students are sent to, and the guide the Enrollment
                     Assistant answers from.
                   </li>
@@ -918,16 +938,17 @@ export function DocsPage() {
                     <span className="font-medium text-ink">
                       Wrong door or wrong account:
                     </span>{" "}
-                    sign out from the user menu and choose the door that matches
-                    your account. ERPSYS never moves a session between account
-                    types on its own.
+                    if you sign in through a door for another role, check the
+                    role shown. Continue to your own portal or choose another
+                    account. Your permissions do not change.
                   </li>
                   <li>
                     <span className="font-medium text-ink">
                       &ldquo;Outside the organization&rdquo; notice:
                     </span>{" "}
-                    your email is not on the college list yet. Ask the SBO office
-                    to add your institutional address, then sign in again.
+                    your email is not on the college list yet. Ask the SBO
+                    office to add your institutional address, then sign in
+                    again.
                   </li>
                   <li>
                     <span className="font-medium text-ink">
@@ -940,6 +961,39 @@ export function DocsPage() {
                     <span className="font-medium text-ink">Signing out:</span>{" "}
                     use the user menu. For advisers, signing out also closes any
                     open department availability.
+                  </li>
+                </Bullets>
+              </Section>
+
+              <Section
+                id="security-policy"
+                title="Security policy"
+                lede="Protect your account and share only the information needed for enrollment."
+              >
+                <Bullets>
+                  <li>
+                    Use 12–128 characters, including at least one uppercase A–Z
+                    and one lowercase a–z, when setting a password. Use a unique
+                    password. Never share it or a sign-in or recovery code.
+                  </li>
+                  <li>
+                    Use only invitation and reset links you expected to receive.
+                    Password setup links expire after one hour and can be used
+                    only once. If a message looks suspicious, do not open it.
+                  </li>
+                  <li>
+                    Use your assigned portal. Staff should not share accounts or
+                    forward student records outside approved office channels.
+                    Sign out before leaving a shared device.
+                  </li>
+                  <li>
+                    Upload only what the current step requests. Review images
+                    for unrelated personal information before submitting them.
+                  </li>
+                  <li>
+                    Report suspicious sign-ins or exposed data to the SBO office
+                    through its official contact channel. Include the time and
+                    affected page, but never a password, code, or student file.
                   </li>
                 </Bullets>
               </Section>
@@ -1000,9 +1054,7 @@ export function DocsPage() {
             </div>
 
             <footer className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6 text-xs text-muted">
-              <p>
-                ERPSYS — Enrollment Records and Processing System · COT-SBO
-              </p>
+              <p>ERPSYS — Enrollment Records and Processing System · COT-SBO</p>
               <a
                 href="#overview"
                 className="font-medium text-primary underline underline-offset-2"

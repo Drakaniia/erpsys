@@ -218,13 +218,10 @@ export async function putEvent(
     if (!(error instanceof CalendarHttpError) || error.status !== 409) {
       throw error;
     }
-    await call(
-      userId,
-      token,
-      `${base}/${event.id}?sendUpdates=none`,
-      "PUT",
-      { ...event, status: "confirmed" },
-    );
+    await call(userId, token, `${base}/${event.id}?sendUpdates=none`, "PUT", {
+      ...event,
+      status: "confirmed",
+    });
   }
 }
 

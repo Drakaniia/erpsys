@@ -1,4 +1,8 @@
-import { summarize, type AccountRole, type AdminOverview } from "$lib/admin/overview";
+import {
+  summarize,
+  type AccountRole,
+  type AdminOverview,
+} from "$lib/admin/overview";
 import type { OverviewData } from "$lib/admin/types";
 import { AccountMix } from "./overview/AccountMix";
 import { ClearanceLine, OverviewHeadline } from "./overview/ClearanceLine";

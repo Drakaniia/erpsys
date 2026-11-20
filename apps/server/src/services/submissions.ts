@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { PRE_ENROLLMENT_STEP_CODES } from "../config/constants.js";
+import {
+  PRE_ENROLLMENT_STEP_CODES,
+  findStepById,
+  listStepsByCodes,
+} from "../config/constants.js";
 import { ApiError } from "../config/errors.js";
 import { escapeQueryRegex } from "../config/queue.js";
 import { REPORT_ROW_CAP } from "../config/report.js";
@@ -8,10 +12,10 @@ import { genId } from "../lib/db/ids.js";
 import { isR2FileKey } from "../lib/storage/storage.js";
 import type { AcademicYearRow } from "../models/AcademicYearModel.js";
 import { NotificationModel } from "../models/NotificationModel.js";
-import { RequirementModel } from "../models/RequirementModel.js";
-import { StepModel } from "../models/StepModel.js";
+import { ContentModel } from "../models/ContentModel.js";
+
 import { StepVerificationModel } from "../models/StepVerificationModel.js";
-import { StudentProfileModel } from "../models/StudentProfileModel.js";
+
 import { UploadModel } from "../models/UploadModel.js";
 import { UserModel } from "../models/UserModel.js";
 import { activeYearOrThrow } from "./academic-years.js";
@@ -58,6 +62,7 @@ async function loadSubmissions(
   input: SubmissionFilterInput,
   skip: number,
   limit: number,
+  queue = false,
 ) {
   const where: Record<string, unknown> = {
     academicYearId: String(year._id),
@@ -67,10 +72,10 @@ async function loadSubmissions(
   if (text) {
     const rx = { $regex: escapeQueryRegex(text), $options: "i" };
     const [byNumber, byName] = await Promise.all([
-      StudentProfileModel.searchByStudentNumber(rx),
+      UserModel.searchProfilesByStudentNumber(rx),
       UserModel.searchByName(rx),
     ]);
-    const viaUser = await StudentProfileModel.listByUserIds(
+    const viaUser = await UserModel.listProfilesByUserIds(
       byName.map((user) => String(user._id)),
     );
     const ids = [
@@ -79,7 +84,16 @@ async function loadSubmissions(
     if (ids.length === 0) where["_id"] = "__no_match__";
     else where["studentProfileId"] = { $in: ids };
   }
-  if (input.status !== "ALL") where["status"] = input.status;
+  if (queue) {
+    where["$and"] = [
+      {
+        $or: [
+          { status: { $in: ["APPLIED", "SUBMITTED"] } },
+          { status: "PENDING", appliedAt: { $gt: new Date(0) } },
+        ],
+      },
+    ];
+  } else if (input.status !== "ALL") where["status"] = input.status;
   if (input.range !== "ALL") {
     const now = Date.now();
     const from =
@@ -105,13 +119,17 @@ async function loadSubmissions(
       : input.sort === "status"
         ? { status: direction, createdAt: direction }
         : input.dir === "asc"
-          ? { status: 1, createdAt: 1 }
-          : { createdAt: -1 };
+          ? queue
+            ? { appliedAt: 1, createdAt: 1 }
+            : { status: 1, createdAt: 1 }
+          : queue
+            ? { appliedAt: -1, createdAt: -1 }
+            : { createdAt: -1 };
   const [total, rows] = await Promise.all([
     StepVerificationModel.countWhere(where),
     StepVerificationModel.search(where, sort, skip, limit),
   ]);
-  const profiles = await StudentProfileModel.findByIds([
+  const profiles = await UserModel.findProfilesByIds([
     ...new Set(rows.map((row) => String(row.studentProfileId))),
   ]);
   const users = await UserModel.findByIds(
@@ -150,7 +168,7 @@ export async function submissionRegister(
   stepCode: string,
 ) {
   const year = await activeYearOrThrow();
-  const [step] = await StepModel.listByCodes([stepCode]);
+  const [step] = listStepsByCodes([stepCode]);
   if (!step) {
     throw new ApiError("NOT_FOUND", { message: "Step not configured." });
   }
@@ -195,9 +213,11 @@ export async function submissionRegister(
   };
 }
 
-export async function submissionPage(input: z.infer<typeof submissionListQuery>) {
+export async function submissionPage(
+  input: z.infer<typeof submissionListQuery>,
+) {
   const year = await activeYearOrThrow();
-  const steps = await StepModel.listByCodes(
+  const steps = listStepsByCodes(
     input.step ? [input.step] : [...PRE_ENROLLMENT_STEP_CODES],
   );
   if (input.step && steps.length === 0) {
@@ -209,6 +229,7 @@ export async function submissionPage(input: z.infer<typeof submissionListQuery>)
     input,
     (input.page - 1) * input.pageSize,
     input.pageSize,
+    true,
   );
   const uploads = await UploadModel.findByIds(
     rows.flatMap(({ row }) => evidenceUploadIds(row.evidence)),
@@ -228,7 +249,9 @@ export async function submissionPage(input: z.infer<typeof submissionListQuery>)
       },
       status: String(row.status),
       submittedAt: isoOf(row.appliedAt, row.createdAt),
-      verifiedAt: row.verifiedAt ? new Date(row.verifiedAt).toISOString() : null,
+      verifiedAt: row.verifiedAt
+        ? new Date(row.verifiedAt).toISOString()
+        : null,
       evidence: ids
         .map((id) => {
           const upload = uploadById.get(id);
@@ -243,6 +266,8 @@ export async function submissionPage(input: z.infer<typeof submissionListQuery>)
         })
         .filter((entry) => entry.fileUrl || isR2FileKey(entry.fileKey)),
       evidenceCount: ids.length,
+      hasGoogleFormsResponse:
+        step?.code === "PROFILING" && Array.isArray(row.answers),
       hasReply: Boolean(row.respondedAt ?? row.replyNote),
       stepCode: step?.code ?? input.step ?? null,
       stepName: step?.name ?? "",
@@ -271,11 +296,11 @@ async function notify(
   title: (name: string) => string,
   body: (name: string) => string,
 ): Promise<void> {
-  const profile = await StudentProfileModel.findById(
+  const profile = await UserModel.findProfileById(
     String(verification.studentProfileId),
   );
   if (!profile) return;
-  const step = await StepModel.findById(String(verification.stepId));
+  const step = findStepById(String(verification.stepId));
   const name = step?.name ?? "Step";
   await NotificationModel.insert({
     _id: genId("notification"),
@@ -293,20 +318,23 @@ export async function submissionDetail(verificationId: string) {
     throw new ApiError("NOT_FOUND", { message: "Verification not found." });
   }
   const [step, profile, uploads] = await Promise.all([
-    StepModel.findById(String(row.stepId)),
-    StudentProfileModel.findById(String(row.studentProfileId)),
+    findStepById(String(row.stepId)),
+    UserModel.findProfileById(String(row.studentProfileId)),
     UploadModel.findByIds(evidenceUploadIds(row.evidence)),
   ]);
   const code = step?.code ?? "ASSESSMENT";
   const requirements = (
     PRE_ENROLLMENT_STEP_CODES as readonly string[]
   ).includes(code)
-    ? await RequirementModel.listActive()
+    ? await ContentModel.listActive()
     : [];
   const users = await UserModel.findByIds(
-    [row.verifiedById, row.revokedById, row.respondedById, profile?.userId].filter(
-      (id): id is string => typeof id === "string",
-    ),
+    [
+      row.verifiedById,
+      row.revokedById,
+      row.respondedById,
+      profile?.userId,
+    ].filter((id): id is string => typeof id === "string"),
   );
   const byId = new Map(users.map((user) => [String(user._id), user]));
   const userOf = (id: string | null | undefined) =>
@@ -466,7 +494,7 @@ export async function captureMugshot(
   input: { fileKey: string; fileUrl: string },
 ) {
   const existing = await currentCycle(verificationId);
-  const step = await StepModel.findById(String(existing.stepId));
+  const step = findStepById(String(existing.stepId));
   if (step?.code !== "MUGSHOT") {
     throw new ApiError("CONFLICT", {
       message: "Mugshot capture is only for the Mugshot step.",

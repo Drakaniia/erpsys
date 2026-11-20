@@ -22,8 +22,7 @@ export function ConnectedAccountsPage() {
   const [linkError, setLinkError] = useState("");
   const [linking, setLinking] = useState(false);
   const [verified, setVerified] = useState(false);
-  const role = (sessionQuery.data?.user as { role?: string } | undefined)
-    ?.role;
+  const role = (sessionQuery.data?.user as { role?: string } | undefined)?.role;
 
   async function loadAccounts() {
     const res = await authClient.listAccounts().catch(() => null);
@@ -87,15 +86,45 @@ export function ConnectedAccountsPage() {
               </p>
             ) : null}
 
-            <section className="mt-6 space-y-3" aria-labelledby="email-verification-heading">
-              <h2 id="email-verification-heading" className="text-[15px] font-medium text-auth-ink">Email verification</h2>
+            <section
+              className="mt-6 space-y-3"
+              aria-labelledby="email-verification-heading"
+            >
+              <h2
+                id="email-verification-heading"
+                className="text-[15px] font-medium text-auth-ink"
+              >
+                Email verification
+              </h2>
               {verified || sessionQuery.data?.user.emailVerified ? (
-                <p role="status" className="text-sm text-muted">Email verified: {userEmail}</p>
+                <p role="status" className="text-sm text-muted">
+                  Email verified: {userEmail}
+                </p>
               ) : (
                 <>
-                  <p className="text-sm text-muted">Your email is not verified. Verification is optional; you can keep using your account.</p>
-                  <p className="text-sm text-muted">For staff or admin addresses, verification clears unverified credentials and existing sessions. Sign in with an email code afterward.</p>
-                  {flags.email && userEmail ? <EmailCodeForm key={userEmail} email={userEmail} onSuccess={() => { setVerified(true); void authClient.getSession(); }} /> : <p className="text-sm text-muted">Email delivery is unavailable. Try again later.</p>}
+                  <p className="text-sm text-muted">
+                    Your email is not verified. Verification is optional; you
+                    can keep using your account.
+                  </p>
+                  <p className="text-sm text-muted">
+                    For staff or admin addresses, verification clears unverified
+                    credentials and existing sessions. Sign in with an email
+                    code afterward.
+                  </p>
+                  {flags.email && userEmail ? (
+                    <EmailCodeForm
+                      key={userEmail}
+                      email={userEmail}
+                      onSuccess={() => {
+                        setVerified(true);
+                        void authClient.getSession();
+                      }}
+                    />
+                  ) : (
+                    <p className="text-sm text-muted">
+                      Email delivery is unavailable. Try again later.
+                    </p>
+                  )}
                 </>
               )}
             </section>

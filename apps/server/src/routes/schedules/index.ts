@@ -12,7 +12,7 @@ import {
 } from "../../middleware/auth.js";
 import { catchAsync } from "../../middleware/catchAsync.js";
 import { okOne, parseBody, parseQuery } from "../../middleware/http.js";
-import { AvailabilityWindowModel } from "../../models/AvailabilityWindowModel.js";
+import { AdviserScheduleModel } from "../../models/AdviserScheduleModel.js";
 import { CalendarConnectionModel } from "../../models/CalendarConnectionModel.js";
 import { activeYearOrThrow } from "../../services/academic-years.js";
 import {
@@ -65,7 +65,7 @@ schedulesRouter.get(
       req,
     );
     const year = await activeYearOrThrow();
-    const rows = await AvailabilityWindowModel.listForAdviserDepartment(
+    const rows = await AdviserScheduleModel.listWindowsForAdviserDepartment(
       sessionUser(req).id,
       departmentId,
       String(year._id),
@@ -105,7 +105,7 @@ schedulesRouter.put(
     await assertDepartmentAssigned(userId, input.departmentId);
     const windows = currentWindows(input.windows);
     validateWindows(windows);
-    await AvailabilityWindowModel.replace(
+    await AdviserScheduleModel.replaceWindows(
       userId,
       input.departmentId,
       String(year._id),

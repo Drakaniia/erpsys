@@ -1,6 +1,10 @@
 export const STEP_UP_REQUIRED = "STEP_UP_REQUIRED";
 
-export type StepUpWaiter = { ok: () => void; cancel: () => void };
+export type StepUpWaiter = {
+  ok: () => void;
+  cancel: () => void;
+  authenticatorReset: boolean;
+};
 
 let open: ((waiter: StepUpWaiter) => void) | null = null;
 let pending: Promise<void> | null = null;
@@ -12,8 +16,8 @@ export function registerStepUpHost(
   open = opener;
 }
 
-/** Resolves once the administrator passes every step; rejects if they cancel. */
-export function requestStepUp(): Promise<void> {
+/** Resolves once the administrator passes the required steps; rejects if they cancel. */
+export function requestStepUp(authenticatorReset = false): Promise<void> {
   if (pending) return pending;
   const opener = open;
   if (!opener) {
@@ -23,6 +27,7 @@ export function requestStepUp(): Promise<void> {
   }
   pending = new Promise<void>((resolve, reject) => {
     opener({
+      authenticatorReset,
       ok: () => {
         pending = null;
         resolve();

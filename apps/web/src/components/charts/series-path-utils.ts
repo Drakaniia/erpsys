@@ -13,7 +13,7 @@ export function computeSeriesPathPoints(
   xAccessor: (datum: Record<string, unknown>) => Date,
   xScale: (value: Date) => number | undefined,
   yScale: (value: number) => number | undefined,
-  dataKey: string
+  dataKey: string,
 ): SeriesPathPoint[] {
   return data.map((datum, index) => {
     const xValue = xAccessor(datum);
@@ -29,7 +29,7 @@ export function computeSeriesPathPoints(
 export function interpolateSeriesPathPoints(
   from: SeriesPathPoint[],
   to: SeriesPathPoint[],
-  progress: number
+  progress: number,
 ): SeriesPathPoint[] {
   if (progress >= 1) {
     return to;
@@ -68,7 +68,7 @@ export function interpolateSeriesPathPoints(
 
 export function seriesPathFromPoints(
   points: SeriesPathPoint[],
-  curve: CurveFactory
+  curve: CurveFactory,
 ): string {
   if (points.length === 0) {
     return "";
@@ -113,7 +113,7 @@ class PolylineRecorder {
     x2: number,
     y2: number,
     x: number,
-    y: number
+    y: number,
   ) {
     const x0 = this.x;
     const y0 = this.y;
@@ -126,7 +126,7 @@ class PolylineRecorder {
       const d = t * t * t;
       this.push(
         a * x0 + b * x1 + c * x2 + d * x,
-        a * y0 + b * y1 + c * y2 + d * y
+        a * y0 + b * y1 + c * y2 + d * y,
       );
     }
   }
@@ -139,7 +139,7 @@ class PolylineRecorder {
       const u = 1 - t;
       this.push(
         u * u * x0 + 2 * u * t * x1 + t * t * x,
-        u * u * y0 + 2 * u * t * y1 + t * t * y
+        u * u * y0 + 2 * u * t * y1 + t * t * y,
       );
     }
   }
@@ -152,7 +152,7 @@ class PolylineRecorder {
 /** Flattens the curve through `points` into a dense polyline sorted by x. */
 export function flattenSeriesPath(
   points: SeriesPathPoint[],
-  curve: CurveFactory
+  curve: CurveFactory,
 ): SeriesPathPoint[] {
   if (points.length < 2) {
     return points;
@@ -205,7 +205,7 @@ export function morphSeriesPolylines(
   from: SeriesPathPoint[],
   to: SeriesPathPoint[],
   progress: number,
-  sampleSpacingPx = 2
+  sampleSpacingPx = 2,
 ): SeriesPathPoint[] {
   const first = to[0];
   const last = to.at(-1);
@@ -228,7 +228,7 @@ export function morphSeriesPolylines(
 export function seriesDataSignature(
   renderData: Record<string, unknown>[],
   xAccessor: (datum: Record<string, unknown>) => Date,
-  dataKey: string
+  dataKey: string,
 ): string {
   return renderData
     .map((datum) => {
@@ -255,7 +255,7 @@ export function seriesPathTransitionSignature({
 }): string {
   return seriesPathTransitionSignatureFromData(
     seriesDataSignature(renderData, xAccessor, dataKey),
-    { innerWidth, xDomainMin, xDomainMax }
+    { innerWidth, xDomainMin, xDomainMax },
   );
 }
 
@@ -269,7 +269,7 @@ export function seriesPathTransitionSignatureFromData(
     innerWidth,
     xDomainMin,
     xDomainMax,
-  }: { innerWidth: number; xDomainMin: number; xDomainMax: number }
+  }: { innerWidth: number; xDomainMin: number; xDomainMax: number },
 ): string {
   return `${innerWidth}|${xDomainMin}|${xDomainMax}|${dataSignature}`;
 }

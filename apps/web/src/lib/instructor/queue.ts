@@ -6,7 +6,7 @@ import { LAUNCH_STALE_MS } from "$lib/perf/cache-policy";
 import { intervalWhileVisible } from "$lib/polling";
 import type { DepartmentQueue, QueueEntry } from "$lib/instructor/types";
 import { type Toast } from "./queue/constants";
-import { useGuideTour } from "./queue/use-guide-tour";
+
 import { useIdleHeartbeat } from "./queue/use-idle-heartbeat";
 import { useRemoveFlow } from "./queue/use-remove-flow";
 import { useAutoCloseNotices } from "./queue/use-auto-close-notices";
@@ -48,8 +48,7 @@ export function useQueueState(getActiveDeptId: () => string, toast: Toast) {
   const spotlight: QueueEntry | null =
     activeDept?.entries.find(
       (e: QueueEntry) => e.status === "WAITING" && !e.locked,
-    ) ??
-    null;
+    ) ?? null;
   const waitingEntries: QueueEntry[] = (activeDept?.entries ?? []).filter(
     (entry: QueueEntry) => entry.status === "WAITING",
   );
@@ -68,29 +67,54 @@ export function useQueueState(getActiveDeptId: () => string, toast: Toast) {
 
   const availabilityMutation = useMutation(
     api.instructor.setAvailability.mutationOptions({
-      onSuccess: async (saved: { departmentId: string; myOpen: boolean; isOpen: boolean; openBy: unknown }) => {
+      onSuccess: async (saved: {
+        departmentId: string;
+        myOpen: boolean;
+        isOpen: boolean;
+        openBy: unknown;
+      }) => {
         const queryKey = api.instructor.getMyQueues.queryKey();
         await queryClient.cancelQueries({ queryKey });
-        queryClient.setQueryData(queryKey, (current: typeof queueQuery.data) => current && ({
-          ...current,
-          departments: current.departments.map((department: DepartmentQueue) => {
-            if (department.id !== saved.departmentId) return department;
-            const released = !saved.myOpen && department.servingEntry?.servedById === myAdviserId;
-            return {
-              ...department,
-              myOpen: saved.myOpen, isOpen: saved.isOpen, openBy: saved.openBy,
-              autoClosedAt: null,
-              servingEntry: released ? null : department.servingEntry,
-              waitingCount: department.waitingCount + (released ? 1 : 0),
-              entries: released ? department.entries.map((entry: QueueEntry) =>
-                entry.entryId === department.servingEntry.entryId
-                  ? { ...entry, status: "WAITING", servedById: null, servedAt: null } : entry,
-              ) : department.entries,
-            };
-          }),
-        }));
+        queryClient.setQueryData(
+          queryKey,
+          (current: typeof queueQuery.data) =>
+            current && {
+              ...current,
+              departments: current.departments.map(
+                (department: DepartmentQueue) => {
+                  if (department.id !== saved.departmentId) return department;
+                  const released =
+                    !saved.myOpen &&
+                    department.servingEntry?.servedById === myAdviserId;
+                  return {
+                    ...department,
+                    myOpen: saved.myOpen,
+                    isOpen: saved.isOpen,
+                    openBy: saved.openBy,
+                    autoClosedAt: null,
+                    servingEntry: released ? null : department.servingEntry,
+                    waitingCount: department.waitingCount + (released ? 1 : 0),
+                    entries: released
+                      ? department.entries.map((entry: QueueEntry) =>
+                          entry.entryId === department.servingEntry.entryId
+                            ? {
+                                ...entry,
+                                status: "WAITING",
+                                servedById: null,
+                                servedAt: null,
+                              }
+                            : entry,
+                        )
+                      : department.entries,
+                  };
+                },
+              ),
+            },
+        );
       },
-      onSettled: () => { invalidateQueues(); },
+      onSettled: () => {
+        invalidateQueues();
+      },
     }),
   );
   const moveMutation = useMutation(api.instructor.moveToEnd.mutationOptions());
@@ -111,8 +135,13 @@ export function useQueueState(getActiveDeptId: () => string, toast: Toast) {
   );
 
   const canServeFirst =
-    !activeDept?.queueLoading && !!activeDept?.myOpen && spotlight !== null && !hasInProgress &&
-    !beginServingMutation.isPending && !availabilityMutation.isPending && !queueQuery.isError;
+    !activeDept?.queueLoading &&
+    !!activeDept?.myOpen &&
+    spotlight !== null &&
+    !hasInProgress &&
+    !beginServingMutation.isPending &&
+    !availabilityMutation.isPending &&
+    !queueQuery.isError;
   const servingBusy = endServingMutation.isPending || moveMutation.isPending;
 
   function invalidateQueues() {
@@ -122,22 +151,27 @@ export function useQueueState(getActiveDeptId: () => string, toast: Toast) {
   }
 
   const [validationTarget, setValidationTarget] = useState<string | null>(null);
-  const showValidateDialog = validationTarget !== null && validationTarget === serveEntry?.entryId;
+  const showValidateDialog =
+    validationTarget !== null && validationTarget === serveEntry?.entryId;
   function setShowValidateDialog(open: boolean) {
-    setValidationTarget(open ? serveEntry?.entryId ?? null : null);
+    setValidationTarget(open ? (serveEntry?.entryId ?? null) : null);
   }
   useEffect(() => {
-    if (validationTarget && validationTarget !== serveEntry?.entryId) setValidationTarget(null);
+    if (validationTarget && validationTarget !== serveEntry?.entryId)
+      setValidationTarget(null);
   }, [validationTarget, serveEntry?.entryId]);
   const [closeTarget, setCloseTarget] = useState<string | null>(null);
-  const closeConfirmOpen = closeTarget !== null && closeTarget === activeDept?.id;
-  function setCloseConfirmOpen(open: boolean) { setCloseTarget(open ? activeDept?.id ?? null : null); }
+  const closeConfirmOpen =
+    closeTarget !== null && closeTarget === activeDept?.id;
+  function setCloseConfirmOpen(open: boolean) {
+    setCloseTarget(open ? (activeDept?.id ?? null) : null);
+  }
   useEffect(() => {
     if (closeTarget && closeTarget !== activeDept?.id) setCloseTarget(null);
   }, [closeTarget, activeDept?.id]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const guideTour = useGuideTour();
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const idle = useIdleHeartbeat({
     anyDeptOpen: () => departments.some((d) => d.myOpen),
     sendHeartbeat: async () => {
@@ -207,7 +241,15 @@ export function useQueueState(getActiveDeptId: () => string, toast: Toast) {
 
   async function openServe(entry: QueueEntry) {
     const dept = activeDept;
-    if (!dept || dept.queueLoading || beginServingMutation.isPending || availabilityMutation.isPending || removeMutation.isPending || queueQuery.isError) return;
+    if (
+      !dept ||
+      dept.queueLoading ||
+      beginServingMutation.isPending ||
+      availabilityMutation.isPending ||
+      removeMutation.isPending ||
+      queueQuery.isError
+    )
+      return;
     if (entry.locked) {
       toast(
         entry.yearLevel
@@ -227,11 +269,17 @@ export function useQueueState(getActiveDeptId: () => string, toast: Toast) {
         servingEntry?.servedById === myAdviserId
           ? "you"
           : (servingEntry?.servedByName ?? "another adviser");
-      toast(`Already being served by ${name} — one student at a time.`, "error");
+      toast(
+        `Already being served by ${name} — one student at a time.`,
+        "error",
+      );
       return;
     }
     if (spotlight?.entryId !== entry.entryId) {
-      toast("Strict FIFO — serve the first student in your year levels.", "error");
+      toast(
+        "Strict FIFO — serve the first student in your year levels.",
+        "error",
+      );
       return;
     }
     try {
@@ -250,7 +298,8 @@ export function useQueueState(getActiveDeptId: () => string, toast: Toast) {
   async function returnToQueue() {
     const dept = activeDept;
     const entry = serveEntry;
-    if (!dept || !entry || servingBusy || availabilityMutation.isPending) return false;
+    if (!dept || !entry || servingBusy || availabilityMutation.isPending)
+      return false;
     try {
       await endServingMutation.mutateAsync({
         departmentId: dept.id,
@@ -269,7 +318,8 @@ export function useQueueState(getActiveDeptId: () => string, toast: Toast) {
   async function moveServingToEnd() {
     const dept = activeDept;
     const entry = serveEntry;
-    if (!dept || !entry || servingBusy || availabilityMutation.isPending) return false;
+    if (!dept || !entry || servingBusy || availabilityMutation.isPending)
+      return false;
     try {
       await moveMutation.mutateAsync({
         departmentId: dept.id,
@@ -287,7 +337,14 @@ export function useQueueState(getActiveDeptId: () => string, toast: Toast) {
 
   async function applyAvailability(next: boolean) {
     const dept = activeDept;
-    if (!dept || dept.queueLoading || availabilityMutation.isPending || beginServingMutation.isPending || servingBusy) return false;
+    if (
+      !dept ||
+      dept.queueLoading ||
+      availabilityMutation.isPending ||
+      beginServingMutation.isPending ||
+      servingBusy
+    )
+      return false;
     const waiting = dept.waitingCount;
     try {
       await availabilityMutation.mutateAsync({
@@ -386,7 +443,8 @@ export function useQueueState(getActiveDeptId: () => string, toast: Toast) {
     closeConfirmOpen,
     setCloseConfirmOpen,
     ...removeFlow,
-    ...guideTour,
+    shortcutsOpen,
+    setShortcutsOpen,
     selectedId,
     setSelectedId,
     ...idle,

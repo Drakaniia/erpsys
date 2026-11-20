@@ -12,14 +12,6 @@ import type { ListItem, StepCode } from "$lib/officer/types";
 import { useOfficerQueries } from "$lib/officer/queries";
 import { useOfficerMutations } from "$lib/officer/mutations";
 
-const STATUS_FILTERS = [
-  "ALL",
-  "PENDING",
-  "SUBMITTED",
-  "VERIFIED",
-  "RETURNED",
-] as const;
-type StatusFilter = (typeof STATUS_FILTERS)[number];
 const EVIDENCE_FILTERS = ["ALL", "HAS", "NONE"] as const;
 type EvidenceFilter = (typeof EVIDENCE_FILTERS)[number];
 const RANGE_FILTERS = ["ALL", "today", "7d", "30d", "year"] as const;
@@ -61,11 +53,7 @@ export function useOfficerState(officerId: string) {
     return value === 25 || value === 100 ? value : 50;
   })();
   const searchQ = param("q", "");
-  const statusFilter = (STATUS_FILTERS as readonly string[]).includes(
-    param("status", "ALL"),
-  )
-    ? (param("status", "ALL") as StatusFilter)
-    : "ALL";
+
   const evidenceFilterValue = param("evidence", "ALL");
   const evidenceFilter: EvidenceFilter =
     TAB_BY_ID.get(activeTab)?.stepCode !== "PROFILING" &&
@@ -81,7 +69,6 @@ export function useOfficerState(officerId: string) {
   const unreadOnly = param("unread", "") === "1";
   const filterActive =
     Boolean(searchQ) ||
-    statusFilter !== "ALL" ||
     evidenceFilter !== "ALL" ||
     rangeFilter !== "ALL" ||
     unreadOnly;
@@ -105,35 +92,15 @@ export function useOfficerState(officerId: string) {
     sortField,
     sortDir,
     searchQ,
-    statusFilter,
+
     evidenceFilter,
     rangeFilter,
   });
   const mutations = useOfficerMutations(toast);
 
-  const [shortcutsOpen, setShortcutsOpenState] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
-
-  // Guide state (spec §3-§6)
-  const [guideOpen, setGuideOpenState] = useState(false);
-  const [guideStep, setGuideStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
-  const [guideDontShow, setGuideDontShow] = useState(true);
-
-  function setShortcutsOpen(v: boolean) {
-    setShortcutsOpenState(v);
-    if (v) setGuideOpenState(false);
-  }
-  function setGuideOpen(v: boolean) {
-    setGuideOpenState(v);
-    if (v) setShortcutsOpenState(false);
-  }
-
-  function openGuide(step: 1 | 2 | 3 | 4 | 5 | 6 = 1) {
-    setGuideStep(step);
-    setGuideOpenState(true);
-    setShortcutsOpenState(false);
-  }
 
   function reviewFromBell(item: {
     verificationId: string;
@@ -205,12 +172,16 @@ export function useOfficerState(officerId: string) {
   // returns the admin shape (stepTotals) for them — same normalization as
   // StepOverview so the step-tab badges read the right field either way.
   const counts: Partial<Record<StepCode, number>> = {};
-  const countSteps: Array<{ code: StepCode; unverified?: number }> =
+  const countSteps: Array<{
+    code: StepCode;
+    awaitingReview?: number;
+    unverified?: number;
+  }> =
     queries.overviewQuery.data?.steps ??
     queries.overviewQuery.data?.stepTotals ??
     [];
   for (const step of countSteps) {
-    counts[step.code] = step.unverified ?? 0;
+    counts[step.code] = step.awaitingReview ?? step.unverified ?? 0;
   }
 
   // "N new since you last looked" — resets when the list key changes, then
@@ -279,7 +250,7 @@ export function useOfficerState(officerId: string) {
     pageNum,
     pageSize,
     searchQ,
-    statusFilter,
+
     evidenceFilter,
     rangeFilter,
     unreadOnly,
@@ -297,12 +268,7 @@ export function useOfficerState(officerId: string) {
     reorderLinksMutation: mutations.reorderLinksMutation,
     shortcutsOpen,
     setShortcutsOpen,
-    guideOpen,
-    setGuideOpen,
-    guideStep,
-    setGuideStep,
-    guideDontShow,
-    setGuideDontShow,
+
     selectedId,
     setSelectedId,
     detailId,
@@ -331,6 +297,5 @@ export function useOfficerState(officerId: string) {
       setNewCount(0);
       seen.current.ids = new Set(rawItems.map((i) => i.verificationId));
     },
-    openGuide,
   };
 }

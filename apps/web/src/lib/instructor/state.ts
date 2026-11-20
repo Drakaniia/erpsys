@@ -136,10 +136,11 @@ export function useInstructorState() {
       refetchOnWindowFocus: true,
     }),
   );
-  const { items: notificationItems, markRead: dismissTransferNotices } = useNotificationReadState(
-    sessionQuery.data?.user.id ?? "",
-    (notificationsQuery.data?.data ?? []) as NotificationItem[],
-  );
+  const { items: notificationItems, markRead: dismissTransferNotices } =
+    useNotificationReadState(
+      sessionQuery.data?.user.id ?? "",
+      (notificationsQuery.data?.data ?? []) as NotificationItem[],
+    );
   const transferNotices = notificationItems.filter(
     (n) => n.type === "DEPARTMENT_QUEUE_TRANSFERRED" && !n.readAt,
   );
@@ -164,10 +165,19 @@ export function useInstructorState() {
         requestId,
         accept,
       });
-      await queryClient.cancelQueries({ queryKey: api.instructor.listMyTransferRequests.queryKey() });
-      queryClient.setQueryData(api.instructor.listMyTransferRequests.queryKey(), (current: typeof transferRequestsQuery.data) => current && ({
-        ...current, incoming: current.incoming.filter((request: { id: string }) => request.id !== requestId),
-      }));
+      await queryClient.cancelQueries({
+        queryKey: api.instructor.listMyTransferRequests.queryKey(),
+      });
+      queryClient.setQueryData(
+        api.instructor.listMyTransferRequests.queryKey(),
+        (current: typeof transferRequestsQuery.data) =>
+          current && {
+            ...current,
+            incoming: current.incoming.filter(
+              (request: { id: string }) => request.id !== requestId,
+            ),
+          },
+      );
       toast(
         accept
           ? res.transferredFromName

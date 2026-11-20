@@ -8,27 +8,19 @@ import {
   type YearLevel,
 } from "../config/constants.js";
 import { ApiError } from "../config/errors.js";
-import { genId } from "../lib/db/ids.js";
+
 import { AdminActionLogModel } from "../models/AdminActionLogModel.js";
-import { AdviserAvailabilityModel } from "../models/AdviserAvailabilityModel.js";
-import { AdviserDepartmentModel } from "../models/AdviserDepartmentModel.js";
-import { AvailabilityWindowModel } from "../models/AvailabilityWindowModel.js";
-import { DepartmentModel } from "../models/DepartmentModel.js";
+import { AdviserScheduleModel } from "../models/AdviserScheduleModel.js";
+import {
+  DepartmentModel,
+  type DepartmentRow,
+  type AdviserAssignmentRow,
+} from "../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../models/EnrollmentQueueModel.js";
 import { UserModel } from "../models/UserModel.js";
 import { syncAfterScheduleChange } from "./calendar.js";
 
 type Assignment = { departmentId: string; yearLevels: YearLevel[] };
-
-async function departmentsByIds(ids: string[]) {
-  const rows = await DepartmentModel.findByIds(ids);
-  if (rows.length !== new Set(ids).size) {
-    throw new ApiError("NOT_FOUND", {
-      message: "One or more departments don't exist.",
-    });
-  }
-  return rows;
-}
 
 export function assertLevelsOffered(
   department: { name: string; yearLevels?: YearLevel[] },
@@ -47,13 +39,17 @@ export function assertLevelsOffered(
 }
 
 async function clashHolderName(
-  holders: Awaited<ReturnType<typeof AdviserDepartmentModel.listForAssignment>>,
+  holders: AdviserAssignmentRow[],
   departmentId: string,
   levels: YearLevel[],
   adviserId: string,
 ): Promise<string | null> {
-  const clash = holders.find((holder) => holder.departmentId === departmentId &&
-    holder.adviserId !== adviserId && yearLevelsOverlap(holder.yearLevels ?? [], levels));
+  const clash = holders.find(
+    (holder) =>
+      holder.departmentId === departmentId &&
+      holder.adviserId !== adviserId &&
+      yearLevelsOverlap(holder.yearLevels ?? [], levels),
+  );
   if (!clash) return null;
   const [user] = await UserModel.findByIds([clash.adviserId]);
   return user?.name?.trim() || "An instructor";
@@ -62,36 +58,32 @@ async function clashHolderName(
 async function writeAssignments(
   adviserId: string,
   assignments: Assignment[],
-  previous: Awaited<ReturnType<typeof AdviserDepartmentModel.listForAdviser>>,
+  previous: AdviserAssignmentRow[],
+  departments: DepartmentRow[],
 ): Promise<void> {
   const keep = assignments.map((a) => a.departmentId);
   const removed = previous.filter((link) => !keep.includes(link.departmentId));
-  const unchanged = previous.filter((link) => assignments.some((next) =>
-    next.departmentId === link.departmentId &&
-    JSON.stringify(normalizeYearLevels(link.yearLevels ?? [])) === JSON.stringify(next.yearLevels),
-  ));
-  if (removed.length > 0) await AdviserAvailabilityModel.closeOpenForAdviser(adviserId, keep);
+  const unchanged = previous.filter((link) =>
+    assignments.some(
+      (next) =>
+        next.departmentId === link.departmentId &&
+        JSON.stringify(normalizeYearLevels(link.yearLevels ?? [])) ===
+          JSON.stringify(next.yearLevels),
+    ),
+  );
+  if (removed.length > 0)
+    await AdviserScheduleModel.closeOpenForAdviser(adviserId, keep);
   if (removed.length > 0 || unchanged.length !== previous.length) {
-    await EnrollmentQueueModel.releaseServingExcept(adviserId, unchanged.map((link) => link.departmentId));
+    await EnrollmentQueueModel.releaseServingExcept(
+      adviserId,
+      unchanged.map((link) => link.departmentId),
+    );
   }
-  if (assignments.length === 0 && previous.length > 0) {
-    await AdviserDepartmentModel.deleteForAdviser(adviserId);
-    return;
-  }
-  for (const link of previous) {
-    const next = assignments.find((a) => a.departmentId === link.departmentId);
-    if (!next) {
-      await AdviserDepartmentModel.deleteOne(adviserId, link.departmentId);
-    } else if (JSON.stringify(normalizeYearLevels(link.yearLevels ?? [])) !== JSON.stringify(next.yearLevels)) {
-      await AdviserDepartmentModel.setLevels(adviserId, link.departmentId, next.yearLevels);
-    }
-  }
-  for (const assignment of assignments) {
-    if (previous.some((link) => link.departmentId === assignment.departmentId)) continue;
-    await AdviserDepartmentModel.insert({
-      _id: genId("adviser-dept"), adviserId, ...assignment,
-    });
-  }
+  await DepartmentModel.replaceAdviserAssignments(
+    adviserId,
+    assignments,
+    departments,
+  );
 }
 
 export async function replaceAssignments(
@@ -121,10 +113,29 @@ export async function replaceAssignments(
     yearLevels: normalizeYearLevels(yearLevels),
   }));
 
-  const [departments, holders] = await Promise.all([
-    departmentsByIds(unique.map((u) => u.departmentId)),
-    AdviserDepartmentModel.listForAssignment(adviserId, unique.map((u) => u.departmentId)),
-  ]);
+  const departments = await DepartmentModel.listForAdviserChanges(
+    adviserId,
+    unique.map((row) => row.departmentId),
+  );
+  if (
+    unique.some(
+      (row) =>
+        !departments.some(
+          (department) => String(department._id) === row.departmentId,
+        ),
+    )
+  ) {
+    throw new ApiError("NOT_FOUND", {
+      message: "One or more departments don't exist.",
+    });
+  }
+  const holders = departments.flatMap((department) =>
+    (department.advisers ?? []).map((holder) => ({
+      ...holder,
+      adviserId: String(holder.adviserId),
+      departmentId: String(department._id),
+    })),
+  );
   const previous = holders.filter((holder) => holder.adviserId === adviserId);
   const departmentOf = (id: string) =>
     departments.find((d) => String(d._id) === id);
@@ -144,8 +155,8 @@ export async function replaceAssignments(
     }
   }
 
-  await writeAssignments(adviserId, unique, previous);
-  const removed = await AvailabilityWindowModel.deleteForAdviser(
+  await writeAssignments(adviserId, unique, previous, departments);
+  const removed = await AdviserScheduleModel.deleteWindowsForAdviser(
     adviserId,
     unique.map((a) => a.departmentId),
   );
@@ -167,10 +178,25 @@ export async function assignSelf(
 ): Promise<{ departmentIds: string[]; yearLevels: YearLevel[] }> {
   const departmentIds = [...new Set(input.departmentIds)];
   const requested = normalizeYearLevels(input.yearLevels);
-  const [departments, holders] = await Promise.all([
-    departmentsByIds(departmentIds),
-    AdviserDepartmentModel.listForAssignment(adviserId, departmentIds),
-  ]);
+  const allDepartments = await DepartmentModel.listForAdviserChanges(
+    adviserId,
+    departmentIds,
+  );
+  const departments = allDepartments.filter((department) =>
+    departmentIds.includes(String(department._id)),
+  );
+  if (departments.length !== departmentIds.length) {
+    throw new ApiError("NOT_FOUND", {
+      message: "One or more departments don't exist.",
+    });
+  }
+  const holders = allDepartments.flatMap((department) =>
+    (department.advisers ?? []).map((holder) => ({
+      ...holder,
+      adviserId: String(holder.adviserId),
+      departmentId: String(department._id),
+    })),
+  );
   const previous = holders.filter((holder) => holder.adviserId === adviserId);
 
   if (departments.some((dept) => !dept.isActive)) {
@@ -182,7 +208,12 @@ export async function assignSelf(
     assertLevelsOffered(department, requested);
   }
   for (const departmentId of departmentIds) {
-    const holder = await clashHolderName(holders, departmentId, requested, adviserId);
+    const holder = await clashHolderName(
+      holders,
+      departmentId,
+      requested,
+      adviserId,
+    );
     if (!holder) continue;
     const department = departments.find((d) => String(d._id) === departmentId)!;
     const scope =
@@ -201,6 +232,7 @@ export async function assignSelf(
       yearLevels: requested,
     })),
     previous,
+    allDepartments,
   );
   return {
     departmentIds,

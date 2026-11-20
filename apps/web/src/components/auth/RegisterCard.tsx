@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { authClient, signUpStudent } from "$lib/auth-client";
 import { googleSignInCallback } from "$lib/auth/google-sign-in";
+import PasswordStrengthMeter from "./PasswordStrengthMeter";
 import { api } from "$lib/api";
 import { YEAR_LEVELS } from "$lib/domain/constants";
 import {
@@ -28,7 +29,6 @@ import FieldErrors from "./FieldErrors";
 import GoogleIcon from "./GoogleIcon";
 import Turnstile, { type TurnstileHandle } from "./Turnstile";
 import { useIntegrations } from "$lib/integrations/use-integrations";
-import { env } from "$lib/env";
 
 export default function RegisterCard() {
   const navigate = useNavigate();
@@ -46,8 +46,8 @@ export default function RegisterCard() {
   const [formError, setFormError] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const turnstileRef = useRef<TurnstileHandle | null>(null);
-  const turnstileSiteKey = env.VITE_TURNSTILE_SITE_KEY ?? "";
-  const { flags } = useIntegrations();
+
+  const { flags, turnstileSiteKey } = useIntegrations();
   const showGoogle = flags.googleAuth;
   const turnstileEnabled =
     flags.turnstile && turnstileSiteKey.trim().length > 0;
@@ -117,9 +117,17 @@ export default function RegisterCard() {
         setFormError(NO_ACADEMIC_YEAR_MESSAGE);
         return;
       }
-      if (turnstileEnabled && !turnstileToken) {
-        setFormError("Please complete the verification challenge.");
-        return;
+      let token = turnstileToken;
+      if (turnstileEnabled && !token) {
+        try {
+          token = (await turnstileRef.current?.execute()) ?? "";
+        } catch {
+          /* the guard below reports every failure */
+        }
+        if (!token) {
+          setFormError("Please complete the verification challenge.");
+          return;
+        }
       }
       const result = await signUpStudent({
         name: value.name,
@@ -129,7 +137,7 @@ export default function RegisterCard() {
         yearLevel: value.yearLevel as (typeof YEAR_LEVELS)[number],
         email: value.email,
         password: value.password,
-        "cf-turnstile-response": turnstileToken,
+        "cf-turnstile-response": token,
       });
       resetTurnstile();
       if (result.error) {
@@ -302,14 +310,19 @@ export default function RegisterCard() {
 
           <form.Field name="password">
             {(field) => (
-              <AuthField
-                field={field}
-                label="Password"
-                type="password"
-                autocomplete="new-password"
-                hint="At least 8 characters"
-                onedit={() => setFormError("")}
-              />
+              <div className="sm:col-span-2">
+                <AuthField
+                  field={field}
+                  label="Password"
+                  type="password"
+                  autocomplete="new-password"
+                  describedBy="password-strength-rules"
+                  onedit={() => setFormError("")}
+                />
+                <PasswordStrengthMeter
+                  value={String(field.state.value ?? "")}
+                />
+              </div>
             )}
           </form.Field>
 

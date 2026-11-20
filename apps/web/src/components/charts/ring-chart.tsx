@@ -173,7 +173,7 @@ const RingChartCore = memo(function RingChartCore({
         setInternalHoveredIndex(index);
       }
     },
-    [isControlled, onHoverChange]
+    [isControlled, onHoverChange],
   );
 
   // Use the smaller dimension to ensure the chart fits
@@ -204,7 +204,7 @@ const RingChartCore = memo(function RingChartCore({
   // Calculate total value
   const totalValue = useMemo(
     () => data.reduce((sum, d) => sum + d.value, 0),
-    [data]
+    [data],
   );
 
   // Get color for a ring index
@@ -216,7 +216,7 @@ const RingChartCore = memo(function RingChartCore({
       }
       return defaultRingColors[index % defaultRingColors.length] as string;
     },
-    [data]
+    [data],
   );
 
   // Get ring radii for an index
@@ -226,7 +226,7 @@ const RingChartCore = memo(function RingChartCore({
       const outerRadius = innerRadius + strokeWidth;
       return { innerRadius, outerRadius };
     },
-    [baseInnerRadius, strokeWidth, ringGap]
+    [baseInnerRadius, strokeWidth, ringGap],
   );
 
   const arcRange = endAngle - startAngle;
@@ -245,7 +245,7 @@ const RingChartCore = memo(function RingChartCore({
           outerRadius,
           startAngle,
           endAngle,
-          cornerRadius
+          cornerRadius,
         ),
         progressPath:
           progressEndAngle <= startAngle + 0.01
@@ -255,7 +255,7 @@ const RingChartCore = memo(function RingChartCore({
                 outerRadius,
                 startAngle,
                 progressEndAngle,
-                cornerRadius
+                cornerRadius,
               ),
         color: getColor(index),
       };
@@ -362,7 +362,7 @@ const RingChartCore = memo(function RingChartCore({
       startAngle,
       endAngle,
       geometryScrubbing,
-    ]
+    ],
   );
 
   // Use CSS Grid stacking to layer SVG and HTML content
@@ -422,7 +422,7 @@ const RingChartCore = memo(function RingChartCore({
 
 function ringChartCorePropsEqual(
   prev: RingChartInnerProps,
-  next: RingChartInnerProps
+  next: RingChartInnerProps,
 ): boolean {
   return (
     prev.width === next.width &&

@@ -45,11 +45,6 @@ const STUDENT = {
   },
 };
 
-const STEPS = [
-  { _id: "step-1", code: "ASSESSMENT", name: "Assessment", order: 1 },
-  { _id: "step-4", code: "MUGSHOT", name: "Mugshot", order: 4 },
-];
-
 function seed(): Record<string, Row[]> {
   return {
     [COLLECTIONS.academicYear]: [
@@ -61,15 +56,7 @@ function seed(): Record<string, Row[]> {
         createdAt: new Date("2025-06-01"),
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "profile-1",
-        userId: "stud1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-    ],
-    [COLLECTIONS.step]: STEPS,
+
     [COLLECTIONS.stepVerification]: [],
     [COLLECTIONS.upload]: [],
     [COLLECTIONS.storageUsage]: [],
@@ -77,6 +64,11 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.user]: [
       {
         _id: "stud1",
+        studentProfile: {
+          _id: "profile-1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
@@ -167,7 +159,7 @@ describe("storage session", () => {
     context.store[COLLECTIONS.stepVerification].push({
       _id: "v-4",
       studentProfileId: "profile-1",
-      stepId: "step-4",
+      stepId: "MUGSHOT",
       academicYearId: "ay-1",
       status: "VERIFIED",
     });
@@ -191,37 +183,81 @@ describe("storage session", () => {
 });
 
 describe("proof upload and submission timestamps", () => {
+  it("attaches only finalized payment proof when applying for assessment", async () => {
+    const mintProof = () =>
+      mint({
+        route: "evidenceImage",
+        stepCode: "ASSESSMENT",
+        mime: "image/jpeg",
+        size: 1000,
+      });
+    const session = await mintProof();
+    expect(session.status).toBe(201);
+    const {
+      data: { uploadId },
+    } = await session.json();
+    expect((await mintProof()).status).toBe(201);
+    const completed = await call("/storage/complete", {
+      method: "POST",
+      body: JSON.stringify({ uploadId }),
+    });
+    expect(completed.status).toBe(200);
+    expect(context.store[COLLECTIONS.stepVerification]).toHaveLength(0);
+    const applied = await call("/me/assessment", {
+      method: "POST",
+      body: "{}",
+    });
+    expect(applied.status).toBe(200);
+    expect(context.store[COLLECTIONS.stepVerification]).toMatchObject([
+      {
+        status: "PENDING",
+        evidence: { uploadIds: [uploadId] },
+        evidenceCount: 1,
+      },
+    ]);
+  });
+
   it("uses a fresh transaction to review proof uploaded after the sheet opened", async () => {
     const sheetTs = nextTs();
     const session = await mint({
-      route: "evidenceImage", stepCode: "MUGSHOT", mime: "image/jpeg", size: 1000,
+      route: "evidenceImage",
+      stepCode: "MUGSHOT",
+      mime: "image/jpeg",
+      size: 1000,
     });
     expect(session.status).toBe(201);
     const { data } = await session.json();
     const completed = await call("/storage/complete", {
-      method: "POST", body: JSON.stringify({ uploadId: data.uploadId }),
+      method: "POST",
+      body: JSON.stringify({ uploadId: data.uploadId }),
     });
     expect(completed.status).toBe(200);
 
     // The old sheet snapshot predates the proof the student just uploaded.
     const stale = await call("/me/steps/MUGSHOT/submission", {
-      method: "POST", body: JSON.stringify({ ts: sheetTs }),
+      method: "POST",
+      body: JSON.stringify({ ts: sheetTs }),
     });
     expect(stale.status).toBe(409);
     expect((await stale.json()).data.code).toBe("TS_ABORTED");
     expect(context.store[COLLECTIONS.stepVerification]).toHaveLength(0);
 
-    const submitted = await call("/me/steps/MUGSHOT/submission", { method: "POST" });
+    const submitted = await call("/me/steps/MUGSHOT/submission", {
+      method: "POST",
+    });
     expect(submitted.status).toBe(201);
     expect((await submitted.json()).data.evidence).toEqual([
       expect.objectContaining({ id: data.uploadId, kind: "MUGSHOT" }),
     ]);
     expect(context.store[COLLECTIONS.stepVerification][0]).toMatchObject({
-      status: "SUBMITTED", evidence: { uploadIds: [data.uploadId] },
+      status: "SUBMITTED",
+      evidence: { uploadIds: [data.uploadId] },
     });
 
     context.store[COLLECTIONS.stepVerification][0].status = "VERIFIED";
-    const locked = await call("/me/steps/MUGSHOT/submission", { method: "POST" });
+    const locked = await call("/me/steps/MUGSHOT/submission", {
+      method: "POST",
+    });
     expect(locked.status).toBe(409);
     expect((await locked.json()).error).toBe("This step is already verified.");
   });

@@ -53,15 +53,6 @@ const ADMIN = {
   },
 };
 
-const STEPS = [
-  "ASSESSMENT",
-  "SOCIAL_MEDIA",
-  "PROFILING",
-  "MUGSHOT",
-  "CONSENT",
-  "ENROLLMENT",
-];
-
 function seed(): Record<string, Row[]> {
   return {
     [COLLECTIONS.academicYear]: [
@@ -76,19 +67,13 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.department]: [
       {
         _id: "dept-1",
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: ["FIRST"] }],
         name: "College of Technologies",
         isActive: true,
         yearLevels: ["FIRST"],
       },
     ],
-    [COLLECTIONS.adviserDepartment]: [
-      {
-        _id: "link-1",
-        adviserId: "adv1",
-        departmentId: "dept-1",
-        yearLevels: ["FIRST"],
-      },
-    ],
+
     [COLLECTIONS.user]: [
       {
         _id: "adm1",
@@ -110,31 +95,28 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p1",
+        studentProfile: {
+          _id: "p1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
       },
       {
         _id: "u-p2",
+        studentProfile: {
+          _id: "p2",
+          studentNumber: "12346",
+          academicYearId: "ay-1",
+        },
         name: "Ben",
         email: "12346@student.buksu.edu.ph",
         role: "STUDENT",
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "p1",
-        userId: "u-p1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-      {
-        _id: "p2",
-        userId: "u-p2",
-        studentNumber: "12346",
-        academicYearId: "ay-1",
-      },
-    ],
+
     [COLLECTIONS.studentEnrollment]: [
       {
         _id: "enr-1",
@@ -144,17 +126,12 @@ function seed(): Record<string, Row[]> {
         yearLevel: "FIRST",
       },
     ],
-    [COLLECTIONS.step]: STEPS.map((code, index) => ({
-      _id: `step-${code}`,
-      code,
-      name: code,
-      order: index + 1,
-    })),
+
     [COLLECTIONS.stepVerification]: [
       {
         _id: "v-1",
         studentProfileId: "p1",
-        stepId: "step-ASSESSMENT",
+        stepId: "ASSESSMENT",
         academicYearId: "ay-1",
         status: "SUBMITTED",
         appliedAt: new Date("2025-07-01"),
@@ -164,17 +141,17 @@ function seed(): Record<string, Row[]> {
       {
         _id: "v-2",
         studentProfileId: "p2",
-        stepId: "step-PROFILING",
+        stepId: "PROFILING",
         academicYearId: "ay-1",
         status: "PENDING",
         createdAt: new Date("2025-07-02"),
       },
     ],
-    [COLLECTIONS.adviserAvailability]: [],
+    [COLLECTIONS.adviserSchedule]: [],
     [COLLECTIONS.notification]: [],
     [COLLECTIONS.departmentTransferRequest]: [],
     [COLLECTIONS.adminActionLog]: [],
-    [COLLECTIONS.socialMediaLink]: [],
+    [COLLECTIONS.content]: [],
   };
 }
 
@@ -241,7 +218,7 @@ describe("launch", () => {
     const { data } = (await launch()).data;
     expect(data.getOverview.hasActiveYear).toBe(true);
     expect(data.getBell).toMatchObject({ total: 1 });
-    expect(data.getBell.data[0]).toMatchObject({ status: "PENDING" });
+    expect(data.getBell.data[0]).toMatchObject({ status: "SUBMITTED" });
     expect(data.getProfilingForm).toBeNull();
     expect(data.listSocialMediaLinks).toEqual({
       data: [],

@@ -2,7 +2,11 @@ import { useState } from "react";
 import { PieCenter } from "@/components/charts/pie-center";
 import { PieChart } from "@/components/charts/pie-chart";
 import { PieSlice } from "@/components/charts/pie-slice";
-import { accountSlices, type AccountRole, type AdminOverview } from "$lib/admin/overview";
+import {
+  accountSlices,
+  type AccountRole,
+  type AdminOverview,
+} from "$lib/admin/overview";
 import Skeleton from "../../ui/Skeleton";
 import { Panel } from "./Panel";
 
@@ -58,7 +62,12 @@ export function AccountMix({
               onHoverChange={setHovered}
             >
               {pieData.map((_, i) => (
-                <PieSlice key={i} index={i} hoverEffect="grow" hoverOffset={4} />
+                <PieSlice
+                  key={i}
+                  index={i}
+                  hoverEffect="grow"
+                  hoverOffset={4}
+                />
               ))}
               <PieCenter defaultLabel="Accounts" />
             </PieChart>
@@ -85,7 +94,9 @@ export function AccountMix({
                     className="size-2.5 shrink-0 rounded-[3px]"
                     style={{ backgroundColor: ROLE_COLORS[s.role] }}
                   />
-                  <span className="min-w-0 flex-1 truncate text-sm text-ink">{s.label}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-ink">
+                    {s.label}
+                  </span>
                   <span className="text-sm font-semibold tabular-nums text-ink">
                     {s.value.toLocaleString()}
                   </span>

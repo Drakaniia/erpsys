@@ -46,7 +46,7 @@ const curves: Record<SparklineCurve, CurveFactory> = {
 
 export function resolveSparklinePadding(
   padding: number | Partial<SparklinePadding> | undefined,
-  fallback: number
+  fallback: number,
 ): SparklinePadding {
   if (typeof padding === "number" || padding === undefined) {
     const p = padding ?? fallback;
@@ -62,7 +62,7 @@ export function resolveSparklinePadding(
 
 export function resolveSparklineValues<T>(
   data: readonly T[],
-  dataKey: SparklineDataKey<T>
+  dataKey: SparklineDataKey<T>,
 ): number[] {
   return data.map((datum, index) => {
     const raw =
@@ -80,7 +80,7 @@ export function resolveSparklineValues<T>(
  */
 export function computeSparklineDomain(
   values: readonly number[],
-  options: { yDomain?: [number?, number?]; includeZero?: boolean } = {}
+  options: { yDomain?: [number?, number?]; includeZero?: boolean } = {},
 ): [number, number] {
   let min = Number.POSITIVE_INFINITY;
   let max = Number.NEGATIVE_INFINITY;
@@ -119,7 +119,7 @@ export function computeSparklineLayout(
     padding: SparklinePadding;
     domain: [number, number];
     kind: "point" | "band";
-  }
+  },
 ): SparklineLayout {
   const { width, height, padding, domain, kind } = options;
   const innerWidth = Math.max(0, width - padding.left - padding.right);
@@ -149,7 +149,7 @@ const isDefined = (point: SparklinePoint) => Number.isFinite(point.y);
 
 export function buildSparklineLinePath(
   points: readonly SparklinePoint[],
-  curve: SparklineCurve
+  curve: SparklineCurve,
 ): string {
   return (
     d3Line<SparklinePoint>()
@@ -163,7 +163,7 @@ export function buildSparklineLinePath(
 export function buildSparklineAreaPath(
   points: readonly SparklinePoint[],
   curve: SparklineCurve,
-  baselineY: number
+  baselineY: number,
 ): string {
   return (
     d3Area<SparklinePoint>()
@@ -183,7 +183,7 @@ export function buildSparklineBarSegment(
   barWidth: number,
   y: number,
   baselineY: number,
-  radius: number
+  radius: number,
 ): string {
   const height = Math.abs(baselineY - y);
   if (height === 0 || barWidth <= 0) {
@@ -217,7 +217,7 @@ export function sparklineBarWidth(band: number, gap: number): number {
 /** All bars as a single path — one DOM node regardless of point count. */
 export function buildSparklineBarsPath(
   layout: SparklineLayout,
-  options: { gap: number; radius: number }
+  options: { gap: number; radius: number },
 ): string {
   const barWidth = sparklineBarWidth(layout.band, options.gap);
   let d = "";
@@ -228,7 +228,7 @@ export function buildSparklineBarsPath(
         barWidth,
         point.y,
         layout.baselineY,
-        options.radius
+        options.radius,
       );
     }
   }
@@ -243,7 +243,7 @@ export function sparklineIndexAtX(
     width: number;
     padding: SparklinePadding;
     kind: "point" | "band";
-  }
+  },
 ): number | null {
   const { count, width, padding, kind } = options;
   if (count === 0) {
@@ -291,7 +291,7 @@ export function describeSparkline(values: readonly number[]): string {
 export function interpolateSparklineLayout(
   from: SparklineLayout,
   to: SparklineLayout,
-  t: number
+  t: number,
 ): SparklineLayout {
   const m = from.points.length;
   const n = to.points.length;

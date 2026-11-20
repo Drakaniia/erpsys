@@ -12,7 +12,7 @@ export interface OfficerQueryParams {
   sortField: string;
   sortDir: string;
   searchQ: string;
-  statusFilter: string;
+
   evidenceFilter: string;
   rangeFilter: string;
 }
@@ -51,7 +51,7 @@ export function useOfficerQueries(p: OfficerQueryParams) {
             sort: p.sortField as never,
             dir: p.sortDir as never,
             q: p.searchQ,
-            status: p.statusFilter as never,
+
             evidence: p.evidenceFilter as never,
             range: p.rangeFilter as never,
           }

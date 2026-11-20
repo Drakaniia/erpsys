@@ -125,10 +125,7 @@ export default function EvidenceSlot({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasPending]);
 
-  useEffect(
-    () => () => pendingRef.current.forEach(revokePreview),
-    [],
-  );
+  useEffect(() => () => pendingRef.current.forEach(revokePreview), []);
 
   function addPending(file: File) {
     setPending((prev) => [

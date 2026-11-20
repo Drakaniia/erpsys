@@ -122,5 +122,3 @@ meRouter.get(
     okList(res, rows, 1, NOTIFICATION_PAGE_SIZE, rows.length);
   }),
 );
-
-

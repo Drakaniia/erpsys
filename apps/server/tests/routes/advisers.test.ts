@@ -53,12 +53,14 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.department]: [
       {
         _id: "dept-1",
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: ["FIRST"] }],
         name: "College of Technologies",
         isActive: true,
         yearLevels: ["FIRST"],
       },
       {
         _id: "dept-2",
+        advisers: [{ _id: "link-2", adviserId: "adv2", yearLevels: [] }],
         name: "College of Arts",
         isActive: true,
         yearLevels: [],
@@ -70,20 +72,7 @@ function seed(): Record<string, Row[]> {
         yearLevels: [],
       },
     ],
-    [COLLECTIONS.adviserDepartment]: [
-      {
-        _id: "link-1",
-        adviserId: "adv1",
-        departmentId: "dept-1",
-        yearLevels: ["FIRST"],
-      },
-      {
-        _id: "link-2",
-        adviserId: "adv2",
-        departmentId: "dept-2",
-        yearLevels: [],
-      },
-    ],
+
     [COLLECTIONS.user]: [
       {
         _id: "adm1",
@@ -105,19 +94,17 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p1",
+        studentProfile: {
+          _id: "p1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "p1",
-        userId: "u-p1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-    ],
+
     [COLLECTIONS.enrollmentQueue]: [
       {
         _id: "q-1",
@@ -128,7 +115,7 @@ function seed(): Record<string, Row[]> {
         joinedAt: new Date("2025-07-01"),
       },
     ],
-    [COLLECTIONS.adviserAvailability]: [],
+    [COLLECTIONS.adviserSchedule]: [],
     [COLLECTIONS.notification]: [],
   };
 }
@@ -200,15 +187,18 @@ describe("adviser mapping", () => {
       adviserId: "adv1",
       assignments: [{ departmentId: "dept-3", yearLevels: ["SECOND"] }],
     });
-    const links = context.store[COLLECTIONS.adviserDepartment];
-    expect(links.filter((link) => link.adviserId === "adv1")).toEqual([
-      {
-        _id: expect.any(String),
-        adviserId: "adv1",
-        departmentId: "dept-3",
-        yearLevels: ["SECOND"],
-      },
+    expect(
+      context.store[COLLECTIONS.department].find(
+        (department) => department._id === "dept-3",
+      )?.advisers,
+    ).toEqual([
+      expect.objectContaining({ adviserId: "adv1", yearLevels: ["SECOND"] }),
     ]);
+    expect(
+      context.store[COLLECTIONS.department].find(
+        (department) => department._id === "dept-1",
+      )?.advisers ?? [],
+    ).toEqual([]);
     expect(context.store[COLLECTIONS.adminActionLog]).toEqual([
       expect.objectContaining({
         actorId: "adm1",
@@ -240,57 +230,128 @@ describe("adviser mapping", () => {
 describe("backend operation budgets", () => {
   it("preserves availability and the serving student for an unchanged assignment", async () => {
     holder.session = ADVISER;
-    context.store[COLLECTIONS.adviserAvailability].push({ _id: "open", adviserId: "adv1", departmentId: "dept-1", academicYearId: "ay-1", isOpen: true });
-    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], { status: "IN_PROGRESS", servedById: "adv1" });
-    const response = await call("/me/departments", "PUT", { departmentIds: ["dept-1"], yearLevels: ["FIRST"] });
+    context.store[COLLECTIONS.adviserSchedule].push({
+      kind: "presence",
+      _id: "open",
+      adviserId: "adv1",
+      departmentId: "dept-1",
+      academicYearId: "ay-1",
+      isOpen: true,
+    });
+    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], {
+      status: "IN_PROGRESS",
+      servedById: "adv1",
+    });
+    const response = await call("/me/departments", "PUT", {
+      departmentIds: ["dept-1"],
+      yearLevels: ["FIRST"],
+    });
     expect(response.status).toBe(200);
-    expect(context.store[COLLECTIONS.adviserAvailability][0].isOpen).toBe(true);
-    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "IN_PROGRESS", servedById: "adv1" });
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].find(
+        (row) => row.kind === "presence",
+      )?.isOpen,
+    ).toBe(true);
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
+      status: "IN_PROGRESS",
+      servedById: "adv1",
+    });
   });
 
   it("still aborts stale availability writes before changing queue state", async () => {
     holder.session = ADVISER;
     const ts = nextTs();
-    context.store[COLLECTIONS.adviserAvailability].push({
-      _id: "open", adviserId: "adv1", departmentId: "dept-1", academicYearId: "ay-1", isOpen: false, writeTs: nextTs(),
+    context.store[COLLECTIONS.adviserSchedule].push({
+      kind: "presence",
+      _id: "open",
+      adviserId: "adv1",
+      departmentId: "dept-1",
+      academicYearId: "ay-1",
+      isOpen: false,
+      writeTs: nextTs(),
     });
     holder.db = guardDb(context.db as never);
-    const response = await call("/me/availability", "PUT", { departmentId: "dept-1", isOpen: true, ts });
+    const response = await call("/me/availability", "PUT", {
+      departmentId: "dept-1",
+      isOpen: true,
+      ts,
+    });
     expect(response.status).toBe(409);
     expect(response.body.data.code).toBe("TS_ABORTED");
-    expect(context.store[COLLECTIONS.adviserAvailability][0].isOpen).toBe(false);
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].find(
+        (row) => row.kind === "presence",
+      )?.isOpen,
+    ).toBe(false);
   });
-  it.each(["assign", "unassign", "unchanged", "open", "close"])("counts guarded database calls for %s", async (action) => {
-    holder.session = ADVISER;
-    const operations: string[] = [];
-    const collection = context.db.collection.bind(context.db);
-    vi.spyOn(context.db, "collection").mockImplementation((name: string) => {
-      const raw = collection(name);
-      return new Proxy(raw, { get(target, key) {
-        const value = Reflect.get(target, key);
-        if (typeof value !== "function") return value;
-        return (...args: unknown[]) => {
-          operations.push(`${name}.${String(key)}`);
-          return Reflect.apply(value, target, args);
-        };
-      } });
-    });
-    holder.db = guardDb(context.db as never);
-    const availability = action === "open" || action === "close";
-    if (action === "close") Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], { status: "IN_PROGRESS", servedById: "adv1" });
-    const response = await call(availability ? "/me/availability" : "/me/departments", "PUT", availability
-      ? { departmentId: "dept-1", isOpen: action === "open" }
-      : { departmentIds: action === "unassign" ? [] : [action === "assign" ? "dept-3" : "dept-1"], yearLevels: ["FIRST"] });
-    expect(response.status).toBe(200);
-    const budgets = { assign: 13, unassign: 10, unchanged: 4, open: 9, close: 10 };
-    expect(operations.length).toBeLessThanOrEqual(budgets[action as keyof typeof budgets]);
-    if (action === "unchanged") {
-      expect(operations.some((operation) => operation.startsWith(`${COLLECTIONS.adviserAvailability}.`) || operation.startsWith(`${COLLECTIONS.enrollmentQueue}.`))).toBe(false);
-    }
-    if (action === "close") {
-      expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "WAITING", servedById: null });
-    }
-  });
+  it.each(["assign", "unassign", "unchanged", "open", "close"])(
+    "counts guarded database calls for %s",
+    async (action) => {
+      holder.session = ADVISER;
+      const operations: string[] = [];
+      const collection = context.db.collection.bind(context.db);
+      vi.spyOn(context.db, "collection").mockImplementation((name: string) => {
+        const raw = collection(name);
+        return new Proxy(raw, {
+          get(target, key) {
+            const value = Reflect.get(target, key);
+            if (typeof value !== "function") return value;
+            return (...args: unknown[]) => {
+              operations.push(`${name}.${String(key)}`);
+              return Reflect.apply(value, target, args);
+            };
+          },
+        });
+      });
+      holder.db = guardDb(context.db as never);
+      const availability = action === "open" || action === "close";
+      if (action === "close")
+        Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], {
+          status: "IN_PROGRESS",
+          servedById: "adv1",
+        });
+      const response = await call(
+        availability ? "/me/availability" : "/me/departments",
+        "PUT",
+        availability
+          ? { departmentId: "dept-1", isOpen: action === "open" }
+          : {
+              departmentIds:
+                action === "unassign"
+                  ? []
+                  : [action === "assign" ? "dept-3" : "dept-1"],
+              yearLevels: ["FIRST"],
+            },
+      );
+      expect(response.status).toBe(200);
+      const budgets = {
+        // Editing ownership adds one marker lookup before a department assignment write.
+        assign: 14,
+        unassign: 11,
+        unchanged: 5,
+        open: 9,
+        close: 10,
+      };
+      expect(operations.length).toBeLessThanOrEqual(
+        budgets[action as keyof typeof budgets],
+      );
+      if (action === "unchanged") {
+        expect(
+          operations.some(
+            (operation) =>
+              operation.startsWith(`${COLLECTIONS.adviserSchedule}.`) ||
+              operation.startsWith(`${COLLECTIONS.enrollmentQueue}.`),
+          ),
+        ).toBe(false);
+      }
+      if (action === "close") {
+        expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
+          status: "WAITING",
+          servedById: null,
+        });
+      }
+    },
+  );
 });
 
 describe("adviser availability", () => {
@@ -306,27 +367,60 @@ describe("adviser availability", () => {
       isOpen: true,
       openBy: null,
     });
-    expect(context.store[COLLECTIONS.adviserAvailability]).toHaveLength(1);
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].filter(
+        (row) => row.kind === "presence",
+      ),
+    ).toHaveLength(1);
   });
 
   it("closing releases only my serving student in the active year", async () => {
     holder.session = ADVISER;
     context.store[COLLECTIONS.enrollmentQueue].push(
-      { _id: "colleague", departmentId: "dept-1", academicYearId: "ay-1", status: "IN_PROGRESS", servedById: "adv2" },
-      { _id: "archived", departmentId: "dept-1", academicYearId: "ay-old", status: "IN_PROGRESS", servedById: "adv1" },
+      {
+        _id: "colleague",
+        departmentId: "dept-1",
+        academicYearId: "ay-1",
+        status: "IN_PROGRESS",
+        servedById: "adv2",
+      },
+      {
+        _id: "archived",
+        departmentId: "dept-1",
+        academicYearId: "ay-old",
+        status: "IN_PROGRESS",
+        servedById: "adv1",
+      },
     );
-    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], { status: "IN_PROGRESS", servedById: "adv1" });
-    const response = await call("/me/availability", "PUT", { departmentId: "dept-1", isOpen: false });
+    Object.assign(context.store[COLLECTIONS.enrollmentQueue][0], {
+      status: "IN_PROGRESS",
+      servedById: "adv1",
+    });
+    const response = await call("/me/availability", "PUT", {
+      departmentId: "dept-1",
+      isOpen: false,
+    });
     expect(response.status).toBe(200);
-    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({ status: "WAITING", servedById: null });
-    expect(context.store[COLLECTIONS.enrollmentQueue].slice(1).every((row) => row.status === "IN_PROGRESS")).toBe(true);
+    expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
+      status: "WAITING",
+      servedById: null,
+    });
+    expect(
+      context.store[COLLECTIONS.enrollmentQueue]
+        .slice(1)
+        .every((row) => row.status === "IN_PROGRESS"),
+    ).toBe(true);
   });
 
   it("opening does not need to list other availability rows", async () => {
     holder.session = ADVISER;
-    const { AdviserAvailabilityModel } = await import("../../src/models/AdviserAvailabilityModel.js");
-    const list = vi.spyOn(AdviserAvailabilityModel, "listOpenByDepartment");
-    const response = await call("/me/availability", "PUT", { departmentId: "dept-1", isOpen: true });
+    const { AdviserScheduleModel } =
+      await import("../../src/models/AdviserScheduleModel.js");
+    const list = vi.spyOn(AdviserScheduleModel, "listOpenByDepartment");
+    const response = await call("/me/availability", "PUT", {
+      departmentId: "dept-1",
+      isOpen: true,
+    });
     expect(response.status).toBe(200);
     expect(list).not.toHaveBeenCalled();
   });

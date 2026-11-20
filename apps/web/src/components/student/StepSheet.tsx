@@ -85,7 +85,7 @@ export default function StepSheet({
       if (e.key === "Tab" && panelRef.current && !desktop) {
         const focusables = Array.from(
           panelRef.current.querySelectorAll<HTMLElement>(
-            'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+            'a[href], button:not([disabled]), summary, textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
           ),
         );
         if (focusables.length === 0) return;
@@ -148,7 +148,8 @@ export default function StepSheet({
         onPointerDown={(e) => {
           if (desktop) return;
           const target = e.target as HTMLElement;
-          if (target.closest("button, a, input, textarea, select")) return;
+          if (target.closest("button, a, summary, input, textarea, select"))
+            return;
           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
           const now = performance.now();
           drag.current = {

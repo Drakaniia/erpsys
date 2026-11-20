@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type RequestHandler } from "express";
 import { z } from "zod";
 import { ApiError } from "../../config/errors.js";
 import { invalidateKnowledgeCache } from "../../lib/chat/knowledge.js";
@@ -22,7 +22,7 @@ import { AcademicYearModel } from "../../models/AcademicYearModel.js";
 import { AdminActionLogModel } from "../../models/AdminActionLogModel.js";
 import { DepartmentModel } from "../../models/DepartmentModel.js";
 
-import type { SocialLinkRow } from "../../models/SocialMediaLinkModel.js";
+import type { SocialLinkRow } from "../../models/ContentModel.js";
 import { activeYearOrThrow } from "../../services/academic-years.js";
 import {
   assertFormsEnabled,
@@ -39,15 +39,19 @@ import { departmentView } from "../../services/departments.js";
 export const contentRouter = Router();
 
 const admin = [requireSession, requireSurface("admin")];
-const officer = [requireSession, requireSurface("officer")];
+const contentManagers: RequestHandler[] = [
+  requireSession,
+  (req, res, next) => {
+    const surface = sessionUser(req).role === "ADMIN" ? "admin" : "officer";
+    requireSurface(surface)(req, res, next);
+  },
+];
 const idParams = z.object({ id: z.string().min(1) });
 const linkBody = {
   name: z.string().trim().min(1).max(120),
   url: z.string().url().max(1000),
 };
-const links = () =>
-  getDbSync().collection<SocialLinkRow>(COLLECTIONS.socialMediaLink);
-
+const links = () => getDbSync().collection<SocialLinkRow>(COLLECTIONS.content);
 
 type KnowledgeDoc = {
   _id: string;
@@ -107,7 +111,10 @@ contentRouter.put(
   "/chatbot-knowledge",
   admin,
   catchAsync(async (req, res) => {
-    const { content } = parseBody(z.object({ content: z.string().max(200_000) }), req);
+    const { content } = parseBody(
+      z.object({ content: z.string().max(200_000) }),
+      req,
+    );
     const actorId = sessionUser(req).id;
     const existing = await latestKnowledge();
     const updatedAt = new Date();
@@ -115,7 +122,9 @@ contentRouter.put(
     if (existing) {
       await knowledge().updateOne(
         { _id: existing._id } as never,
-        { $set: { content, version, updatedById: actorId, updatedAt } } as never,
+        {
+          $set: { content, version, updatedById: actorId, updatedAt },
+        } as never,
       );
     } else {
       await knowledge().insertOne({
@@ -128,18 +137,25 @@ contentRouter.put(
       } as never);
     }
     invalidateKnowledgeCache();
-    await AdminActionLogModel.log(actorId, "Updated chatbot doc", `v${version}`);
+    await AdminActionLogModel.log(
+      actorId,
+      "Updated chatbot doc",
+      `v${version}`,
+    );
     okOne(res, { version, updatedAt: updatedAt.toISOString() });
   }),
 );
 
 async function rename(id: string, input: { name: string; url: string }) {
-  const existing = await links().findOne(idIn([id]) as never);
+  const existing = await links().findOne({
+    ...idIn([id]),
+    kind: "socialLink",
+  } as never);
   if (!existing) {
     throw new ApiError("NOT_FOUND", { message: "That link no longer exists." });
   }
   await links().updateOne(
-    idIn([id]) as never,
+    { ...idIn([id]), kind: "socialLink" } as never,
     { $set: { name: input.name, url: input.url } } as never,
   );
   return socialLinkView({ ...existing, name: input.name, url: input.url });
@@ -147,13 +163,13 @@ async function rename(id: string, input: { name: string; url: string }) {
 
 /**
  * `GET /api/v1/profiling-form`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Use: read the active year's linked Google Form.
  * Returns: `{ data: { formId, title, responderUri, editUrl, updatedByName, updatedAt } }`, or `null` when none.
  */
 contentRouter.get(
   "/profiling-form",
-  officer,
+  contentManagers,
   catchAsync(async (_req, res) => {
     okOne(res, await readProfilingForm());
   }),
@@ -161,14 +177,14 @@ contentRouter.get(
 
 /**
  * `POST /api/v1/profiling-form`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: create the year's Google Form through the Forms API (verified-email collection, published, shared with the caller) — body `{ title }`.
  * Returns: `201` with `{ data: form }`; `409` when one is already linked.
  */
 contentRouter.post(
   "/profiling-form",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const { title } = parseBody(
       z.object({ title: z.string().trim().min(1).max(200) }),
@@ -187,8 +203,12 @@ contentRouter.post(
     }
     const { formId, responderUri } = await createForm(title, actor.email);
     await AcademicYearModel.setProfilingForm(String(year._id), {
-      formId, title, responderUri, updatedById: actor.id,
-      createdAt: new Date(), updatedAt: new Date(),
+      formId,
+      title,
+      responderUri,
+      updatedById: actor.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
     if (actor.role === "ADMIN") {
       await AdminActionLogModel.log(
@@ -203,14 +223,14 @@ contentRouter.post(
 
 /**
  * `DELETE /api/v1/profiling-form`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: unlink the year's Google Form (the form itself stays in Google Drive).
  * Returns: `{ data: { ok: true } }`.
  */
 contentRouter.delete(
   "/profiling-form",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const actor = sessionUser(req);
     const year = await activeYearOrThrow();
@@ -228,13 +248,13 @@ contentRouter.delete(
 
 /**
  * `GET /api/v1/social-links`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Use: list links in display order (query `page`, `pageSize`).
  * Returns: `{ data, page, pageSize, total }`.
  */
 contentRouter.get(
   "/social-links",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const items = await listSocialLinks();
     const { page, pageSize } = parsePagination(req);
@@ -244,14 +264,14 @@ contentRouter.get(
 
 /**
  * `POST /api/v1/social-links`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: add a link — body `{ id?, name, url }`.
  * Returns: `201` when new, else `{ data: link }`.
  */
 contentRouter.post(
   "/social-links",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const input = parseBody(
       z.object({ id: z.string().optional(), ...linkBody }),
@@ -259,7 +279,7 @@ contentRouter.post(
     );
     if (input.id) return okOne(res, await rename(input.id, input));
     const [highest] = await links()
-      .find({} as never)
+      .find({ kind: "socialLink" } as never)
       .sort({ order: -1 })
       .limit(1)
       .toArray();
@@ -270,21 +290,25 @@ contentRouter.post(
       order: (highest?.order ?? 0) + 1,
       isActive: true,
     };
-    await links().insertOne({ ...row, createdAt: new Date() } as never);
+    await links().insertOne({
+      ...row,
+      kind: "socialLink",
+      createdAt: new Date(),
+    } as never);
     okOne(res, socialLinkView(row), 201);
   }),
 );
 
 /**
  * `PUT /api/v1/social-links/order`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: reorder — body `{ orderedIds }`.
  * Returns: `{ data: { ok: true } }`.
  */
 contentRouter.put(
   "/social-links/order",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const { orderedIds } = parseBody(
       z.object({ orderedIds: z.array(z.string().min(1)) }),
@@ -293,7 +317,7 @@ contentRouter.put(
     await Promise.all(
       orderedIds.map((id, index) =>
         links().updateOne(
-          idIn([id]) as never,
+          { ...idIn([id]), kind: "socialLink" } as never,
           { $set: { order: index + 1 } } as never,
         ),
       ),
@@ -304,14 +328,14 @@ contentRouter.put(
 
 /**
  * `PATCH /api/v1/social-links/:id`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: edit one — body `{ name, url }`.
  * Returns: `{ data: link }`.
  */
 contentRouter.patch(
   "/social-links/:id",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
     okOne(res, await rename(id, parseBody(z.object(linkBody), req)));
@@ -320,17 +344,17 @@ contentRouter.patch(
 
 /**
  * `DELETE /api/v1/social-links/:id`
- * Access: session + officer surface.
+ * Access: session + officer surface or session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: remove one.
  * Returns: `{ data: { ok: true } }`.
  */
 contentRouter.delete(
   "/social-links/:id",
-  officer,
+  contentManagers,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
-    await links().deleteOne(idIn([id]) as never);
+    await links().deleteOne({ ...idIn([id]), kind: "socialLink" } as never);
     okOne(res, { ok: true });
   }),
 );

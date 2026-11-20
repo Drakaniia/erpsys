@@ -166,7 +166,7 @@ const PieChartCore = memo(function PieChartCore({
         setInternalHoveredIndex(index);
       }
     },
-    [isControlled, onHoverChange]
+    [isControlled, onHoverChange],
   );
 
   // Use the smaller dimension to ensure the chart fits
@@ -181,7 +181,7 @@ const PieChartCore = memo(function PieChartCore({
   // Calculate total value
   const totalValue = useMemo(
     () => data.reduce((sum, d) => sum + d.value, 0),
-    [data]
+    [data],
   );
 
   // Get color for a slice index
@@ -193,7 +193,7 @@ const PieChartCore = memo(function PieChartCore({
       }
       return defaultPieColors[index % defaultPieColors.length] as string;
     },
-    [data]
+    [data],
   );
 
   // Get fill for a slice index (supports patterns/gradients)
@@ -207,7 +207,7 @@ const PieChartCore = memo(function PieChartCore({
       // Fall back to color
       return getColor(index);
     },
-    [data, getColor]
+    [data, getColor],
   );
 
   // Compute arcs using d3-shape pie
@@ -242,8 +242,8 @@ const PieChartCore = memo(function PieChartCore({
         arc.startAngle,
         arc.endAngle,
         cornerRadius,
-        arc.padAngle
-      )
+        arc.padAngle,
+      ),
     );
   }, [geometryScrubbing, arcs, innerRadius, outerRadius, cornerRadius]);
 
@@ -361,7 +361,7 @@ const PieChartCore = memo(function PieChartCore({
       getFill,
       geometryScrubbing,
       scrubSlicePaths,
-    ]
+    ],
   );
 
   // Use CSS Grid stacking to layer SVG and HTML content
@@ -402,7 +402,7 @@ const PieChartCore = memo(function PieChartCore({
                       key={data[index]?.label ?? index}
                       pointerEvents="none"
                     />
-                  ) : null
+                  ) : null,
                 )
               : null}
             {svgChildren}
@@ -425,7 +425,7 @@ const PieChartCore = memo(function PieChartCore({
 
 function pieChartCorePropsEqual(
   prev: PieChartInnerProps,
-  next: PieChartInnerProps
+  next: PieChartInnerProps,
 ): boolean {
   return (
     prev.width === next.width &&

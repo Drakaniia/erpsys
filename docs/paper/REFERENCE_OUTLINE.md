@@ -7,16 +7,16 @@ Source: [`Collab Final Project Documentation.REFERENCE.pdf`](Collab%20Final%20Pr
 - Page numbers are **PDF page numbers**; the file has no printed folios.
 - Headings are reproduced verbatim, including the reference document's numbering typos, so every
   line here can be matched against the source.
-- The reference documents a different system (Bukidnon State University CITL — *University Training
-  and Seminar Management System*, UTSMS). It is used here only as the structural template for
+- The reference documents a different system (Bukidnon State University CITL — _University Training
+  and Seminar Management System_, UTSMS). It is used here only as the structural template for
   `FINAL_PAPER.md`.
 
 ---
 
 ## Front matter
 
-| Page | Content                                                                                          |
-| ---- | ------------------------------------------------------------------------------------------------ |
+| Page | Content                                                                                                                                                                                                                                                                                              |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1    | Title page — Bukidnon State University / College of Technologies / IT Department; project title; "A Project Presented to" + panel; "In Partial Fulfillment …" (IT133 SIA 1, IT137 Elective 3, IT132 Advanced Database Systems, IT135 Information Assurance and Security 1); "By:" + developers; date |
 
 No table of contents, list of figures, or list of tables is present.
@@ -37,7 +37,7 @@ No table of contents, list of figures, or list of tables is present.
   - 1.2.3. Weighted Factor Analysis (p. 6)
   - 1.2.4. Threat Identification (p. 6)
   - 1.2.5. Vulnerability Database (p. 7) — Table 1.2
-  - 1.2..6. Vulnerability Assessment (p. 8) — *printed with a double dot; High / Medium priority controls*
+  - 1.2..6. Vulnerability Assessment (p. 8) — _printed with a double dot; High / Medium priority controls_
 - 1.3. Background of the System (p. 8)
 - 1.4. Objectives (p. 10)
   - 1.4.1. General Objectives (p. 10)
@@ -65,7 +65,7 @@ No table of contents, list of figures, or list of tables is present.
   - 3.2.1. Logical View (Activity Diagram) (p. 27) — Figures 3.1–3.4
   - 3.2.2. Process View (User Flow Diagram) (p. 32) — Figure 3.5
   - 3.2.3. Scenario View (Use-Case Diagram) (p. 33) — Figure 3.6
-- *(no 3.3 in the source — numbering jumps from 3.2.3 to 3.4)*
+- _(no 3.3 in the source — numbering jumps from 3.2.3 to 3.4)_
 - 3.4. Project Schedule (p. 34) — Figure 3.7 Gantt chart
 - 3.5. Integration Strategies (p. 35)
   - 3.5.1. API Integrations and Interactions (p. 35) — numbered 1–6, one sub-block each:
@@ -176,7 +176,7 @@ request, invalid request, and each response code.
 - 1.3.3 Verify User Google Account (p. 201)
 - 1.3.4 Manual login and authenticate User Credentials (p. 203)
 - 1.3.5 Logout User and Terminate Session (p. 206)
-- 2.3.6 New User Password Set Up (p. 209) — *printed as 2.3.6; belongs to 1.3*
+- 2.3.6 New User Password Set Up (p. 209) — _printed as 2.3.6; belongs to 1.3_
 
 ## External API Documentation (p. 213)
 
@@ -243,13 +243,13 @@ Numbered Figure 3 onward, in three groups:
 
 ## Anomalies to avoid copying
 
-| Where              | What                                                                                   |
-| ------------------ | -------------------------------------------------------------------------------------- |
-| 1.2                | `1.2..6. Vulnerability Assessment` — double dot                                        |
-| Chapter 3          | no `3.3` — numbering jumps from `3.2.3` to `3.4`                                        |
-| 2.2                | `2.2.1`–`2.2.4` are printed without the trailing dot used elsewhere                     |
-| API 1.3            | last endpoint printed as `2.3.6` instead of `1.3.6`                                     |
-| Figures, API part  | numbering skips `133`/`134` and later restarts at `Figure 1` in each later part         |
-| Figures, calendar  | `Figure 59`, `Figure 70`, `Figure 71`, `Figure 72` — the 60s are missing                |
-| Tables             | `Table 5`, `Table 6` appear after the chapter tables (chapter tables stop at `Table 4.1`) |
-| References         | entries are out of alphabetical order (Kong after Pulsifer)                             |
+| Where             | What                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| 1.2               | `1.2..6. Vulnerability Assessment` — double dot                                           |
+| Chapter 3         | no `3.3` — numbering jumps from `3.2.3` to `3.4`                                          |
+| 2.2               | `2.2.1`–`2.2.4` are printed without the trailing dot used elsewhere                       |
+| API 1.3           | last endpoint printed as `2.3.6` instead of `1.3.6`                                       |
+| Figures, API part | numbering skips `133`/`134` and later restarts at `Figure 1` in each later part           |
+| Figures, calendar | `Figure 59`, `Figure 70`, `Figure 71`, `Figure 72` — the 60s are missing                  |
+| Tables            | `Table 5`, `Table 6` appear after the chapter tables (chapter tables stop at `Table 4.1`) |
+| References        | entries are out of alphabetical order (Kong after Pulsifer)                               |

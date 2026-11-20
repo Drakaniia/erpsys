@@ -29,12 +29,10 @@ const ADVISER = {
   },
 };
 
-const STEPS = ["ASSESSMENT", "SOCIAL_MEDIA", "PROFILING", "MUGSHOT", "CONSENT"];
-
-function profile(id: string, userId: string): Row {
+function profile(id: string): Row {
   return {
     _id: id,
-    userId,
+
     studentNumber: `1234${id}`,
     academicYearId: "ay-1",
   };
@@ -51,19 +49,21 @@ function seed(): Record<string, Row[]> {
         createdAt: new Date("2025-06-01"),
       },
     ],
-    [COLLECTIONS.adviserDepartment]: [
-      { _id: "link-1", adviserId: "adv1", departmentId: "dept-1" },
+    [COLLECTIONS.department]: [
+      {
+        _id: "dept-1",
+        name: "College of Technologies",
+        isActive: true,
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: [] }],
+      },
     ],
     [COLLECTIONS.user]: ["p1", "p2", "p3"].map((id) => ({
       _id: `u-${id}`,
+      studentProfile: profile(id),
       name: id,
       email: `${id}@student.buksu.edu.ph`,
     })),
-    [COLLECTIONS.studentProfile]: [
-      profile("p1", "u-p1"),
-      profile("p2", "u-p2"),
-      profile("p3", "u-p3"),
-    ],
+
     [COLLECTIONS.studentEnrollment]: [
       {
         _id: "enr-1",
@@ -87,26 +87,13 @@ function seed(): Record<string, Row[]> {
         yearLevel: "FIRST",
       },
     ],
-    [COLLECTIONS.step]: [
-      ...STEPS.map((code, index) => ({
-        _id: `step-${code}`,
-        code,
-        name: code,
-        order: index + 1,
-      })),
-      {
-        _id: "step-ENROLLMENT",
-        code: "ENROLLMENT",
-        name: "Enrollment",
-        order: 6,
-      },
-    ],
+
     [COLLECTIONS.stepVerification]: [
       // p1 has nothing verified except assessment.
       {
         _id: "v-1",
         studentProfileId: "p1",
-        stepId: "step-ASSESSMENT",
+        stepId: "ASSESSMENT",
         academicYearId: "ay-1",
         status: "VERIFIED",
       },
@@ -114,7 +101,7 @@ function seed(): Record<string, Row[]> {
       {
         _id: "v-2",
         studentProfileId: "p3",
-        stepId: "step-ENROLLMENT",
+        stepId: "ENROLLMENT",
         academicYearId: "ay-1",
         status: "VERIFIED",
       },

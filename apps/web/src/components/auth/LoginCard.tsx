@@ -30,7 +30,6 @@ export default function LoginCard() {
 
   const [formError, setFormError] = useState("");
 
-
   const google = useGoogleSignIn({
     dest: params.get("dest"),
     onError: setFormError,
@@ -97,9 +96,17 @@ export default function LoginCard() {
         }
         return;
       }
-      if (turnstileEnabled && !turnstileToken) {
-        setFormError("Please complete the verification challenge.");
-        return;
+      let token = turnstileToken;
+      if (turnstileEnabled && !token) {
+        try {
+          token = (await turnstileRef.current?.execute()) ?? "";
+        } catch {
+          /* the guard below reports every failure */
+        }
+        if (!token) {
+          setFormError("Please complete the verification challenge.");
+          return;
+        }
       }
       try {
         sessionStorage.setItem("lastAuthProvider", "credential");
@@ -109,7 +116,7 @@ export default function LoginCard() {
       const result = await authClient.signIn.email({
         email: value.email,
         password: value.password,
-        "cf-turnstile-response": turnstileToken,
+        "cf-turnstile-response": token,
       } as unknown as Record<string, unknown> & {
         email: string;
         password: string;
@@ -149,7 +156,6 @@ export default function LoginCard() {
 
   return (
     <div className="w-full">
-
       <form
         className="space-y-5"
         onSubmit={(e) => {

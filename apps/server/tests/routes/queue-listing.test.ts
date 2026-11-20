@@ -49,18 +49,17 @@ function seed(): Record<string, Row[]> {
       },
     ],
     [COLLECTIONS.department]: [
-      { _id: "dept-1", name: "College of Technologies", isActive: true },
-    ],
-    [COLLECTIONS.adviserDepartment]: [
       {
-        _id: "link-1",
-        adviserId: "adv1",
-        departmentId: "dept-1",
-        yearLevels: ["FIRST"],
+        _id: "dept-1",
+        name: "College of Technologies",
+        isActive: true,
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: ["FIRST"] }],
       },
     ],
-    [COLLECTIONS.adviserAvailability]: [
+
+    [COLLECTIONS.adviserSchedule]: [
       {
+        kind: "presence",
         _id: "av-1",
         adviserId: "adv2",
         departmentId: "dept-1",
@@ -69,20 +68,7 @@ function seed(): Record<string, Row[]> {
         lastActiveAt: new Date(),
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "profile-1",
-        userId: "stud1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-      {
-        _id: "profile-2",
-        userId: "stud2",
-        studentNumber: "12346",
-        academicYearId: "ay-1",
-      },
-    ],
+
     [COLLECTIONS.studentEnrollment]: [
       {
         _id: "enr-1",
@@ -100,20 +86,33 @@ function seed(): Record<string, Row[]> {
       },
     ],
     [COLLECTIONS.user]: [
-      { _id: "stud1", name: "Ana", email: "12345@student.buksu.edu.ph" },
-      { _id: "stud2", name: "Ben", email: "12346@student.buksu.edu.ph" },
+      {
+        _id: "stud1",
+        name: "Ana",
+        email: "12345@student.buksu.edu.ph",
+        studentProfile: {
+          _id: "profile-1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
+      },
+      {
+        _id: "stud2",
+        name: "Ben",
+        email: "12346@student.buksu.edu.ph",
+        studentProfile: {
+          _id: "profile-2",
+          studentNumber: "12346",
+          academicYearId: "ay-1",
+        },
+      },
       { _id: "adv2", name: "Other Adviser", email: "adv2@buksu.edu.ph" },
     ],
-    [COLLECTIONS.step]: PRE_STEPS.map((code, index) => ({
-      _id: `step-${code}`,
-      code,
-      name: code,
-      order: index + 1,
-    })),
+
     [COLLECTIONS.stepVerification]: PRE_STEPS.map((code) => ({
       _id: `ver-${code}`,
       studentProfileId: "profile-1",
-      stepId: `step-${code}`,
+      stepId: code,
       academicYearId: "ay-1",
       status: "VERIFIED",
     })),

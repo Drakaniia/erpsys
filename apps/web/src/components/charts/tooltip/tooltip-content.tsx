@@ -31,7 +31,7 @@ export function TooltipHeader({ children, className }: TooltipHeaderProps) {
     <div
       className={cn(
         "border-b px-3.5 py-2.5 text-left font-medium text-chart-tooltip-foreground text-sm",
-        className
+        className,
       )}
     >
       {children}

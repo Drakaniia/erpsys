@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  registerStepUpHost,
-  type StepUpWaiter,
-} from "$lib/auth/step-up";
+import { registerStepUpHost, type StepUpWaiter } from "$lib/auth/step-up";
 import StepUpDialog from "./StepUpDialog";
 
 /** Mounted once in the admin console; opens the confirmation when the API asks for it. */
@@ -17,6 +14,7 @@ export default function StepUpHost() {
   if (!waiter) return null;
   return (
     <StepUpDialog
+      authenticatorReset={waiter.authenticatorReset}
       onDone={() => {
         waiter.ok();
         setWaiter(null);

@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "react-router";
+import { toast } from "sonner";
 import { queryClient } from "$lib/api";
 import { router } from "./router";
 
@@ -61,15 +62,26 @@ describe("router (React port)", () => {
     });
   });
 
-  it("bounces an unauthenticated /student to the login screen", async () => {
+  it("shows session expiry and preserves the destination when redirecting to login", async () => {
+    const expiredToast = vi.spyOn(toast, "error");
     // Mount first: the component guards only run while a RouterProvider is
     // subscribed, so navigating without a render would assert nothing.
     renderApp();
     await router.navigate("/student");
     await waitFor(() => {
       expect(window.location.pathname).toBe("/login");
-      expect(window.location.search).toBe("?reason=expired");
+      expect(new URLSearchParams(window.location.search).get("dest")).toBe(
+        "/student",
+      );
+      expect(new URLSearchParams(window.location.search).has("reason")).toBe(
+        false,
+      );
+      expect(expiredToast).toHaveBeenCalledWith(
+        "Your session expired — please sign in again.",
+        { duration: 5000 },
+      );
     });
+    expiredToast.mockRestore();
   });
 
   it("folds the retired per-role login URLs into /login", async () => {

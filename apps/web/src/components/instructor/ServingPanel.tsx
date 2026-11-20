@@ -38,7 +38,6 @@ export default function ServingPanel({
       aria-label={isServing ? "Now serving" : "No student being served"}
       className="flex h-full flex-col rounded-2xl border border-border bg-surface-raised p-5 shadow-sm"
     >
-
       {isServing && entry ? (
         <>
           <p

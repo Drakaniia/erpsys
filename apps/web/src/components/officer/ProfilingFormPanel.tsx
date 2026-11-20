@@ -4,6 +4,7 @@ import { useIntegrations } from "$lib/integrations/use-integrations";
 import { absoluteTime } from "$lib/officer/format";
 import { useFormEditorWindow } from "$lib/officer/form-editor-window";
 import ConfirmDialog from "../ConfirmDialog";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import EmptyState from "../ui/EmptyState";
 import FormPreviewFullscreen, {
   embeddedFormUrl,
@@ -43,7 +44,20 @@ export default function ProfilingFormPanel({
   const { flags } = useIntegrations();
   const formsEnabled = flags.googleForms;
   const editor = useFormEditorWindow(data?.editUrl);
+  const [editRequested, setEditRequested] = useState(false);
+  const editing =
+    !data?.editUrl || confirmRemove || editRequested || editor.editing || busy;
+  const { blocked, onBlockedChange } = useEditingLock(
+    `${data?.editUrl ?? "new"}:${editing}`,
+  );
 
+  function openEditor() {
+    if (!editRequested && !editor.editing) {
+      setEditRequested(true);
+      return;
+    }
+    if (!blocked) editor.openEditor();
+  }
 
   if (isLoading && !data) return <ProfilingFormSkeleton />;
   if (!hasActiveYear) {
@@ -72,37 +86,46 @@ export default function ProfilingFormPanel({
         className="flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault();
-          if (title.trim()) onsave(title.trim());
+          if (!blocked && !busy && title.trim()) onsave(title.trim());
         }}
       >
-        <EmptyState
-          title="No profiling form yet"
-          hint="Create a Google Form, then add the questions in Google Forms. Students answer it signed in with their school Google account."
-          icon="form"
-        />
-        <div className="flex flex-wrap gap-2">
-          <input
-            aria-label="Form title"
-            className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
-            maxLength={200}
-            value={title}
-            onChange={(e) => setTitle(e.currentTarget.value)}
+        <ActiveEditors
+          resource="profiling-form"
+          onBlockedChange={onBlockedChange}
+        >
+          <EmptyState
+            title="No profiling form yet"
+            hint="Create a Google Form, then add the questions in Google Forms. Students answer it signed in with their school Google account."
+            icon="form"
           />
-          <button
-            type="submit"
-            disabled={busy || !title.trim()}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
-            {busy ? "Creating…" : "Create Google Form"}
-          </button>
-        </div>
+          <div className="flex flex-wrap gap-2">
+            <input
+              aria-label="Form title"
+              className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
+              maxLength={200}
+              value={title}
+              onChange={(e) => setTitle(e.currentTarget.value)}
+            />
+            <button
+              type="submit"
+              disabled={busy || !title.trim()}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {busy ? "Creating…" : "Create Google Form"}
+            </button>
+          </div>
+        </ActiveEditors>
       </form>
     );
   }
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface-raised p-4">
-
+      <ActiveEditors
+        resource="profiling-form"
+        enabled={editing}
+        onBlockedChange={onBlockedChange}
+      />
       <div>
         <p className="text-[15px] font-semibold text-ink">{data.title}</p>
         <p className="text-xs text-muted">
@@ -170,10 +193,11 @@ export default function ProfilingFormPanel({
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={editor.openEditor}
+          onClick={openEditor}
+          disabled={editing && blocked}
           className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/90"
         >
-          Edit questions
+          {editRequested && !editor.editing ? "Open editor" : "Edit questions"}
         </button>
         {data.responderUri ? (
           <a
@@ -187,6 +211,7 @@ export default function ProfilingFormPanel({
         ) : null}
         <button
           onClick={() => setConfirmRemove(true)}
+          disabled={editing && blocked}
           className="rounded-lg px-3 py-1.5 text-sm font-medium text-error hover:bg-error/5"
         >
           Unlink form
@@ -199,7 +224,8 @@ export default function ProfilingFormPanel({
           title={data.title ?? "Profiling form"}
           src={embeddedFormUrl(data.responderUri)}
           reloadKey={editor.reloadKey}
-          onedit={editor.openEditor}
+          onedit={openEditor}
+          editDisabled={editing && blocked}
           onclose={closeFullscreen}
         />
       ) : null}
@@ -211,7 +237,9 @@ export default function ProfilingFormPanel({
         confirmLabel="Unlink"
         destructive
         busy={busy}
+        confirmDisabled={blocked}
         onconfirm={() => {
+          if (blocked || busy) return;
           setConfirmRemove(false);
           onremove();
         }}

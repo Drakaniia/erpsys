@@ -28,13 +28,16 @@ vi.mock("../../src/lib/google/calendar.js", async (importOriginal) => ({
   ...google,
 }));
 
-vi.mock("../../src/lib/platform/integration-settings.js", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("../../src/lib/platform/integration-settings.js")
-  >()),
-  integrationEnabled: async () => holder.available,
-  integrationConfigured: () => true,
-}));
+vi.mock(
+  "../../src/lib/platform/integration-settings.js",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../src/lib/platform/integration-settings.js")
+    >()),
+    integrationEnabled: async () => holder.available,
+    integrationConfigured: () => true,
+  }),
+);
 
 import {
   CalendarAuthError,
@@ -68,13 +71,14 @@ function seed(): Record<string, Row[]> {
         nextAttemptAt: new Date("2026-11-10"),
       },
     ],
-    [COLLECTIONS.availabilityWindow]: [
+    [COLLECTIONS.adviserSchedule]: [
       {
         _id: "w1",
         adviserId: "adv1",
         departmentId: "dept-1",
         academicYearId: "ay-1",
-        kind: "WEEKLY",
+        kind: "window",
+        windowKind: "WEEKLY",
         weekday: 1,
         startMinute: 540,
         endMinute: 720,
@@ -84,7 +88,8 @@ function seed(): Record<string, Row[]> {
         adviserId: "adv1",
         departmentId: "dept-1",
         academicYearId: "ay-1",
-        kind: "CANCEL",
+        kind: "window",
+        windowKind: "CANCEL",
         date: "2026-11-23",
       },
       {
@@ -92,7 +97,8 @@ function seed(): Record<string, Row[]> {
         adviserId: "adv1",
         departmentId: "dept-1",
         academicYearId: "ay-1",
-        kind: "EXTRA",
+        kind: "window",
+        windowKind: "EXTRA",
         date: "2026-11-21",
         startMinute: 600,
         endMinute: 660,
@@ -153,7 +159,9 @@ describe("Google Calendar sync", () => {
     await syncCalendar("adv1");
     for (const [, , , event] of google.putEvent.mock.calls) {
       const body = JSON.stringify(event);
-      expect(event.summary).toBe("Enrollment advising – College of Technologies");
+      expect(event.summary).toBe(
+        "Enrollment advising – College of Technologies",
+      );
       expect(event.reminders).toEqual({ useDefault: false });
       expect(body).not.toContain("attendees");
       expect(body).not.toContain("adv1");
@@ -175,7 +183,10 @@ describe("Google Calendar sync", () => {
 
   it("deletes events that no longer belong to a window", async () => {
     google.listEvents.mockResolvedValue([
-      { id: "stale", extendedProperties: { private: { erpsys: "1", sig: "x" } } },
+      {
+        id: "stale",
+        extendedProperties: { private: { erpsys: "1", sig: "x" } },
+      },
     ]);
     await syncCalendar("adv1");
     expect(google.deleteEvent).toHaveBeenCalledWith(
@@ -248,12 +259,13 @@ describe("calendar sweep", () => {
   });
 
   it("drops windows from a past academic year and resyncs that instructor", async () => {
-    context.store[COLLECTIONS.availabilityWindow].push({
+    context.store[COLLECTIONS.adviserSchedule].push({
       _id: "old",
       adviserId: "adv1",
       departmentId: "dept-1",
       academicYearId: "ay-0",
-      kind: "WEEKLY",
+      kind: "window",
+      windowKind: "WEEKLY",
       weekday: 2,
       startMinute: 540,
       endMinute: 600,
@@ -262,7 +274,9 @@ describe("calendar sweep", () => {
     connection().nextAttemptAt = null;
     await sweepCalendars(new Date());
     expect(
-      context.store[COLLECTIONS.availabilityWindow].map((w) => w._id),
+      context.store[COLLECTIONS.adviserSchedule]
+        .filter((w) => w.kind === "window")
+        .map((w) => w._id),
     ).not.toContain("old");
     expect(google.listEvents).toHaveBeenCalled();
   });

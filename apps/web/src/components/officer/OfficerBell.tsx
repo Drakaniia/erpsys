@@ -63,6 +63,7 @@ export default function OfficerBell({
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-controls="officer-bell-popover"
+        data-onboarding-tip={isLoading || isOpen ? undefined : "notifications"}
         aria-label={
           isLoading
             ? "Notifications — loading"

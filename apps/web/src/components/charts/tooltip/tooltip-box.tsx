@@ -130,7 +130,7 @@ const mixNumber = (from: number, to: number, progress: number) =>
 function mixPanelSizes(
   from: PanelSizes,
   to: PanelSizes,
-  progress: number
+  progress: number,
 ): PanelSizes {
   return {
     panelWidth: mixNumber(from.panelWidth, to.panelWidth, progress),
@@ -215,7 +215,7 @@ function drawPanelTween(
   radii: PanelRadii,
   from: PanelSizes,
   target: PanelSizes,
-  progress: number
+  progress: number,
 ) {
   const drawn = mixPanelSizes(from, target, progress);
   const scaleX = ratio(drawn.panelWidth, target.panelWidth);
@@ -235,14 +235,14 @@ function drawPanelTween(
     panel.style.borderRadius = correctedRadius(
       radii.panel,
       drawn.panelWidth,
-      drawn.panelHeight
+      drawn.panelHeight,
     );
   }
   if (radii.clip !== null) {
     clip.style.borderRadius = correctedRadius(
       radii.clip,
       drawn.clipWidth,
-      drawn.clipHeight
+      drawn.clipHeight,
     );
   }
 }
@@ -272,7 +272,7 @@ function usePanelSizeTween(
   panelRef: RefObject<HTMLDivElement | null>,
   clipRef: RefObject<HTMLDivElement | null>,
   contentRef: RefObject<HTMLDivElement | null>,
-  enabled: boolean
+  enabled: boolean,
 ) {
   const checkRef = useRef<(() => void) | null>(null);
 
@@ -416,7 +416,7 @@ export function TooltipPanel({
     panelRef,
     clipRef,
     contentRef,
-    animateSize && !reducedMotionConfig
+    animateSize && !reducedMotionConfig,
   );
 
   return (
@@ -452,7 +452,7 @@ export function TooltipPanel({
 function moveTo(
   spring: MotionValue<number>,
   value: number,
-  snap: boolean
+  snap: boolean,
 ): void {
   if (snap) {
     spring.jump(value);
@@ -491,7 +491,7 @@ function resolveTooltipTarget({
     left: flipped ? x - offset - width : x + offset,
     top: Math.max(
       offset,
-      Math.min(y - height / 2, containerHeight - height - offset)
+      Math.min(y - height / 2, containerHeight - height - offset),
     ),
   };
 }
@@ -578,7 +578,7 @@ function TooltipBoxInner({
       offset,
       containerWidth,
       containerHeight,
-    })
+    }),
   );
   const animatedLeft = useSpring(initialTarget.left, effectiveSpring);
   const animatedTop = useSpring(initialTarget.top, effectiveSpring);
@@ -609,7 +609,7 @@ function TooltipBoxInner({
     setFlip((prev) =>
       prev.flipped === target.flipped
         ? prev
-        : { flipped: target.flipped, key: prev.key + 1 }
+        : { flipped: target.flipped, key: prev.key + 1 },
     );
     const tx = target.left;
     const ty = target.top;
@@ -684,7 +684,7 @@ function TooltipBoxInner({
           <div className={TOOLTIP_PANEL_INNER_CLASS_NAME}>{children}</div>
         </div>
       </div>,
-      container
+      container,
     );
   }
 
@@ -713,7 +713,7 @@ function TooltipBoxInner({
         {children}
       </TooltipPanel>
     </m.div>,
-    container
+    container,
   );
 }
 

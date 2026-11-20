@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 
 import { queryClient } from "$lib/api";
 import { notify } from "$lib/notifications";
@@ -45,6 +46,7 @@ export default function IntegrationCredentialsEditor({
   const reset = useResetCredentials();
   const validate = useValidateCredentials();
   const errorId = useId();
+  const lock = useEditingLock(row.key);
 
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState<{
@@ -158,161 +160,172 @@ export default function IntegrationCredentialsEditor({
   const status = (error as { status?: number } | null)?.status;
   const failures = failuresOf(save.error);
   const validationFailures = failuresOf(validate.error);
-  const fieldErrors = byField(failures.length > 0 ? failures : validationFailures);
+  const fieldErrors = byField(
+    failures.length > 0 ? failures : validationFailures,
+  );
   const validateStatus = (validate.error as { status?: number } | null)?.status;
   const unreadable = row.credentials.some((field) => field.unreadable);
 
   return (
     <div className="flex flex-col gap-4 pt-3">
-
-      {unreadable && (
-        <p role="status" className="border-l-2 border-warning pl-2.5 text-xs text-warning">
-          Stored credentials cannot be read — the encryption key changed.
-          Re-enter them, or reset to .env.
-        </p>
-      )}
-
-      <div className="flex flex-col gap-4">
-        {row.credentials.map((field) => {
-          const secret = field.class === "secret";
-          const isReplacing = secret && replacing[field.envKey] === true;
-          const problem = fieldErrors[field.envKey];
-          const problemId = `${errorId}-${field.envKey}`;
-          return (
-            <div key={field.envKey} className="flex flex-col gap-1">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="text-sm font-medium text-ink">
-                  {field.label}
-                  {field.required ? "" : " (optional)"}
-                </span>
-                <span className="text-[11px] text-muted">
-                  {sourceLabel(field.source)}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {!secret ? (
-                  <input
-                    type="text"
-                    value={drafts[field.envKey] ?? field.value ?? ""}
-                    onChange={(event) => edit(field, event.target.value)}
-                    spellCheck={false}
-                    aria-label={field.label}
-                    aria-invalid={problem ? true : undefined}
-                    aria-describedby={problem ? problemId : undefined}
-                    className={`${INPUT}${problem ? " border-warning" : ""}`}
-                  />
-                ) : isReplacing ? (
-                  <input
-                    type="password"
-                    value={drafts[field.envKey] ?? ""}
-                    onChange={(event) => edit(field, event.target.value)}
-                    autoComplete="new-password"
-                    spellCheck={false}
-                    autoCapitalize="off"
-                    aria-label={`New ${field.label}`}
-                    aria-invalid={problem ? true : undefined}
-                    aria-describedby={problem ? problemId : undefined}
-                    className={`${INPUT}${problem ? " border-warning" : ""}`}
-                  />
-                ) : (
-                  <>
-                    <span
-                      aria-hidden="true"
-                      className="font-mono text-sm tabular-nums text-ink"
-                    >
-                      {field.masked ?? "Not set"}
-                    </span>
-                    <span className="sr-only">
-                      {field.masked === null
-                        ? "Credential not set"
-                        : "Credential set"}
-                    </span>
-                  </>
-                )}
-
-                {secret && !isReplacing && (
-                  <button
-                    type="button"
-                    onClick={() => replace(field)}
-                    className={SECONDARY}
-                  >
-                    Replace
-                  </button>
-                )}
-              </div>
-
-              {problem ? (
-                <p id={problemId} className="text-[11px] text-warning">
-                  {problem}
-                </p>
-              ) : null}
-
-              <p className="text-[11px] leading-relaxed text-muted">
-                {field.hint}
-                {field.helpUrl ? (
-                  <>
-                    {" "}
-                    <a
-                      href={field.helpUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary underline underline-offset-2"
-                    >
-                      Open provider console
-                    </a>
-                  </>
-                ) : null}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-
-      {status === 422 || validateStatus === 422 ? (
-        <div
-          role="alert"
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-ink"
-        >
-          <p className="font-medium">
-            {status === 422 ? error?.message : validate.error?.message}
+      <ActiveEditors
+        resource="integration"
+        scope={row.key}
+        onBlockedChange={lock.onBlockedChange}
+      >
+        {unreadable && (
+          <p
+            role="status"
+            className="border-l-2 border-warning pl-2.5 text-xs text-warning"
+          >
+            Stored credentials cannot be read — the encryption key changed.
+            Re-enter them, or reset to .env.
           </p>
-          <ul className="mt-1 flex flex-col gap-0.5">
-            {(failures.length > 0 ? failures : validationFailures).map((failure) => (
-              <li key={failure.key}>
-                <span className="font-mono">{failure.key}</span> —{" "}
-                {failure.reason}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : status === 409 ? (
-        <div
-          role="alert"
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-ink"
-        >
-          Another admin changed these credentials. Reload this row and re-enter
-          your change.
-        </div>
-      ) : status === 429 ? (
-        <p role="alert" className="text-xs text-warning">
-          Too many attempts. Wait a minute, then retry.
-        </p>
-      ) : error ? (
-        <p role="alert" className="text-xs text-warning">
-          {error.message}
-        </p>
-      ) : validate.error ? (
-        <p role="alert" className="text-xs text-warning">
-          {validate.error.message}
-        </p>
-      ) : null}
+        )}
 
+        <div className="flex flex-col gap-4">
+          {row.credentials.map((field) => {
+            const secret = field.class === "secret";
+            const isReplacing = secret && replacing[field.envKey] === true;
+            const problem = fieldErrors[field.envKey];
+            const problemId = `${errorId}-${field.envKey}`;
+            return (
+              <div key={field.envKey} className="flex flex-col gap-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm font-medium text-ink">
+                    {field.label}
+                    {field.required ? "" : " (optional)"}
+                  </span>
+                  <span className="text-[11px] text-muted">
+                    {sourceLabel(field.source)}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {!secret ? (
+                    <input
+                      type="text"
+                      value={drafts[field.envKey] ?? field.value ?? ""}
+                      onChange={(event) => edit(field, event.target.value)}
+                      spellCheck={false}
+                      aria-label={field.label}
+                      aria-invalid={problem ? true : undefined}
+                      aria-describedby={problem ? problemId : undefined}
+                      className={`${INPUT}${problem ? " border-warning" : ""}`}
+                    />
+                  ) : isReplacing ? (
+                    <input
+                      type="password"
+                      value={drafts[field.envKey] ?? ""}
+                      onChange={(event) => edit(field, event.target.value)}
+                      autoComplete="new-password"
+                      spellCheck={false}
+                      autoCapitalize="off"
+                      aria-label={`New ${field.label}`}
+                      aria-invalid={problem ? true : undefined}
+                      aria-describedby={problem ? problemId : undefined}
+                      className={`${INPUT}${problem ? " border-warning" : ""}`}
+                    />
+                  ) : (
+                    <>
+                      <span
+                        aria-hidden="true"
+                        className="font-mono text-sm tabular-nums text-ink"
+                      >
+                        {field.masked ?? "Not set"}
+                      </span>
+                      <span className="sr-only">
+                        {field.masked === null
+                          ? "Credential not set"
+                          : "Credential set"}
+                      </span>
+                    </>
+                  )}
+
+                  {secret && !isReplacing && (
+                    <button
+                      type="button"
+                      onClick={() => replace(field)}
+                      className={SECONDARY}
+                    >
+                      Replace
+                    </button>
+                  )}
+                </div>
+
+                {problem ? (
+                  <p id={problemId} className="text-[11px] text-warning">
+                    {problem}
+                  </p>
+                ) : null}
+
+                <p className="text-[11px] leading-relaxed text-muted">
+                  {field.hint}
+                  {field.helpUrl ? (
+                    <>
+                      {" "}
+                      <a
+                        href={field.helpUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary underline underline-offset-2"
+                      >
+                        Open provider console
+                      </a>
+                    </>
+                  ) : null}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        {status === 422 || validateStatus === 422 ? (
+          <div
+            role="alert"
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-ink"
+          >
+            <p className="font-medium">
+              {status === 422 ? error?.message : validate.error?.message}
+            </p>
+            <ul className="mt-1 flex flex-col gap-0.5">
+              {(failures.length > 0 ? failures : validationFailures).map(
+                (failure) => (
+                  <li key={failure.key}>
+                    <span className="font-mono">{failure.key}</span> —{" "}
+                    {failure.reason}
+                  </li>
+                ),
+              )}
+            </ul>
+          </div>
+        ) : status === 409 ? (
+          <div
+            role="alert"
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-ink"
+          >
+            Another admin changed these credentials. Reload this row and
+            re-enter your change.
+          </div>
+        ) : status === 429 ? (
+          <p role="alert" className="text-xs text-warning">
+            Too many attempts. Wait a minute, then retry.
+          </p>
+        ) : error ? (
+          <p role="alert" className="text-xs text-warning">
+            {error.message}
+          </p>
+        ) : validate.error ? (
+          <p role="alert" className="text-xs text-warning">
+            {validate.error.message}
+          </p>
+        ) : null}
+      </ActiveEditors>
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={runValidation}
-          disabled={!dirty || validate.isPending}
+          disabled={lock.blocked || !dirty || validate.isPending}
           aria-busy={validate.isPending ? "true" : undefined}
           className={SECONDARY}
         >
@@ -321,7 +334,7 @@ export default function IntegrationCredentialsEditor({
         <button
           type="button"
           onClick={submit}
-          disabled={!dirty || !validated || save.isPending}
+          disabled={lock.blocked || !dirty || !validated || save.isPending}
           aria-busy={save.isPending ? "true" : undefined}
           className={PRIMARY}
         >
@@ -338,7 +351,7 @@ export default function IntegrationCredentialsEditor({
         <button
           type="button"
           onClick={resetToEnv}
-          disabled={reset.isPending}
+          disabled={lock.blocked || reset.isPending}
           className={SECONDARY}
         >
           Reset to .env
@@ -347,6 +360,7 @@ export default function IntegrationCredentialsEditor({
         {status === 422 || (error && status !== 409 && status !== 429) ? (
           <button
             type="button"
+            disabled={lock.blocked}
             onClick={() => save.mutate(sent ?? payload)}
             className={SECONDARY}
           >

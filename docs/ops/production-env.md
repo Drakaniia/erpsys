@@ -11,11 +11,11 @@ Replace `<domain>` below with the real site address, for example
 
 ## 1. Where production reads its variables
 
-| Thing | Local | Production |
-| --- | --- | --- |
-| Runtime config | `.env` in the repo root | `/etc/erpsys.env` (`root:erpsys`, mode `0640`), loaded by systemd `EnvironmentFile` |
-| `VITE_*` values | `.env` | The **build host's** environment when you run `pnpm build`. Changing one needs a rebuild, not a restart. |
-| Integration overrides | n/a | Admin → Integrations stores them encrypted in MongoDB. They override the file **after a restart**. |
+| Thing                 | Local                   | Production                                                                                               |
+| --------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------- |
+| Runtime config        | `.env` in the repo root | `/etc/erpsys.env` (`root:erpsys`, mode `0640`), loaded by systemd `EnvironmentFile`                      |
+| `VITE_*` values       | `.env`                  | The **build host's** environment when you run `pnpm build`. Changing one needs a rebuild, not a restart. |
+| Integration overrides | n/a                     | Admin → Integrations stores them encrypted in MongoDB. They override the file **after a restart**.       |
 
 Rules:
 
@@ -26,30 +26,30 @@ Rules:
 
 ## 2. Change these (they are wrong in production if copied from local)
 
-| Variable | Local value | Production value |
-| --- | --- | --- |
-| `NODE_ENV` | unset (`development`) | `production`. Required, or the server serves stack traces. |
-| `PORT` | `3001` | `3001`, matching the `upstream` in `deploy/nginx/erpsys.conf` |
-| `DATABASE_URL` | local or dev Mongo | The MongoDB Atlas connection string (M10 or higher), database name in the path. Add the server's public egress IP to Atlas → Network Access. |
-| `BETTER_AUTH_SECRET` | dev secret | A **new** secret, at least 32 characters: `openssl rand -hex 32`. Do not reuse the local one. |
-| `BETTER_AUTH_URL` | `http://localhost:5173` | `<domain>`. A mismatch gives a 403 on every write. |
-| `PUBLIC_SITE_URL` | `http://localhost:...` | `<domain>`. A `localhost` value refuses to boot. |
-| `WEB_ORIGIN` | local web origin | Empty for the single-origin deploy, or the exact origin(s), comma-separated. |
-| `QUEUE_SHARE_SECRET` | unset | Optional new secret (`openssl rand -hex 32`) so share links rotate separately from sessions. |
-| `ADMIN_EMAILS` | test admin(s) | The real admin email(s), comma-separated. The first login must be one of them. |
-| `SU_PIN` | sample or test value | Exactly 6 digits, not `123456`. Wrong value refuses to boot. |
-| `SU_EMAIL` | test email | The real superuser email. |
-| `METRICS_TOKEN` | unset | A random token, or block `/api/metrics` in Nginx. |
+| Variable             | Local value             | Production value                                                                                                                             |
+| -------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`           | unset (`development`)   | `production`. Required, or the server serves stack traces.                                                                                   |
+| `PORT`               | `3001`                  | `3001`, matching the `upstream` in `deploy/nginx/erpsys.conf`                                                                                |
+| `DATABASE_URL`       | local or dev Mongo      | The MongoDB Atlas connection string (M10 or higher), database name in the path. Add the server's public egress IP to Atlas → Network Access. |
+| `BETTER_AUTH_SECRET` | dev secret              | A **new** secret, at least 32 characters: `openssl rand -hex 32`. Do not reuse the local one.                                                |
+| `BETTER_AUTH_URL`    | `http://localhost:5173` | `<domain>`. A mismatch gives a 403 on every write.                                                                                           |
+| `PUBLIC_SITE_URL`    | `http://localhost:...`  | `<domain>`. A `localhost` value refuses to boot.                                                                                             |
+| `WEB_ORIGIN`         | local web origin        | Empty for the single-origin deploy, or the exact origin(s), comma-separated.                                                                 |
+| `QUEUE_SHARE_SECRET` | unset                   | Optional new secret (`openssl rand -hex 32`) so share links rotate separately from sessions.                                                 |
+| `ADMIN_EMAILS`       | test admin(s)           | The real admin email(s), comma-separated. The first login must be one of them.                                                               |
+| `SU_PIN`             | sample or test value    | Exactly 6 digits, not `123456`. Wrong value refuses to boot.                                                                                 |
+| `SU_EMAIL`           | test email              | The real superuser email.                                                                                                                    |
+| `METRICS_TOKEN`      | unset                   | A random token, or block `/api/metrics` in Nginx.                                                                                            |
 
 ## 3. Third-party services: new production values
 
-| Service | Variables | What to do |
-| --- | --- | --- |
-| Cloudflare Turnstile | `TURNSTILE_SECRET_KEY`, `TURNSTILE_HOSTNAMES`, `VITE_TURNSTILE_SITE_KEY` | Add `<domain>`'s hostname to the widget. Set `TURNSTILE_HOSTNAMES` to that hostname (it defaults to `localhost`). `VITE_TURNSTILE_SITE_KEY` goes on the **build host**, not in `/etc/erpsys.env`. An empty secret turns bot protection off. |
-| Cloudflare R2 | `R2_BUCKET`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Use the production bucket (`erpsys-prod`), not the dev one. Mint a token scoped to that bucket only. Apply `deploy/r2/cors.json` with the production origin, or uploads fail in the browser. Empty values refuse to boot. Check with `pnpm --filter @erpsys/server r2:verify`. |
-| Cloudflare Workers AI | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` | Same account is fine. Mint a token scoped to Workers AI. Empty only disables the chatbot. |
-| Brevo mail | `BREVO_API_KEY`, `MAIL_FROM` | Real key and a verified sender. Empty silently drops password-reset mail in production. |
-| Google sign-in | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | See section 4. |
+| Service               | Variables                                                                | What to do                                                                                                                                                                                                                                                                     |
+| --------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cloudflare Turnstile  | `TURNSTILE_SECRET_KEY`, `TURNSTILE_HOSTNAMES`, `VITE_TURNSTILE_SITE_KEY` | Add `<domain>`'s hostname to the widget. Set `TURNSTILE_HOSTNAMES` to that hostname (it defaults to `localhost`). `VITE_TURNSTILE_SITE_KEY` goes on the **build host**, not in `/etc/erpsys.env`. An empty secret turns bot protection off.                                    |
+| Cloudflare R2         | `R2_BUCKET`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`   | Use the production bucket (`erpsys-prod`), not the dev one. Mint a token scoped to that bucket only. Apply `deploy/r2/cors.json` with the production origin, or uploads fail in the browser. Empty values refuse to boot. Check with `pnpm --filter @erpsys/server r2:verify`. |
+| Cloudflare Workers AI | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`                          | Same account is fine. Mint a token scoped to Workers AI. Empty only disables the chatbot.                                                                                                                                                                                      |
+| Brevo mail            | `BREVO_API_KEY`, `MAIL_FROM`                                             | Real key and a verified sender. Empty silently drops password-reset mail in production.                                                                                                                                                                                        |
+| Google sign-in        | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                               | See section 4.                                                                                                                                                                                                                                                                 |
 
 ## 4. Google (sign-in and Forms)
 
@@ -90,12 +90,12 @@ Without it the schedule still works and students still see it.
 
 ## 5. Remove these (not used in production)
 
-| Variable | Why |
-| --- | --- |
-| `SEED_PASSWORD` | Read by nothing in the repo. |
-| `UPLOADTHING_TOKEN` | No code references it. |
-| `CUSTOM_GOOGLE_CLIENT_ID`, `CUSTOM_GOOGLE_CLIENT_SECRET` | No code references them. |
-| `GOOGLE_FORMS_SA_EMAIL`, `GOOGLE_FORMS_SA_PRIVATE_KEY` | Service accounts cannot create forms (`forms.create` returns HTTP 500). Also delete the `erpsys-*.json` key file and revoke the key in IAM & Admin → Service Accounts → Keys. |
+| Variable                                                 | Why                                                                                                                                                                           |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SEED_PASSWORD`                                          | Read by nothing in the repo.                                                                                                                                                  |
+| `UPLOADTHING_TOKEN`                                      | No code references it.                                                                                                                                                        |
+| `CUSTOM_GOOGLE_CLIENT_ID`, `CUSTOM_GOOGLE_CLIENT_SECRET` | No code references them.                                                                                                                                                      |
+| `GOOGLE_FORMS_SA_EMAIL`, `GOOGLE_FORMS_SA_PRIVATE_KEY`   | Service accounts cannot create forms (`forms.create` returns HTTP 500). Also delete the `erpsys-*.json` key file and revoke the key in IAM & Admin → Service Accounts → Keys. |
 
 ## 6. Keep as defaults unless you have a reason
 

@@ -17,6 +17,7 @@ export default function AppleSwitch({
   busy = false,
   interactive = true,
   ariaLabel,
+  onboardingTip,
 }: {
   /** Current on/off state. */
   checked: boolean;
@@ -29,6 +30,7 @@ export default function AppleSwitch({
   busy?: boolean;
   interactive?: boolean;
   ariaLabel?: string;
+  onboardingTip?: string;
 }) {
   const hintId = `apple-switch-hint-${useId()}`;
   const blocked = disabled || busy;
@@ -114,6 +116,7 @@ export default function AppleSwitch({
         <button
           type="button"
           role="switch"
+          data-onboarding-tip={onboardingTip}
           aria-checked={checked}
           aria-label={label ? undefined : ariaLabel}
           aria-describedby={description ? hintId : undefined}

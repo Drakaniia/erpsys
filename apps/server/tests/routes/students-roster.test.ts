@@ -59,14 +59,22 @@ function seed(): Record<string, Row[]> {
       },
     ],
     [COLLECTIONS.department]: [
-      { _id: "dept-1", name: "College of Technologies", isActive: true },
+      {
+        _id: "dept-1",
+        name: "College of Technologies",
+        isActive: true,
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: [] }],
+      },
     ],
-    [COLLECTIONS.adviserDepartment]: [
-      { _id: "link-1", adviserId: "adv1", departmentId: "dept-1" },
-    ],
+
     [COLLECTIONS.user]: [
       {
         _id: "u-p1",
+        studentProfile: {
+          _id: "p1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
@@ -74,6 +82,11 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p2",
+        studentProfile: {
+          _id: "p2",
+          studentNumber: "12346",
+          academicYearId: "ay-1",
+        },
         name: "Ben",
         email: "12346@student.buksu.edu.ph",
         role: "STUDENT",
@@ -81,6 +94,11 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p3",
+        studentProfile: {
+          _id: "p3",
+          studentNumber: "12347",
+          academicYearId: "ay-1",
+        },
         name: "Cara",
         email: "12347@student.buksu.edu.ph",
         role: "STUDENT",
@@ -88,6 +106,11 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p4",
+        studentProfile: {
+          _id: "p4",
+          studentNumber: "12348",
+          academicYearId: "ay-1",
+        },
         name: "Dan",
         email: "12348@student.buksu.edu.ph",
         role: "STUDENT",
@@ -101,32 +124,7 @@ function seed(): Record<string, Row[]> {
         createdAt: new Date("2024-12-31"),
       },
     ],
-    [COLLECTIONS.studentProfile]: [
-      {
-        _id: "p1",
-        userId: "u-p1",
-        studentNumber: "12345",
-        academicYearId: "ay-1",
-      },
-      {
-        _id: "p2",
-        userId: "u-p2",
-        studentNumber: "12346",
-        academicYearId: "ay-1",
-      },
-      {
-        _id: "p3",
-        userId: "u-p3",
-        studentNumber: "12347",
-        academicYearId: "ay-1",
-      },
-      {
-        _id: "p4",
-        userId: "u-p4",
-        studentNumber: "12348",
-        academicYearId: "ay-1",
-      },
-    ],
+
     [COLLECTIONS.studentEnrollment]: [
       {
         _id: "enr-1",
@@ -150,26 +148,13 @@ function seed(): Record<string, Row[]> {
         yearLevel: "FIRST",
       },
     ],
-    [COLLECTIONS.step]: [
-      ...PRE.map((code, index) => ({
-        _id: `step-${code}`,
-        code,
-        name: code,
-        order: index + 1,
-      })),
-      {
-        _id: "step-ENROLLMENT",
-        code: "ENROLLMENT",
-        name: "Enrollment",
-        order: 6,
-      },
-    ],
+
     [COLLECTIONS.stepVerification]: [
       // p1: all five pre-enrollment steps verified, no queue row → READY.
       ...PRE.map((code, index) => ({
         _id: `v-p1-${index}`,
         studentProfileId: "p1",
-        stepId: `step-${code}`,
+        stepId: code,
         academicYearId: "ay-1",
         status: "VERIFIED",
       })),
@@ -177,7 +162,7 @@ function seed(): Record<string, Row[]> {
       {
         _id: "v-p2-1",
         studentProfileId: "p2",
-        stepId: "step-ASSESSMENT",
+        stepId: "ASSESSMENT",
         academicYearId: "ay-1",
         status: "SUBMITTED",
       },
@@ -185,7 +170,7 @@ function seed(): Record<string, Row[]> {
       {
         _id: "v-p3-1",
         studentProfileId: "p3",
-        stepId: "step-ENROLLMENT",
+        stepId: "ENROLLMENT",
         academicYearId: "ay-1",
         status: "VERIFIED",
       },
@@ -329,7 +314,7 @@ describe("roster", () => {
   });
 
   it("refuses a student outside the adviser's departments", async () => {
-    context.store[COLLECTIONS.adviserDepartment] = [];
+    context.store[COLLECTIONS.department][0].advisers = [];
     const response = await fetch(`${server.url}/api/v1/students/p3`);
     expect(response.status).toBe(403);
     expect((await response.json()).error).toBe(
@@ -376,10 +361,37 @@ describe("roster board", () => {
     expect(body.data.stats.year).toMatchObject({ label: "2025-2026" });
   });
 
-  it("refuses a role without the instructor surface", async () => {
-    holder.session = OFFICER;
+  it("lets admins read the board across departments even with scope=mine", async () => {
+    holder.session = {
+      user: { id: "adm1", email: "admin@buksu.edu.ph", role: "ADMIN" },
+    };
+    const response = await fetch(
+      `${server.url}/api/v1/students/board?scope=mine`,
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(
+      body.data.roster.data.map(
+        (row: { studentName: string }) => row.studentName,
+      ),
+    ).toEqual(["Ana", "Ben", "Cara"]);
+    expect(body.data.roster.total).toBe(3);
+    expect(body.data.stats.stats.total).toBe(3);
+  });
+
+  it.each([OFFICER, STUDENT])(
+    "refuses other roles ($user.role)",
+    async (session) => {
+      holder.session = session;
+      const response = await fetch(`${server.url}/api/v1/students/board`);
+      expect(response.status).toBe(403);
+    },
+  );
+
+  it("requires a session", async () => {
+    holder.session = null;
     const response = await fetch(`${server.url}/api/v1/students/board`);
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(401);
   });
 });
 
@@ -416,8 +428,8 @@ describe("roster reports", () => {
   it("returns the step register for one step", async () => {
     holder.session = OFFICER;
     const body = await get("/reports/step-register?step=ASSESSMENT");
-    // Seed step names are their codes; the payload echoes the stored name.
-    expect(body.data.step).toEqual({ code: "ASSESSMENT", name: "ASSESSMENT" });
+    // Fixed definitions provide the canonical display name.
+    expect(body.data.step).toEqual({ code: "ASSESSMENT", name: "Assessment" });
     expect(body.data.matchedCount).toBe(2);
     // `submittedAt` ascending sorts by status first, so SUBMITTED leads.
     expect(
