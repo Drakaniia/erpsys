@@ -41,6 +41,21 @@ type ListedEntry = {
   servedAt: string | null;
 };
 
+export function capWaitingEntries<T extends { departmentId: string }>(
+  rows: T[],
+  departmentIds: string[],
+  cap: number,
+): T[] {
+  const remaining = new Map(departmentIds.map((id) => [id, cap]));
+  return rows.filter((row) => {
+    const id = String(row.departmentId);
+    const count = remaining.get(id) ?? 0;
+    if (count === 0) return false;
+    remaining.set(id, count - 1);
+    return true;
+  });
+}
+
 export async function myQueues(adviserId: string) {
   const year = await AcademicYearModel.findActive();
   if (!year) {
@@ -76,11 +91,12 @@ export async function myQueues(adviserId: string) {
   const [openRows, myRows, waiting, serving] = await Promise.all([
     AdviserScheduleModel.listOpenByDepartments(deptIds, yearId),
     AdviserScheduleModel.listMineByDepartments(adviserId, deptIds, yearId),
-    Promise.all(
-      deptIds.map((id) =>
-        EnrollmentQueueModel.listByStatus([id], yearId, "WAITING", ENTRY_CAP),
-      ),
-    ).then((rows) => rows.flat()),
+    EnrollmentQueueModel.listByStatus(
+      deptIds,
+      yearId,
+      "WAITING",
+      ENTRY_CAP * deptIds.length,
+    ).then((rows) => capWaitingEntries(rows, deptIds, ENTRY_CAP)),
     EnrollmentQueueModel.listByStatus(deptIds, yearId, "IN_PROGRESS"),
   ]);
   const waitingCounts = await Promise.all(
