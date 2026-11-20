@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useEditTimestamp } from "$lib/edit-timestamp";
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
-import { api, queryClient } from "$lib/api";
+import { api } from "$lib/api";
 import { useStorageUpload } from "$lib/storage/use-storage-upload";
 import type { StepStatus } from "$lib/officer/types";
 import {
@@ -9,6 +9,7 @@ import {
   doReply,
   doRevoke,
   doVerify,
+  refreshOfficerSubmissions,
 } from "$lib/officer/detail-handlers";
 
 /**
@@ -138,7 +139,7 @@ export function useDetailSheetState(
 
   function afterMutation(message: string) {
     setAnnouncement(message);
-    queryClient.invalidateQueries({ queryKey: ["officer"] });
+    refreshOfficerSubmissions();
   }
 
   async function handleVerify() {
@@ -209,7 +210,11 @@ export function useDetailSheetState(
           const done = await uploadMugshot(file, {
             studentProfileId: (student as { id?: string })?.id,
           });
-          return { key: done.fileKey, url: done.fileUrl };
+          return {
+            key: done.fileKey,
+            url: done.fileUrl,
+            uploadId: done.uploadId,
+          };
         },
       },
       stampQuery.data as never,

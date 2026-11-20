@@ -86,6 +86,7 @@ export function useOfficerState(officerId: string) {
 
   const queries = useOfficerQueries({
     authenticated: Boolean(officerId),
+    activeTab,
     activeStep,
     pageNum,
     pageSize,
