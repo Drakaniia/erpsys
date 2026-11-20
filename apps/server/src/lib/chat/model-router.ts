@@ -55,7 +55,7 @@ let rpm = DEFAULT_CHAT_RPM;
 let capacity = rpm;
 let tokens = capacity;
 let refillPerMs = rpm / 60_000;
-let lastRefillMs = 0;
+let lastRefillMs: number | null = null;
 let pauseUntilMs = 0;
 
 export function configurePacer(
@@ -77,7 +77,7 @@ export function pauseProviderUntil(timestampMs: number): void {
 export function pacingWaitMs(now: number): number {
   if (pauseUntilMs > now) return pauseUntilMs - now;
 
-  if (lastRefillMs === 0) lastRefillMs = now;
+  if (lastRefillMs === null) lastRefillMs = now;
   if (now > lastRefillMs) {
     tokens = Math.min(capacity, tokens + (now - lastRefillMs) * refillPerMs);
     lastRefillMs = now;
@@ -90,20 +90,48 @@ export function pacingWaitMs(now: number): number {
   return Math.ceil((1 - tokens) / refillPerMs);
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+export class ProviderBusyError extends Error {
+  constructor() {
+    super("Provider pacing wait expired");
+    this.name = "ProviderBusyError";
+  }
+}
+
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      reject(signal?.reason ?? new Error("Aborted"));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) onAbort();
+  });
 }
 
 export async function acquireProviderSlot(
   maxWaitMs: number = MAX_PACE_WAIT_MS,
+  signal?: AbortSignal,
+  deadlineAt: number = Infinity,
 ): Promise<void> {
-  const started = Date.now();
+  const expiresAt = Math.min(Date.now() + Math.max(0, maxWaitMs), deadlineAt);
+  let first = true;
   for (;;) {
-    const wait = pacingWaitMs(Date.now());
+    signal?.throwIfAborted();
+    const now = Date.now();
+    if (now >= deadlineAt || (!first && now >= expiresAt)) {
+      throw new ProviderBusyError();
+    }
+    first = false;
+    const wait = pacingWaitMs(now);
     if (wait === 0) return;
-    const remaining = maxWaitMs - (Date.now() - started);
-    if (remaining <= 0) return;
-    await sleep(Math.min(wait, 250, remaining));
+    const remaining = expiresAt - now;
+    if (remaining <= 0) throw new ProviderBusyError();
+    await sleep(Math.min(wait, 250, remaining), signal);
   }
 }
 
