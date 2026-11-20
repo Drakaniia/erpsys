@@ -32,6 +32,7 @@ let sharedCheck:
   | undefined;
 let budgetSequence = 0;
 
+// Optional shared check (e.g. cross-process store) backing checkAsync; unset = per-process memory.
 export function configureSharedRateLimits(
   check: NonNullable<typeof sharedCheck>,
 ): void {
@@ -112,6 +113,7 @@ function assertPositive(label: string, value: number, integer: boolean): void {
   }
 }
 
+// One budget: per-key timestamps; a hit passes while fewer than `max` fall inside `windowMs`.
 export function createRateLimitBudget(opts: {
   windowMs: number;
   max: number;
@@ -145,6 +147,7 @@ export function createRateLimitBudget(opts: {
   };
 }
 
+// Middleware form of a budget: over-budget requests get 429 with Retry-After.
 export function slidingWindowRateLimit(opts: {
   windowMs: number;
   max: number;
@@ -179,6 +182,7 @@ export function slidingWindowRateLimit(opts: {
   };
 }
 
+// Best-effort caller IP: req.ip, then X-Forwarded-For, then the socket.
 export function clientIp(req: Request): string {
   const ip = req.ip;
   if (typeof ip === "string" && ip.length > 0) return ip;
@@ -191,6 +195,7 @@ export function clientIp(req: Request): string {
   return req.socket?.remoteAddress || "unknown";
 }
 
+// Maintenance hooks, used by tests: clear everything, one key, or expired keys.
 export function resetRateLimits(): void {
   for (const { store } of registry) store.clear();
 }
@@ -204,6 +209,8 @@ export function sweepRateLimits(): void {
   for (const { store, windowMs } of registry) sweepStore(store, now, windowMs);
 }
 
+// authRateLimit — used in routes/auth: throttles the /api/auth credential
+// endpoints (sign-in, sign-up, OTP send/verify) to 20 per 5 min per IP.
 const AUTH_RATE_LIMIT_WINDOW_MS = 5 * 60_000;
 export const AUTH_RATE_LIMIT_MAX = 20;
 
@@ -256,6 +263,8 @@ function sessionFingerprint(req: Request): string {
   return createHash("sha256").update(token).digest("hex").slice(0, 16);
 }
 
+// rpcRateLimit/restRateLimit — mounted on /api in app.ts: global backstop,
+// 300/min per session-cookie hash + IP (IP alone when anonymous).
 export const rpcRateLimit: RequestHandler = slidingWindowRateLimit({
   windowMs: RPC_RATE_LIMIT_WINDOW_MS,
   max: RPC_RATE_LIMIT_MAX,
