@@ -32,9 +32,17 @@ export default function EmailCodeForm({
   async function send() {
     if (busy || cooldown) return;
     setError("");
-    if (challenge && !token) {
-      setError("Please complete the verification challenge.");
-      return;
+    let challengeToken = token;
+    if (challenge && !challengeToken) {
+      try {
+        challengeToken = (await turnstile.current?.execute()) ?? "";
+      } catch {
+        /* the guard below reports every failure */
+      }
+      if (!challengeToken) {
+        setError("Please complete the verification challenge.");
+        return;
+      }
     }
     setBusy(true);
     try {
@@ -42,7 +50,9 @@ export default function EmailCodeForm({
       const result = await authClient.emailOtp.sendVerificationOtp({
         email: target,
         type: verification ? "email-verification" : "sign-in",
-        fetchOptions: { headers: { "cf-turnstile-response": token } },
+        fetchOptions: {
+          headers: { "cf-turnstile-response": challengeToken },
+        },
       });
       if (result.error) {
         setError(

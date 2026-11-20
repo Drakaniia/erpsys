@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { authClient, signUpStudent } from "$lib/auth-client";
 import { googleSignInCallback } from "$lib/auth/google-sign-in";
-import { PASSWORD_REQUIREMENTS } from "$lib/auth/password";
+import PasswordStrengthMeter from "./PasswordStrengthMeter";
 import { api } from "$lib/api";
 import { YEAR_LEVELS } from "$lib/domain/constants";
 import {
@@ -117,9 +117,17 @@ export default function RegisterCard() {
         setFormError(NO_ACADEMIC_YEAR_MESSAGE);
         return;
       }
-      if (turnstileEnabled && !turnstileToken) {
-        setFormError("Please complete the verification challenge.");
-        return;
+      let token = turnstileToken;
+      if (turnstileEnabled && !token) {
+        try {
+          token = (await turnstileRef.current?.execute()) ?? "";
+        } catch {
+          /* the guard below reports every failure */
+        }
+        if (!token) {
+          setFormError("Please complete the verification challenge.");
+          return;
+        }
       }
       const result = await signUpStudent({
         name: value.name,
@@ -129,7 +137,7 @@ export default function RegisterCard() {
         yearLevel: value.yearLevel as (typeof YEAR_LEVELS)[number],
         email: value.email,
         password: value.password,
-        "cf-turnstile-response": turnstileToken,
+        "cf-turnstile-response": token,
       });
       resetTurnstile();
       if (result.error) {
@@ -302,14 +310,19 @@ export default function RegisterCard() {
 
           <form.Field name="password">
             {(field) => (
-              <AuthField
-                field={field}
-                label="Password"
-                type="password"
-                autocomplete="new-password"
-                hint={PASSWORD_REQUIREMENTS}
-                onedit={() => setFormError("")}
-              />
+              <div className="sm:col-span-2">
+                <AuthField
+                  field={field}
+                  label="Password"
+                  type="password"
+                  autocomplete="new-password"
+                  describedBy="password-strength-rules"
+                  onedit={() => setFormError("")}
+                />
+                <PasswordStrengthMeter
+                  value={String(field.state.value ?? "")}
+                />
+              </div>
             )}
           </form.Field>
 
