@@ -19,7 +19,9 @@ export default function AssessmentSheet({
   const applyMutation = useMutation(
     api.student.applyAssessment.mutationOptions(),
   );
-  const removeMutation = useMutation(api.student.deleteEvidence.mutationOptions());
+  const removeMutation = useMutation(
+    api.student.deleteEvidence.mutationOptions(),
+  );
   const { upload } = useStorageUpload("evidenceImage");
   const [proof, setProof] = useState<File | null>(null);
   const [applying, setApplying] = useState(false);
@@ -29,7 +31,9 @@ export default function AssessmentSheet({
   const proofs = (step.evidence ?? []).filter(
     (item: StepRow["evidence"][number]) => item.kind === "PAYMENT_PROOF",
   );
-  const liveProofs = proofs.filter((item: StepRow["evidence"][number]) => !item.expired);
+  const liveProofs = proofs.filter(
+    (item: StepRow["evidence"][number]) => !item.expired,
+  );
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const presence = useEditTimestamp(
@@ -44,7 +48,11 @@ export default function AssessmentSheet({
       await removeMutation.mutateAsync({ id });
       await queryClient.invalidateQueries({ queryKey: ["student"] });
     } catch (e) {
-      notify((e as { message?: string }).message ?? "Could not remove proof of payment.", "error");
+      notify(
+        (e as { message?: string }).message ??
+          "Could not remove proof of payment.",
+        "error",
+      );
     }
   }
 
@@ -88,7 +96,17 @@ export default function AssessmentSheet({
               label="Upload proof of payment"
               hint="Choose a receipt image or PDF to send with your application."
               uploading={busy}
-              pending={proof ? [{ id: "payment-proof", name: proof.name, previewUrl: null }] : []}
+              pending={
+                proof
+                  ? [
+                      {
+                        id: "payment-proof",
+                        name: proof.name,
+                        previewUrl: null,
+                      },
+                    ]
+                  : []
+              }
               onpick={setProof}
               onremovepending={() => setProof(null)}
               ondelete={removeProof}

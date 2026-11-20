@@ -94,7 +94,11 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p1",
-        studentProfile: { _id: "p1", studentNumber: "12345", academicYearId: "ay-1" },
+        studentProfile: {
+          _id: "p1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
@@ -183,10 +187,18 @@ describe("adviser mapping", () => {
       adviserId: "adv1",
       assignments: [{ departmentId: "dept-3", yearLevels: ["SECOND"] }],
     });
-    expect(context.store[COLLECTIONS.department].find(department => department._id === "dept-3")?.advisers).toEqual([
+    expect(
+      context.store[COLLECTIONS.department].find(
+        (department) => department._id === "dept-3",
+      )?.advisers,
+    ).toEqual([
       expect.objectContaining({ adviserId: "adv1", yearLevels: ["SECOND"] }),
     ]);
-    expect(context.store[COLLECTIONS.department].find(department => department._id === "dept-1")?.advisers ?? []).toEqual([]);
+    expect(
+      context.store[COLLECTIONS.department].find(
+        (department) => department._id === "dept-1",
+      )?.advisers ?? [],
+    ).toEqual([]);
     expect(context.store[COLLECTIONS.adminActionLog]).toEqual([
       expect.objectContaining({
         actorId: "adm1",
@@ -235,7 +247,11 @@ describe("backend operation budgets", () => {
       yearLevels: ["FIRST"],
     });
     expect(response.status).toBe(200);
-    expect(context.store[COLLECTIONS.adviserSchedule].find(row => row.kind === "presence")?.isOpen).toBe(true);
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].find(
+        (row) => row.kind === "presence",
+      )?.isOpen,
+    ).toBe(true);
     expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
       status: "IN_PROGRESS",
       servedById: "adv1",
@@ -262,9 +278,11 @@ describe("backend operation budgets", () => {
     });
     expect(response.status).toBe(409);
     expect(response.body.data.code).toBe("TS_ABORTED");
-    expect(context.store[COLLECTIONS.adviserSchedule].find(row => row.kind === "presence")?.isOpen).toBe(
-      false,
-    );
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].find(
+        (row) => row.kind === "presence",
+      )?.isOpen,
+    ).toBe(false);
   });
   it.each(["assign", "unassign", "unchanged", "open", "close"])(
     "counts guarded database calls for %s",
@@ -349,7 +367,11 @@ describe("adviser availability", () => {
       isOpen: true,
       openBy: null,
     });
-    expect(context.store[COLLECTIONS.adviserSchedule].filter(row => row.kind === "presence")).toHaveLength(1);
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].filter(
+        (row) => row.kind === "presence",
+      ),
+    ).toHaveLength(1);
   });
 
   it("closing releases only my serving student in the active year", async () => {

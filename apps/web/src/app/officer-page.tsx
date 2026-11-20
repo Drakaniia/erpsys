@@ -253,13 +253,11 @@ export function OfficerPage() {
             unreadIds={s.unreadIds}
             selectedId={s.selectedId}
             q={s.searchQ}
-
             evidence={s.evidenceFilter}
             range={s.rangeFilter}
             unreadOnly={s.unreadOnly}
             filterActive={s.filterActive}
             onqchange={(v) => s.updateUrl({ q: v || null, page: null })}
-
             onevidencechange={(v) =>
               s.updateUrl({ evidence: v === "ALL" ? null : v, page: null })
             }

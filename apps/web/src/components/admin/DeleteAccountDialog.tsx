@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { dialogTrap } from "$lib/ui/dialog-trap";
 
 export default function DeleteAccountDialog({
@@ -7,6 +7,8 @@ export default function DeleteAccountDialog({
   excludedCount = 0,
   adviserNote = false,
   busy = false,
+  confirmDisabled = false,
+  children,
   onconfirm,
   onclose,
 }: {
@@ -15,6 +17,8 @@ export default function DeleteAccountDialog({
   excludedCount?: number;
   adviserNote?: boolean;
   busy?: boolean;
+  confirmDisabled?: boolean;
+  children?: ReactNode;
   onconfirm: () => void;
   onclose: () => void;
 }) {
@@ -76,10 +80,11 @@ export default function DeleteAccountDialog({
         )}
         {isBulk && excludedCount > 0 && (
           <p className="mt-2 text-xs text-muted">
-            {excludedCount} row{excludedCount === 1 ? "" : "s"} excluded (admin
-            or blocked accounts).
+            {excludedCount} row{excludedCount === 1 ? "" : "s"} excluded (your
+            account or blocked accounts).
           </p>
         )}
+        {children}
         <div className="mt-4 flex justify-end gap-2">
           <button
             type="button"
@@ -92,7 +97,7 @@ export default function DeleteAccountDialog({
           <button
             type="button"
             onClick={onconfirm}
-            disabled={busy}
+            disabled={busy || confirmDisabled}
             className="rounded-lg bg-error px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
           >
             {busy ? "Working…" : "Delete account"}

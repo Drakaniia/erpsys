@@ -8,7 +8,8 @@ import { queryClient } from "$lib/api";
 import IntegrationsPanel from "./IntegrationsPanel";
 
 vi.mock("../ActiveEditors", () => ({
-  default: ({ children }: { children?: import("react").ReactNode }) => children ?? null,
+  default: ({ children }: { children?: import("react").ReactNode }) =>
+    children ?? null,
   useEditingLock: () => ({ blocked: false, onBlockedChange: () => {} }),
 }));
 

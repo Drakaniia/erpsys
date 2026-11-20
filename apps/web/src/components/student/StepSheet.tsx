@@ -148,7 +148,8 @@ export default function StepSheet({
         onPointerDown={(e) => {
           if (desktop) return;
           const target = e.target as HTMLElement;
-          if (target.closest("button, a, summary, input, textarea, select")) return;
+          if (target.closest("button, a, summary, input, textarea, select"))
+            return;
           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
           const now = performance.now();
           drag.current = {

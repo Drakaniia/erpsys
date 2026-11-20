@@ -42,10 +42,12 @@ export async function sweep(): Promise<void> {
         { $set: { isOpen: false, closedAt: now, autoClosedAt: now } } as never,
       );
     for (const presence of toClose) {
-      await db.collection(COLLECTIONS.department).updateOne(
-        { _id: presence.departmentId } as never,
-        { $pull: { advisers: { adviserId: presence.adviserId } } } as never,
-      );
+      await db
+        .collection(COLLECTIONS.department)
+        .updateOne(
+          { _id: presence.departmentId } as never,
+          { $pull: { advisers: { adviserId: presence.adviserId } } } as never,
+        );
     }
   }
 
@@ -63,14 +65,12 @@ export async function sweep(): Promise<void> {
     } as never)
     .toArray();
   for (const entry of stuck) {
-    const reverted = await db
-      .collection(COLLECTIONS.enrollmentQueue)
-      .updateOne(
-        { _id: entry._id, status: "IN_PROGRESS" } as never,
-        {
-          $set: { status: "WAITING", servedById: null, servedAt: null },
-        } as never,
-      );
+    const reverted = await db.collection(COLLECTIONS.enrollmentQueue).updateOne(
+      { _id: entry._id, status: "IN_PROGRESS" } as never,
+      {
+        $set: { status: "WAITING", servedById: null, servedAt: null },
+      } as never,
+    );
     if (reverted.matchedCount === 0 || !entry.servedById) continue;
     await db.collection(COLLECTIONS.notification).insertOne({
       _id: genId("notification"),
@@ -83,16 +83,14 @@ export async function sweep(): Promise<void> {
     } as never);
   }
 
-  await db
-    .collection(COLLECTIONS.upload)
-    .updateMany(
-      {
-        backend: "r2",
-        r2Status: "pending",
-        sessionExpiresAt: { $lte: now },
-      } as never,
-      { $set: { r2Status: "abandoned" } } as never,
-    );
+  await db.collection(COLLECTIONS.upload).updateMany(
+    {
+      backend: "r2",
+      r2Status: "pending",
+      sessionExpiresAt: { $lte: now },
+    } as never,
+    { $set: { r2Status: "abandoned" } } as never,
+  );
 }
 
 export function startSweeps(run = sweep, label = "sweep"): void {

@@ -10,15 +10,15 @@ There are no drops, deletes, source updates, automatic cleanup, indexes, account
 
 ## Exact transformations
 
-| Source | Destination | Transformation |
-| --- | --- | --- |
-| `student_profile` | `user.studentProfile` | Copy every persisted field except `userId`; retain `_id`, `studentNumber`, `academicYearId`, `createdAt`, `updatedAt`, `readTs`, `writeTs` when present. DTO `userId` derives from parent user. |
-| `adviser_department` | `department.advisers[]` | Copy every field except `departmentId`; retain assignment `_id`, `adviserId`, optional `yearLevels`, timestamps and guards. |
-| `requirement_item` | `content` | Retain every field and `_id`, add `kind: 'requirement'`. |
-| `social_media_link` | `content` | Retain every field and `_id`, add `kind: 'socialLink'`. |
-| `adviser_availability` | `adviser_schedule` | Retain every field and `_id`, add `kind: 'presence'`. |
-| `availability_window` | `adviser_schedule` | Retain fields and `_id`; move source `kind` (`WEEKLY`, `EXTRA`, `CANCEL`) to `windowKind`, set `kind: 'window'`. |
-| `step_verification.stepId` | Same row and field | Resolve the old `step._id` through its `code` to canonical `STEP_CODES`; already canonical values remain unchanged. All other fields, including evidence and guards, remain unchanged. |
+| Source                     | Destination             | Transformation                                                                                                                                                                                  |
+| -------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `student_profile`          | `user.studentProfile`   | Copy every persisted field except `userId`; retain `_id`, `studentNumber`, `academicYearId`, `createdAt`, `updatedAt`, `readTs`, `writeTs` when present. DTO `userId` derives from parent user. |
+| `adviser_department`       | `department.advisers[]` | Copy every field except `departmentId`; retain assignment `_id`, `adviserId`, optional `yearLevels`, timestamps and guards.                                                                     |
+| `requirement_item`         | `content`               | Retain every field and `_id`, add `kind: 'requirement'`.                                                                                                                                        |
+| `social_media_link`        | `content`               | Retain every field and `_id`, add `kind: 'socialLink'`.                                                                                                                                         |
+| `adviser_availability`     | `adviser_schedule`      | Retain every field and `_id`, add `kind: 'presence'`.                                                                                                                                           |
+| `availability_window`      | `adviser_schedule`      | Retain fields and `_id`; move source `kind` (`WEEKLY`, `EXTRA`, `CANCEL`) to `windowKind`, set `kind: 'window'`.                                                                                |
+| `step_verification.stepId` | Same row and field      | Resolve the old `step._id` through its `code` to canonical `STEP_CODES`; already canonical values remain unchanged. All other fields, including evidence and guards, remain unchanged.          |
 
 `step` rows are validated and retained untouched; runtime definitions replace their use. Missing step definitions are allowed only where references already use canonical codes. Unknown definitions, duplicate codes, canonical-ID/code disagreement, and unknown references fail closed. IDs are never generated or converted; BSON ObjectIds remain ObjectIds. Ambiguous string/ObjectId aliases fail closed instead of selecting a parent arbitrarily.
 
@@ -36,6 +36,7 @@ Yearly `student_enrollment` rows, their IDs and profile references are preserved
    ```
 
    `--dry-run` is optional and makes no writes, including no marker writes. Unknown, repeated, contradictory, or malformed arguments fail before configuration or connection. Output is counts and generic error codes only; no user data, documents, IDs, URIs, credentials or backup reference is printed. Do not capture driver debugging logs containing connection details.
+
 5. Investigate any generic reconciliation failure privately using secure database tooling. Do not paste raw user documents or credentials into tracked files. No automatic conflict resolution exists. Repeat a dry-run after any separately approved repair.
 
 The planner rejects duplicate/ambiguous profile ownership or student numbers, missing parents, source/destination ID collisions, different destination fields, invalid assignment levels, overlapping year-level assignments within a department (empty means all levels), duplicate adviser/department assignments, duplicate presence tuples `(adviserId, departmentId, academicYearId)`, unknown schedule discriminators, and invalid/overlapping windows using the existing per-adviser/department/year schedule validator. One adviser may hold assignments in multiple departments. Duplicate verification tuples created by remapping also fail. Nothing is silently discarded.

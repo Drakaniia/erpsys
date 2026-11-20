@@ -26,7 +26,6 @@ export function canUseStudentSurface(role: string | null | undefined): boolean {
   return canEnterSurface(role, "student");
 }
 
-
 export function landingSurfaceForRole(
   role: string | null | undefined,
 ): SurfaceId {

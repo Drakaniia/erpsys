@@ -73,14 +73,14 @@ The comment rules are in `AGENTS.md` → "Comments".
 
 ### `apps/web/src/lib/api.ts` — client side
 
-| Code              | Line | Purpose                                                                     |
-| ----------------- | ---- | --------------------------------------------------------------------------- |
-| `TS_ABORTED`      | 13   | Same abort code as the server.                                              |
-| `tsById`          | 17   | Map of record id → the `ts` it was last read at.                            |
-| `rememberTs()`    | 19   | Records the envelope `ts` for every `_id`/`id` in a response.               |
+| Code              | Line | Purpose                                                                       |
+| ----------------- | ---- | ----------------------------------------------------------------------------- |
+| `TS_ABORTED`      | 13   | Same abort code as the server.                                                |
+| `tsById`          | 17   | Map of record id → the `ts` it was last read at.                              |
+| `rememberTs()`    | 19   | Records the envelope `ts` for every `_id`/`id` in a response.                 |
 | `request()` catch |      | On `409 TS_ABORTED`: shows a toast and rethrows without discarding the draft. |
-| `send()`          | 163  | On PUT/PATCH/DELETE, adds the remembered `ts` for the URL's id to the body. |
-| `send()`          | 199  | Calls `rememberTs()` for every successful JSON response.                    |
+| `send()`          | 163  | On PUT/PATCH/DELETE, adds the remembered `ts` for the URL's id to the body.   |
+| `send()`          | 199  | Calls `rememberTs()` for every successful JSON response.                      |
 
 ## Active review editors
 

@@ -45,7 +45,6 @@ const STUDENT = {
   },
 };
 
-
 function seed(): Record<string, Row[]> {
   return {
     [COLLECTIONS.academicYear]: [
@@ -58,7 +57,6 @@ function seed(): Record<string, Row[]> {
       },
     ],
 
-
     [COLLECTIONS.stepVerification]: [],
     [COLLECTIONS.upload]: [],
     [COLLECTIONS.storageUsage]: [],
@@ -66,7 +64,11 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.user]: [
       {
         _id: "stud1",
-        studentProfile: { _id: "profile-1", studentNumber: "12345", academicYearId: "ay-1" },
+        studentProfile: {
+          _id: "profile-1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
@@ -182,20 +184,36 @@ describe("storage session", () => {
 
 describe("proof upload and submission timestamps", () => {
   it("attaches only finalized payment proof when applying for assessment", async () => {
-    const mintProof = () => mint({ route: "evidenceImage", stepCode: "ASSESSMENT", mime: "image/jpeg", size: 1000 });
+    const mintProof = () =>
+      mint({
+        route: "evidenceImage",
+        stepCode: "ASSESSMENT",
+        mime: "image/jpeg",
+        size: 1000,
+      });
     const session = await mintProof();
     expect(session.status).toBe(201);
-    const { data: { uploadId } } = await session.json();
+    const {
+      data: { uploadId },
+    } = await session.json();
     expect((await mintProof()).status).toBe(201);
     const completed = await call("/storage/complete", {
-      method: "POST", body: JSON.stringify({ uploadId }),
+      method: "POST",
+      body: JSON.stringify({ uploadId }),
     });
     expect(completed.status).toBe(200);
     expect(context.store[COLLECTIONS.stepVerification]).toHaveLength(0);
-    const applied = await call("/me/assessment", { method: "POST", body: "{}" });
+    const applied = await call("/me/assessment", {
+      method: "POST",
+      body: "{}",
+    });
     expect(applied.status).toBe(200);
     expect(context.store[COLLECTIONS.stepVerification]).toMatchObject([
-      { status: "PENDING", evidence: { uploadIds: [uploadId] }, evidenceCount: 1 },
+      {
+        status: "PENDING",
+        evidence: { uploadIds: [uploadId] },
+        evidenceCount: 1,
+      },
     ]);
   });
 

@@ -34,20 +34,31 @@ describe("fixed step definitions", () => {
     for (const code of STEP_CODES) {
       expect(findStepById(code)).toEqual(findStepByCode(code));
     }
-    for (const unknown of ["", "assessment", "step-assessment", "UNKNOWN", "toString"]) {
+    for (const unknown of [
+      "",
+      "assessment",
+      "step-assessment",
+      "UNKNOWN",
+      "toString",
+    ]) {
       expect(findStepByCode(unknown)).toBeNull();
       expect(findStepById(unknown)).toBeNull();
     }
   });
 
   it("filters in canonical order, ignores unknown codes, and removes duplicates", () => {
-    expect(listStepsByCodes(["CONSENT", "ASSESSMENT", "UNKNOWN", "CONSENT"]))
-      .toEqual([findStepByCode("ASSESSMENT"), findStepByCode("CONSENT")]);
+    expect(
+      listStepsByCodes(["CONSENT", "ASSESSMENT", "UNKNOWN", "CONSENT"]),
+    ).toEqual([findStepByCode("ASSESSMENT"), findStepByCode("CONSENT")]);
     expect(listStepsByCodes([])).toEqual([]);
-    expect(listStepsByCodes(PRE_ENROLLMENT_STEP_CODES).map((step) => step.code))
-      .toEqual(PRE_ENROLLMENT_STEP_CODES);
-    expect(listStepsByCodes(PRE_ENROLLMENT_STEP_CODES).some((step) => step.code === "ENROLLMENT"))
-      .toBe(false);
+    expect(
+      listStepsByCodes(PRE_ENROLLMENT_STEP_CODES).map((step) => step.code),
+    ).toEqual(PRE_ENROLLMENT_STEP_CODES);
+    expect(
+      listStepsByCodes(PRE_ENROLLMENT_STEP_CODES).some(
+        (step) => step.code === "ENROLLMENT",
+      ),
+    ).toBe(false);
   });
 
   it("returns fresh data so callers cannot corrupt later lookups", () => {
@@ -64,7 +75,9 @@ describe("fixed step definitions", () => {
       name: "Assessment",
       order: 1,
     });
-    expect(listStepCodeMap()).toEqual(STEP_CODES.map((code) => ({ _id: code, code })));
+    expect(listStepCodeMap()).toEqual(
+      STEP_CODES.map((code) => ({ _id: code, code })),
+    );
   });
 
   it("remains compatible with awaited and Promise.all callers", async () => {

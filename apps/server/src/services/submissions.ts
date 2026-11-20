@@ -85,12 +85,14 @@ async function loadSubmissions(
     else where["studentProfileId"] = { $in: ids };
   }
   if (queue) {
-    where["$and"] = [{
-      $or: [
-        { status: { $in: ["APPLIED", "SUBMITTED"] } },
-        { status: "PENDING", appliedAt: { $gt: new Date(0) } },
-      ],
-    }];
+    where["$and"] = [
+      {
+        $or: [
+          { status: { $in: ["APPLIED", "SUBMITTED"] } },
+          { status: "PENDING", appliedAt: { $gt: new Date(0) } },
+        ],
+      },
+    ];
   } else if (input.status !== "ALL") where["status"] = input.status;
   if (input.range !== "ALL") {
     const now = Date.now();
@@ -117,8 +119,12 @@ async function loadSubmissions(
       : input.sort === "status"
         ? { status: direction, createdAt: direction }
         : input.dir === "asc"
-          ? (queue ? { appliedAt: 1, createdAt: 1 } : { status: 1, createdAt: 1 })
-          : (queue ? { appliedAt: -1, createdAt: -1 } : { createdAt: -1 });
+          ? queue
+            ? { appliedAt: 1, createdAt: 1 }
+            : { status: 1, createdAt: 1 }
+          : queue
+            ? { appliedAt: -1, createdAt: -1 }
+            : { createdAt: -1 };
   const [total, rows] = await Promise.all([
     StepVerificationModel.countWhere(where),
     StepVerificationModel.search(where, sort, skip, limit),
@@ -260,7 +266,8 @@ export async function submissionPage(
         })
         .filter((entry) => entry.fileUrl || isR2FileKey(entry.fileKey)),
       evidenceCount: ids.length,
-      hasGoogleFormsResponse: step?.code === "PROFILING" && Array.isArray(row.answers),
+      hasGoogleFormsResponse:
+        step?.code === "PROFILING" && Array.isArray(row.answers),
       hasReply: Boolean(row.respondedAt ?? row.replyNote),
       stepCode: step?.code ?? input.step ?? null,
       stepName: step?.name ?? "",

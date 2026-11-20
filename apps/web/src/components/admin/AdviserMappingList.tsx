@@ -143,92 +143,98 @@ export default function AdviserMappingList({
                 <li key={adviser.id} className="px-4 py-3">
                   {editingId === adviser.id ? (
                     <div className="flex flex-col gap-3">
-                      <ActiveEditors resource="adviser" id={adviser.id} onBlockedChange={lock.onBlockedChange}>
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
-                          aria-hidden="true"
-                        >
-                          {initials(adviser.name)}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-ink">
-                            {adviser.name}
-                          </p>
-                          <p className="truncate text-xs text-muted">
-                            {adviser.email}
-                          </p>
-                        </div>
-                      </div>
-                      <div
-                        className="flex flex-wrap gap-1.5"
-                        role="group"
-                        aria-label={`Departments for ${adviser.name}`}
+                      <ActiveEditors
+                        resource="adviser"
+                        id={adviser.id}
+                        onBlockedChange={lock.onBlockedChange}
                       >
-                        {activeDepartments.map((d) => {
-                          const selected = selectedLevels.has(d.id);
-                          return (
-                            <button
-                              key={d.id}
-                              type="button"
-                              onClick={() => toggleDept(d.id)}
-                              aria-pressed={selected}
-                              className={`rounded-full border px-3 py-1 text-xs font-medium tracking-[0.01em] transition-[transform,background-color,border-color,color] duration-100 ease-out active:scale-[0.97] ${
-                                selected
-                                  ? "border-primary bg-primary text-white"
-                                  : "border-border text-muted hover:border-primary/40 hover:text-primary"
-                              }`}
-                            >
-                              {d.code}
-                            </button>
-                          );
-                        })}
-                        {activeDepartments.length === 0 && (
-                          <p className="text-xs text-muted">
-                            No active departments to assign.
-                          </p>
-                        )}
-                      </div>
-
-                      {selectedLevels.size > 0 && (
-                        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-3 py-2.5">
-                          {[...selectedLevels.keys()].map((deptId) => {
-                            const dept = activeDepartments.find(
-                              (d) => d.id === deptId,
-                            );
-                            if (!dept) return null;
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+                            aria-hidden="true"
+                          >
+                            {initials(adviser.name)}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-ink">
+                              {adviser.name}
+                            </p>
+                            <p className="truncate text-xs text-muted">
+                              {adviser.email}
+                            </p>
+                          </div>
+                        </div>
+                        <div
+                          className="flex flex-wrap gap-1.5"
+                          role="group"
+                          aria-label={`Departments for ${adviser.name}`}
+                        >
+                          {activeDepartments.map((d) => {
+                            const selected = selectedLevels.has(d.id);
                             return (
-                              <div key={deptId} className="flex flex-col">
-                                <div className="flex items-center justify-between gap-2">
-                                  <p className="text-xs font-semibold text-ink">
-                                    {dept.code}
-                                  </p>
-                                  <span className="text-[11px] text-muted">
-                                    {departmentLevelRangeLabel(
-                                      selectedLevels.get(deptId) ?? [],
-                                    )}
-                                  </span>
-                                </div>
-                                <div className="mt-1.5">
-                                  <YearLevelChips
-                                    selected={selectedLevels.get(deptId) ?? []}
-                                    options={
-                                      dept.yearLevels.length > 0
-                                        ? dept.yearLevels
-                                        : YEAR_LEVELS
-                                    }
-                                    label="Year levels"
-                                    emptyNote="No levels selected — every year level this program offers."
-                                    onchange={(levels) =>
-                                      setLevels(deptId, levels)
-                                    }
-                                  />
-                                </div>
-                              </div>
+                              <button
+                                key={d.id}
+                                type="button"
+                                onClick={() => toggleDept(d.id)}
+                                aria-pressed={selected}
+                                className={`rounded-full border px-3 py-1 text-xs font-medium tracking-[0.01em] transition-[transform,background-color,border-color,color] duration-100 ease-out active:scale-[0.97] ${
+                                  selected
+                                    ? "border-primary bg-primary text-white"
+                                    : "border-border text-muted hover:border-primary/40 hover:text-primary"
+                                }`}
+                              >
+                                {d.code}
+                              </button>
                             );
                           })}
+                          {activeDepartments.length === 0 && (
+                            <p className="text-xs text-muted">
+                              No active departments to assign.
+                            </p>
+                          )}
                         </div>
-                      )}
+
+                        {selectedLevels.size > 0 && (
+                          <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-3 py-2.5">
+                            {[...selectedLevels.keys()].map((deptId) => {
+                              const dept = activeDepartments.find(
+                                (d) => d.id === deptId,
+                              );
+                              if (!dept) return null;
+                              return (
+                                <div key={deptId} className="flex flex-col">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="text-xs font-semibold text-ink">
+                                      {dept.code}
+                                    </p>
+                                    <span className="text-[11px] text-muted">
+                                      {departmentLevelRangeLabel(
+                                        selectedLevels.get(deptId) ?? [],
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1.5">
+                                    <YearLevelChips
+                                      selected={
+                                        selectedLevels.get(deptId) ?? []
+                                      }
+                                      options={
+                                        dept.yearLevels.length > 0
+                                          ? dept.yearLevels
+                                          : YEAR_LEVELS
+                                      }
+                                      label="Year levels"
+                                      emptyNote="No levels selected — every year level this program offers."
+                                      onchange={(levels) =>
+                                        setLevels(deptId, levels)
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </ActiveEditors>
                       <div className="flex gap-2">
                         <button

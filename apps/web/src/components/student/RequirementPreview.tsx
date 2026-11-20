@@ -3,27 +3,34 @@ import type { StepCode } from "$lib/student/types";
 const examples: Record<StepCode, { sample: string; guide: string }> = {
   ASSESSMENT: {
     sample: "Payment receipt · Reference: SAMPLE-001 · Date: 01 October",
-    guide: "If you upload proof of payment, use a clear photo or screenshot of your own receipt. Keep the date and reference number readable.",
+    guide:
+      "If you upload proof of payment, use a clear photo or screenshot of your own receipt. Keep the date and reference number readable.",
   },
   SOCIAL_MEDIA: {
     sample: "Official COT-SBO page · Following ✓",
-    guide: "Capture the page name and the Following or Liked status in the same screenshot. Use the pages listed in this step.",
+    guide:
+      "Capture the page name and the Following or Liked status in the same screenshot. Use the pages listed in this step.",
   },
   PROFILING: {
     sample: "Google Forms · Your response has been recorded",
-    guide: "Submit the form with your school Google account, then select ‘I’ve submitted’ here. ERPSYS checks the Google Forms record; no screenshot is needed.",
+    guide:
+      "Submit the form with your school Google account, then select ‘I’ve submitted’ here. ERPSYS checks the Google Forms record; no screenshot is needed.",
   },
   MUGSHOT: {
     sample: "Example: Face centered, front-facing, plain background",
-    guide: "Use a clear JPEG, PNG, or WebP photo up to 4 MB, or ask an SBO officer to take your photo.",
+    guide:
+      "Use a clear JPEG, PNG, or WebP photo up to 4 MB, or ask an SBO officer to take your photo.",
   },
   CONSENT: {
-    sample: "Annex E: General Parental/Guardian Consent Form · Annex F: Medical Certificate",
-    guide: "Upload clear scans or photos of your completed documents, not these samples. Keep the signatures and form text readable.",
+    sample:
+      "Annex E: General Parental/Guardian Consent Form · Annex F: Medical Certificate",
+    guide:
+      "Upload clear scans or photos of your completed documents, not these samples. Keep the signatures and form text readable.",
   },
   ENROLLMENT: {
     sample: "Example: Steps 1–5 verified · Department queue open",
-    guide: "No file is needed for this step. Join your department’s queue when your prior steps are verified and staff are available.",
+    guide:
+      "No file is needed for this step. Join your department’s queue when your prior steps are verified and staff are available.",
   },
 };
 

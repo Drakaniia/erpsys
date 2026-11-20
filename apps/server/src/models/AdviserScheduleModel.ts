@@ -35,7 +35,11 @@ type WindowInput = Pick<
   "kind" | "weekday" | "date" | "startMinute" | "endMinute"
 >;
 
-const windowView = ({ kind: _kind, windowKind, ...row }: StoredWindow): AvailabilityWindowRow => ({
+const windowView = ({
+  kind: _kind,
+  windowKind,
+  ...row
+}: StoredWindow): AvailabilityWindowRow => ({
   ...row,
   kind: windowKind,
 });
@@ -48,10 +52,18 @@ export class AdviserScheduleModel {
   ): Promise<AvailabilityRow | null> {
     return getDbSync()
       .collection<AvailabilityRow>(COLLECTIONS.adviserSchedule)
-      .findOne({ kind: "presence", adviserId, departmentId, academicYearId, isOpen: true } as never);
+      .findOne({
+        kind: "presence",
+        adviserId,
+        departmentId,
+        academicYearId,
+        isOpen: true,
+      } as never);
   }
 
-  static async listOpenByYear(academicYearId: string): Promise<AvailabilityRow[]> {
+  static async listOpenByYear(
+    academicYearId: string,
+  ): Promise<AvailabilityRow[]> {
     return getDbSync()
       .collection<AvailabilityRow>(COLLECTIONS.adviserSchedule)
       .find({ kind: "presence", academicYearId, isOpen: true } as never)
@@ -64,7 +76,12 @@ export class AdviserScheduleModel {
   ): Promise<AvailabilityRow[]> {
     return getDbSync()
       .collection<AvailabilityRow>(COLLECTIONS.adviserSchedule)
-      .find({ kind: "presence", departmentId, academicYearId, isOpen: true } as never)
+      .find({
+        kind: "presence",
+        departmentId,
+        academicYearId,
+        isOpen: true,
+      } as never)
       .toArray();
   }
 
@@ -91,7 +108,9 @@ export class AdviserScheduleModel {
   ): Promise<(AvailabilityRow & { autoClosedAt?: Date | null })[]> {
     if (departmentIds.length === 0) return [];
     return getDbSync()
-      .collection<AvailabilityRow & { autoClosedAt?: Date | null }>(COLLECTIONS.adviserSchedule)
+      .collection<AvailabilityRow & { autoClosedAt?: Date | null }>(
+        COLLECTIONS.adviserSchedule,
+      )
       .find({
         kind: "presence",
         adviserId,
@@ -101,7 +120,11 @@ export class AdviserScheduleModel {
       .toArray();
   }
 
-  static async closeForDepartment(adviserId: string, departmentId: string, now: Date): Promise<void> {
+  static async closeForDepartment(
+    adviserId: string,
+    departmentId: string,
+    now: Date,
+  ): Promise<void> {
     await getDbSync()
       .collection(COLLECTIONS.adviserSchedule)
       .updateMany(
@@ -110,16 +133,24 @@ export class AdviserScheduleModel {
       );
   }
 
-  static async isActive(adviserId: string, academicYearId: string, now: Date, staleMs: number): Promise<boolean> {
+  static async isActive(
+    adviserId: string,
+    academicYearId: string,
+    now: Date,
+    staleMs: number,
+  ): Promise<boolean> {
     const row = await getDbSync()
       .collection(COLLECTIONS.adviserSchedule)
-      .findOne({
-        kind: "presence",
-        adviserId,
-        academicYearId,
-        isOpen: true,
-        lastActiveAt: { $gte: new Date(now.getTime() - staleMs) },
-      } as never, { projection: { _id: 1 } });
+      .findOne(
+        {
+          kind: "presence",
+          adviserId,
+          academicYearId,
+          isOpen: true,
+          lastActiveAt: { $gte: new Date(now.getTime() - staleMs) },
+        } as never,
+        { projection: { _id: 1 } },
+      );
     return row !== null;
   }
 
@@ -169,16 +200,29 @@ export class AdviserScheduleModel {
       .deleteMany({ kind: "presence", departmentId } as never);
   }
 
-  static async closeOpenForAdviser(adviserId: string, keepDepartmentIds: string[] = []): Promise<void> {
+  static async closeOpenForAdviser(
+    adviserId: string,
+    keepDepartmentIds: string[] = [],
+  ): Promise<void> {
     await getDbSync()
       .collection(COLLECTIONS.adviserSchedule)
       .updateMany(
-        { kind: "presence", adviserId: refIn([adviserId]), isOpen: true, departmentId: { $nin: keepDepartmentIds } } as never,
-        { $set: { isOpen: false, closedAt: new Date(), autoClosedAt: null } } as never,
+        {
+          kind: "presence",
+          adviserId: refIn([adviserId]),
+          isOpen: true,
+          departmentId: { $nin: keepDepartmentIds },
+        } as never,
+        {
+          $set: { isOpen: false, closedAt: new Date(), autoClosedAt: null },
+        } as never,
       );
   }
 
-  static async listWindowsForAdviser(adviserId: string, academicYearId: string): Promise<AvailabilityWindowRow[]> {
+  static async listWindowsForAdviser(
+    adviserId: string,
+    academicYearId: string,
+  ): Promise<AvailabilityWindowRow[]> {
     const rows = await getDbSync()
       .collection<StoredWindow>(COLLECTIONS.adviserSchedule)
       .find({ kind: "window", adviserId, academicYearId } as never)
@@ -186,15 +230,27 @@ export class AdviserScheduleModel {
     return rows.map(windowView);
   }
 
-  static async listWindowsForAdviserDepartment(adviserId: string, departmentId: string, academicYearId: string): Promise<AvailabilityWindowRow[]> {
+  static async listWindowsForAdviserDepartment(
+    adviserId: string,
+    departmentId: string,
+    academicYearId: string,
+  ): Promise<AvailabilityWindowRow[]> {
     const rows = await getDbSync()
       .collection<StoredWindow>(COLLECTIONS.adviserSchedule)
-      .find({ kind: "window", adviserId, departmentId, academicYearId } as never)
+      .find({
+        kind: "window",
+        adviserId,
+        departmentId,
+        academicYearId,
+      } as never)
       .toArray();
     return rows.map(windowView);
   }
 
-  static async listWindowsByDepartment(departmentId: string, academicYearId: string): Promise<AvailabilityWindowRow[]> {
+  static async listWindowsByDepartment(
+    departmentId: string,
+    academicYearId: string,
+  ): Promise<AvailabilityWindowRow[]> {
     const rows = await getDbSync()
       .collection<StoredWindow>(COLLECTIONS.adviserSchedule)
       .find({ kind: "window", departmentId, academicYearId } as never)
@@ -202,50 +258,77 @@ export class AdviserScheduleModel {
     return rows.map(windowView);
   }
 
-  static async replaceWindows(adviserId: string, departmentId: string, academicYearId: string, rows: WindowInput[]): Promise<void> {
-    await getDbSync().collection(COLLECTIONS.adviserSchedule).deleteMany({
-      kind: "window", adviserId, departmentId, academicYearId,
-    } as never);
-    if (rows.length === 0) return;
-    const now = new Date();
-    await getDbSync().collection(COLLECTIONS.adviserSchedule).insertMany(
-      rows.map(({ kind, ...row }) => ({
-        ...row,
+  static async replaceWindows(
+    adviserId: string,
+    departmentId: string,
+    academicYearId: string,
+    rows: WindowInput[],
+  ): Promise<void> {
+    await getDbSync()
+      .collection(COLLECTIONS.adviserSchedule)
+      .deleteMany({
         kind: "window",
-        windowKind: kind,
-        _id: genId("window"),
         adviserId,
         departmentId,
         academicYearId,
-        createdAt: now,
-        updatedAt: now,
-      })) as never,
-    );
+      } as never);
+    if (rows.length === 0) return;
+    const now = new Date();
+    await getDbSync()
+      .collection(COLLECTIONS.adviserSchedule)
+      .insertMany(
+        rows.map(({ kind, ...row }) => ({
+          ...row,
+          kind: "window",
+          windowKind: kind,
+          _id: genId("window"),
+          adviserId,
+          departmentId,
+          academicYearId,
+          createdAt: now,
+          updatedAt: now,
+        })) as never,
+      );
   }
 
-  static async deleteWindowsForAdviser(adviserId: string, keepDepartmentIds: string[] = []): Promise<number> {
-    const result = await getDbSync().collection(COLLECTIONS.adviserSchedule).deleteMany({
-      kind: "window", adviserId: refIn([adviserId]), departmentId: { $nin: keepDepartmentIds },
-    } as never);
+  static async deleteWindowsForAdviser(
+    adviserId: string,
+    keepDepartmentIds: string[] = [],
+  ): Promise<number> {
+    const result = await getDbSync()
+      .collection(COLLECTIONS.adviserSchedule)
+      .deleteMany({
+        kind: "window",
+        adviserId: refIn([adviserId]),
+        departmentId: { $nin: keepDepartmentIds },
+      } as never);
     return result.deletedCount ?? 0;
   }
 
   static async deleteStaleWindowYears(activeYearId: string): Promise<string[]> {
-    const rows = await getDbSync().collection<StoredWindow>(COLLECTIONS.adviserSchedule)
+    const rows = await getDbSync()
+      .collection<StoredWindow>(COLLECTIONS.adviserSchedule)
       .find({ kind: "window", academicYearId: { $ne: activeYearId } } as never)
       .toArray();
     if (rows.length === 0) return [];
-    await getDbSync().collection(COLLECTIONS.adviserSchedule).deleteMany({
-      kind: "window", academicYearId: { $ne: activeYearId },
-    } as never);
+    await getDbSync()
+      .collection(COLLECTIONS.adviserSchedule)
+      .deleteMany({
+        kind: "window",
+        academicYearId: { $ne: activeYearId },
+      } as never);
     return [...new Set(rows.map((row) => row.adviserId))];
   }
 
-  static async deleteWindowsByDepartment(departmentId: string): Promise<string[]> {
-    const rows = await getDbSync().collection<StoredWindow>(COLLECTIONS.adviserSchedule)
+  static async deleteWindowsByDepartment(
+    departmentId: string,
+  ): Promise<string[]> {
+    const rows = await getDbSync()
+      .collection<StoredWindow>(COLLECTIONS.adviserSchedule)
       .find({ kind: "window", departmentId } as never)
       .toArray();
-    await getDbSync().collection(COLLECTIONS.adviserSchedule)
+    await getDbSync()
+      .collection(COLLECTIONS.adviserSchedule)
       .deleteMany({ kind: "window", departmentId } as never);
     return [...new Set(rows.map((row) => row.adviserId))];
   }

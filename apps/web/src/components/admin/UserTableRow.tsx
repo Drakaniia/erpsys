@@ -95,7 +95,9 @@ export default function UserTableRow({
               type="button"
               onClick={() => admin.setPurgeTarget(item)}
               disabled={item.id === myId}
-              title={item.id === myId ? "You cannot delete yourself." : undefined}
+              title={
+                item.id === myId ? "You cannot delete yourself." : undefined
+              }
               className="rounded-md px-2 py-1 text-xs font-medium text-error transition-[transform,background-color] duration-100 ease-out hover:bg-error/10 active:scale-[0.97]"
             >
               Delete permanently
@@ -125,20 +127,28 @@ export default function UserTableRow({
                   Demote
                 </button>
               ))}
-            {item.role !== "ADMIN" && <button
-              type="button"
-              onClick={() => admin.askSingle(item, "ADMIN")}
-              disabled={!item.emailVerified}
-              title={!item.emailVerified ? "Email verification is required first." : undefined}
-              className="rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Promote to admin
-            </button>}
+            {item.role !== "ADMIN" && (
+              <button
+                type="button"
+                onClick={() => admin.askSingle(item, "ADMIN")}
+                disabled={!item.emailVerified}
+                title={
+                  !item.emailVerified
+                    ? "Email verification is required first."
+                    : undefined
+                }
+                className="rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Promote to admin
+              </button>
+            )}
             <button
               type="button"
               onClick={() => admin.askDelete(item)}
               disabled={item.id === myId}
-              title={item.id === myId ? "You cannot delete yourself." : undefined}
+              title={
+                item.id === myId ? "You cannot delete yourself." : undefined
+              }
               className="rounded-md px-2 py-1 text-xs font-medium text-error/80 transition-[transform,background-color] duration-100 ease-out hover:bg-error/10 hover:text-error active:scale-[0.97]"
             >
               Delete

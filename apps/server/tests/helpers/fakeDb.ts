@@ -10,18 +10,23 @@ export type Row = Record<string, unknown>;
 function clone<T>(value: T): T {
   if (value instanceof ObjectId) return new ObjectId(value.toHexString()) as T;
   if (value instanceof Date) return new Date(value.getTime()) as T;
-  if (Array.isArray(value)) return value.map(item => clone(item)) as T;
+  if (Array.isArray(value)) return value.map((item) => clone(item)) as T;
   if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, clone(item)])) as T;
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, clone(item)]),
+    ) as T;
   }
   return value;
 }
 
 function project(row: Row, projection?: Row): Row {
   if (!projection) return clone(row);
-  const inclusions = Object.entries(projection).filter(([key, value]) => key !== "_id" && Boolean(value));
+  const inclusions = Object.entries(projection).filter(
+    ([key, value]) => key !== "_id" && Boolean(value),
+  );
   const result: Row = inclusions.length ? {} : clone(row);
-  if (inclusions.length && projection._id !== 0 && row._id !== undefined) result._id = clone(row._id);
+  if (inclusions.length && projection._id !== 0 && row._id !== undefined)
+    result._id = clone(row._id);
   for (const [path] of inclusions) {
     const value = getPath(row, path);
     if (value !== undefined) setPath(result, path, clone(value));
@@ -62,12 +67,18 @@ function matchesValue(rowValue: unknown, filterValue: unknown): boolean {
     !Array.isArray(filterValue)
   ) {
     const operator = filterValue as Record<string, unknown>;
-    const conditions = Object.keys(operator).filter((key) => key.startsWith("$") && key !== "$options");
+    const conditions = Object.keys(operator).filter(
+      (key) => key.startsWith("$") && key !== "$options",
+    );
     if (conditions.length > 1) {
-      return conditions.every((key) => matchesValue(rowValue, {
-        [key]: operator[key],
-        ...(key === "$regex" && operator.$options ? { $options: operator.$options } : {}),
-      }));
+      return conditions.every((key) =>
+        matchesValue(rowValue, {
+          [key]: operator[key],
+          ...(key === "$regex" && operator.$options
+            ? { $options: operator.$options }
+            : {}),
+        }),
+      );
     }
     if ("$elemMatch" in operator) {
       return (
@@ -105,7 +116,8 @@ function matchesValue(rowValue: unknown, filterValue: unknown): boolean {
       );
     }
   }
-  if (Array.isArray(filterValue)) return isDeepStrictEqual(rowValue, filterValue);
+  if (Array.isArray(filterValue))
+    return isDeepStrictEqual(rowValue, filterValue);
   if (Array.isArray(rowValue)) {
     return rowValue.some((value) => matchesValue(value, filterValue));
   }
@@ -149,7 +161,7 @@ function cursor(found: Row[]) {
       return api;
     },
     project(projection: Row) {
-      state.rows = state.rows.map(row => project(row, projection));
+      state.rows = state.rows.map((row) => project(row, projection));
       return api;
     },
     skip(n: number) {
@@ -194,12 +206,16 @@ function evaluate(expr: unknown, row: Row, vars: Row = {}): unknown {
     const [name, field] = expr.slice(2).split(".");
     return field ? (vars[name] as Row)?.[field] : vars[name];
   }
-  if (typeof expr === "string" && expr.startsWith("$")) return getPath(row, expr.slice(1));
-  if (expr === null || typeof expr !== "object" || expr instanceof Date) return expr;
-  if (Array.isArray(expr)) return expr.map((value) => evaluate(value, row, vars));
+  if (typeof expr === "string" && expr.startsWith("$"))
+    return getPath(row, expr.slice(1));
+  if (expr === null || typeof expr !== "object" || expr instanceof Date)
+    return expr;
+  if (Array.isArray(expr))
+    return expr.map((value) => evaluate(value, row, vars));
   const [[op, arg]] = Object.entries(expr);
   if (op === "$literal") return arg;
-  const values = () => (arg as unknown[]).map((value) => evaluate(value, row, vars));
+  const values = () =>
+    (arg as unknown[]).map((value) => evaluate(value, row, vars));
   switch (op) {
     case "$ifNull": {
       const [a, b] = values();
@@ -208,13 +224,21 @@ function evaluate(expr: unknown, row: Row, vars: Row = {}): unknown {
     case "$concatArrays":
       return values().flat();
     case "$filter": {
-      const { input, as, cond } = arg as { input: unknown; as: string; cond: unknown };
+      const { input, as, cond } = arg as {
+        input: unknown;
+        as: string;
+        cond: unknown;
+      };
       return (evaluate(input, row, vars) as unknown[]).filter((value) =>
         evaluate(cond, row, { ...vars, [as]: value }),
       );
     }
     case "$map": {
-      const { input, as, in: expression } = arg as { input: unknown; as: string; in: unknown };
+      const {
+        input,
+        as,
+        in: expression,
+      } = arg as { input: unknown; as: string; in: unknown };
       return (evaluate(input, row, vars) as unknown[]).map((value) =>
         evaluate(expression, row, { ...vars, [as]: value }),
       );
@@ -272,8 +296,15 @@ function applyUpdate(row: Row, update: Row | Row[]): void {
   for (const [path, value] of Object.entries((update.$pull ?? {}) as Row)) {
     const current = getPath(row, path);
     if (Array.isArray(current)) {
-      setPath(row, path, current.filter(item => value && typeof value === "object" && item && typeof item === "object"
-        ? !matches(item as Row, value as Row) : !matchesValue(item, value)));
+      setPath(
+        row,
+        path,
+        current.filter((item) =>
+          value && typeof value === "object" && item && typeof item === "object"
+            ? !matches(item as Row, value as Row)
+            : !matchesValue(item, value),
+        ),
+      );
     }
   }
   for (const [path, value] of Object.entries((update.$max ?? {}) as Row)) {
@@ -298,8 +329,7 @@ export function fakeDb(seed: Record<string, Row[]>) {
       return {
         // Reads hand back copies, like the driver: a handler that mutates a
         // fetched doc must not mutate the stored one.
-        find: (filter?: Row) =>
-          cursor(match(filter).map((row) => clone(row))),
+        find: (filter?: Row) => cursor(match(filter).map((row) => clone(row))),
         findOne: async (filter?: Row, options?: { projection?: Row }) => {
           const row = match(filter)[0];
           return row ? project(row, options?.projection) : null;
@@ -327,7 +357,10 @@ export function fakeDb(seed: Record<string, Row[]>) {
             if (options?.upsert) {
               const created: Row = {};
               for (const [path, value] of Object.entries(filter)) {
-                if (!path.startsWith("$") && (value === null || typeof value !== "object")) {
+                if (
+                  !path.startsWith("$") &&
+                  (value === null || typeof value !== "object")
+                ) {
                   setPath(created, path, value);
                 }
               }

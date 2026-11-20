@@ -79,7 +79,9 @@ export default function DetailSheet({
     lastOpenedId.current === verificationId &&
     (stampOpen || replyOpen || revokeOpen || ds.cameraOpen || ds.busyAny);
 
-  const { blocked, onBlockedChange } = useEditingLock(`${verificationId}:${editing}`);
+  const { blocked, onBlockedChange } = useEditingLock(
+    `${verificationId}:${editing}`,
+  );
   const editingBlocked = editing && blocked;
 
   useEffect(() => {
@@ -125,7 +127,15 @@ export default function DetailSheet({
     window.addEventListener("keydown", onKeydown);
     return () => window.removeEventListener("keydown", onKeydown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, canStamp, stampOpen, replyOpen, revokeOpen, lightboxIndex, editingBlocked]);
+  }, [
+    mounted,
+    canStamp,
+    stampOpen,
+    replyOpen,
+    revokeOpen,
+    lightboxIndex,
+    editingBlocked,
+  ]);
 
   if (!mounted) return null;
 
@@ -168,8 +178,10 @@ export default function DetailSheet({
           <div className="h-1 w-8 rounded-full bg-border/60"></div>
         </div>
 
-        {verificationId && ds.data && sessionQuery.data?.user.id && (
-          editing ? (
+        {verificationId &&
+          ds.data &&
+          sessionQuery.data?.user.id &&
+          (editing ? (
             <ActiveEditors
               key={verificationId}
               resource="submission"
@@ -181,10 +193,8 @@ export default function DetailSheet({
             <SubmissionActiveEditors
               key={`${verificationId}:${sessionQuery.data.user.id}`}
               id={verificationId}
-
             />
-          )
-        )}
+          ))}
 
         {ds.detailQuery.isPending && !ds.data ? (
           <div className="px-5 py-4" aria-hidden="true">
@@ -249,14 +259,26 @@ export default function DetailSheet({
             revokeBusy={ds.revokeMutation.isPending}
             onclose={() => onclose()}
             onopenlightbox={(i) => ds.setLightboxIndex(i)}
-            oncapturesave={(url) => { if (editing && !blocked) ds.handleCaptureSave(url); }}
+            oncapturesave={(url) => {
+              if (editing && !blocked) ds.handleCaptureSave(url);
+            }}
             oncapturecancel={() => ds.setCameraOpen(false)}
-            onshowcamera={() => { if (!editingBlocked) ds.setCameraOpen(true); }}
+            onshowcamera={() => {
+              if (!editingBlocked) ds.setCameraOpen(true);
+            }}
             onreplyclose={() => ds.setReplyOpen(false)}
-            onreplysend={(chips, note) => { if (editing && !blocked) ds.handleReply(chips, note); }}
-            onstamp={() => { if (!editingBlocked) ds.setStampOpen(true); }}
-            onrevoke={() => { if (!editingBlocked) ds.setRevokeOpen(true); }}
-            ontogglesendback={() => { if (!editingBlocked) ds.setReplyOpen(!ds.replyOpen); }}
+            onreplysend={(chips, note) => {
+              if (editing && !blocked) ds.handleReply(chips, note);
+            }}
+            onstamp={() => {
+              if (!editingBlocked) ds.setStampOpen(true);
+            }}
+            onrevoke={() => {
+              if (!editingBlocked) ds.setRevokeOpen(true);
+            }}
+            ontogglesendback={() => {
+              if (!editingBlocked) ds.setReplyOpen(!ds.replyOpen);
+            }}
             justVerified={ds.justVerified}
             dialogStampName={ds.dialogStampName}
             dialogGraphicUrl={
@@ -275,9 +297,13 @@ export default function DetailSheet({
             revokeOpen={ds.revokeOpen}
             studentName={ds.student?.name ?? ""}
             verifyBusy={ds.verifyMutation.isPending}
-            onconfirm={() => { if (editing && !blocked) ds.handleVerify(); }}
+            onconfirm={() => {
+              if (editing && !blocked) ds.handleVerify();
+            }}
             oncancel={() => ds.setStampOpen(false)}
-            onrevokeconfirm={() => { if (editing && !blocked) ds.handleRevoke(); }}
+            onrevokeconfirm={() => {
+              if (editing && !blocked) ds.handleRevoke();
+            }}
             onrevokecancel={() => ds.setRevokeOpen(false)}
             onfinish={() => ds.setJustVerified(false)}
           />

@@ -42,14 +42,24 @@ const INDEXES: [CollectionName, IndexDescription[]][] = [
       ix(
         "uq_user_student_number",
         { "studentProfile.studentNumber": 1 },
-        { unique: true, partialFilterExpression: { "studentProfile.studentNumber": { $type: "string" } } },
+        {
+          unique: true,
+          partialFilterExpression: {
+            "studentProfile.studentNumber": { $type: "string" },
+          },
+        },
       ),
       ix(
         "uq_user_student_profile_id",
         { "studentProfile._id": 1 },
-        { unique: true, partialFilterExpression: { "studentProfile._id": { $exists: true } } },
+        {
+          unique: true,
+          partialFilterExpression: { "studentProfile._id": { $exists: true } },
+        },
       ),
-      ix("idx_user_student_profile_year", { "studentProfile.academicYearId": 1 }),
+      ix("idx_user_student_profile_year", {
+        "studentProfile.academicYearId": 1,
+      }),
     ],
   ],
   [
@@ -65,17 +75,30 @@ const INDEXES: [CollectionName, IndexDescription[]][] = [
         { unique: true, partialFilterExpression: { kind: "presence" } },
       ),
       ix("idx_adviser_schedule_kind_department_year", {
-        kind: 1, departmentId: 1, academicYearId: 1,
+        kind: 1,
+        departmentId: 1,
+        academicYearId: 1,
       }),
       ix("idx_adviser_schedule_kind_adviser_department_year", {
-        kind: 1, adviserId: 1, departmentId: 1, academicYearId: 1,
+        kind: 1,
+        adviserId: 1,
+        departmentId: 1,
+        academicYearId: 1,
       }),
       ix("idx_adviser_schedule_kind_year_open", {
-        kind: 1, academicYearId: 1, isOpen: 1,
+        kind: 1,
+        academicYearId: 1,
+        isOpen: 1,
       }),
-      ix("idx_adviser_schedule_kind_adviser_open", { kind: 1, adviserId: 1, isOpen: 1 }),
+      ix("idx_adviser_schedule_kind_adviser_open", {
+        kind: 1,
+        adviserId: 1,
+        isOpen: 1,
+      }),
       ix("idx_adviser_schedule_kind_open_last_active", {
-        kind: 1, isOpen: 1, lastActiveAt: 1,
+        kind: 1,
+        isOpen: 1,
+        lastActiveAt: 1,
       }),
     ],
   ],
@@ -185,10 +208,19 @@ function equivalentIndex(
   existing: IndexDescriptionInfo,
   desired: IndexDescription,
 ): boolean {
-  const { name: existingName, key: existingKey, v, ns, ...existingOptions } = existing;
+  const {
+    name: existingName,
+    key: existingKey,
+    v,
+    ns,
+    ...existingOptions
+  } = existing;
   const { name: desiredName, key: desiredKey, ...desiredOptions } = desired;
   return (
-    isDeepStrictEqual(Object.entries(existingKey), Object.entries(desiredKey)) &&
+    isDeepStrictEqual(
+      Object.entries(existingKey),
+      Object.entries(desiredKey),
+    ) &&
     isDeepStrictEqual(
       { unique: false, sparse: false, hidden: false, ...existingOptions },
       { unique: false, sparse: false, hidden: false, ...desiredOptions },
@@ -201,14 +233,21 @@ export async function ensureIndexes(): Promise<void> {
   for (const [name, indexes] of INDEXES) {
     try {
       const collection = db.collection(name);
-      const existing = await collection.listIndexes().toArray().catch((error: unknown) => {
-        if ((error as { code?: number }).code === 26) return [];
-        throw error;
-      });
-      await collection.createIndexes(indexes.map(index => {
-        const match = existing.find(candidate => equivalentIndex(candidate, index));
-        return match ? { ...index, name: match.name } : index;
-      }));
+      const existing = await collection
+        .listIndexes()
+        .toArray()
+        .catch((error: unknown) => {
+          if ((error as { code?: number }).code === 26) return [];
+          throw error;
+        });
+      await collection.createIndexes(
+        indexes.map((index) => {
+          const match = existing.find((candidate) =>
+            equivalentIndex(candidate, index),
+          );
+          return match ? { ...index, name: match.name } : index;
+        }),
+      );
     } catch (error) {
       console.error(`[indexes] ${name}: ${(error as Error).message}`);
       if (

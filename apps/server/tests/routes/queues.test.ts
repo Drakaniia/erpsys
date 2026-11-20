@@ -106,7 +106,11 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.user]: [
       {
         _id: "stud1",
-        studentProfile: { _id: "profile-1", studentNumber: "12345", academicYearId: "ay-1" },
+        studentProfile: {
+          _id: "profile-1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
@@ -203,7 +207,9 @@ describe("joining the queue", () => {
   });
 
   it("refuses when no adviser has the queue open", async () => {
-    context.store[COLLECTIONS.adviserSchedule].find(row => row.kind === "presence")!.isOpen = false;
+    context.store[COLLECTIONS.adviserSchedule].find(
+      (row) => row.kind === "presence",
+    )!.isOpen = false;
     const response = await join();
     expect(response.status).toBe(409);
     expect((await response.json()).error).toBe(
@@ -212,7 +218,8 @@ describe("joining the queue", () => {
   });
 
   it("refuses a year level the live advisers do not cover", async () => {
-    (context.store[COLLECTIONS.department][0].advisers as Row[])[0].yearLevels = ["SECOND"];
+    (context.store[COLLECTIONS.department][0].advisers as Row[])[0].yearLevels =
+      ["SECOND"];
     const response = await join();
     expect(response.status).toBe(409);
     expect((await response.json()).error).toBe(
@@ -507,8 +514,15 @@ describe("officer serving", () => {
 
   it("serves the first student in my year levels past one I can't serve", async () => {
     context.store[COLLECTIONS.user].push({
-      _id: "stud2", name: "Ben", email: "22222@student.buksu.edu.ph", role: "STUDENT",
-      studentProfile: { _id: "profile-2", studentNumber: "22222", academicYearId: "ay-1" },
+      _id: "stud2",
+      name: "Ben",
+      email: "22222@student.buksu.edu.ph",
+      role: "STUDENT",
+      studentProfile: {
+        _id: "profile-2",
+        studentNumber: "22222",
+        academicYearId: "ay-1",
+      },
     });
     context.store[COLLECTIONS.studentEnrollment].push({
       _id: "enr-2",
@@ -517,7 +531,8 @@ describe("officer serving", () => {
       departmentId: "dept-1",
       yearLevel: "SECOND",
     });
-    (context.store[COLLECTIONS.department][0].advisers as Row[])[0].yearLevels = ["SECOND"];
+    (context.store[COLLECTIONS.department][0].advisers as Row[])[0].yearLevels =
+      ["SECOND"];
     pushWaiting("entry-1", "2025-07-01T00:00:00Z"); // 1st year, not mine
     context.store[COLLECTIONS.enrollmentQueue].push({
       _id: "entry-2",

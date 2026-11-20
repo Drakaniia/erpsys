@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { api } from "$lib/api";
 import { cn } from "$lib/utils";
 import { registerEditLease } from "$lib/edit-leases";
@@ -14,7 +21,12 @@ export type ActiveEditorsProps = {
 };
 
 type Editor = { userId: string; name: string; expiresAt: number | string };
-type Target = { resource: string; id?: string; scope?: string; enabled: boolean };
+type Target = {
+  resource: string;
+  id?: string;
+  scope?: string;
+  enabled: boolean;
+};
 const LEASE_MS = 30_000;
 
 // One lease per target survives the dev StrictMode remount, so the second
@@ -34,16 +46,35 @@ function leaseFor(target: Target): string {
 // Tag their state with the target so switching drafts fails closed immediately.
 export function useEditingLock(target: unknown) {
   const [state, setState] = useState<{ target: unknown; blocked: boolean }>();
-  const onBlockedChange = useCallback((blocked: boolean) => {
-    setState((old) => old && old.target === target && old.blocked === blocked ? old : { target, blocked });
-  }, [target]);
-  return { blocked: !state || state.target !== target || state.blocked, onBlockedChange };
+  const onBlockedChange = useCallback(
+    (blocked: boolean) => {
+      setState((old) =>
+        old && old.target === target && old.blocked === blocked
+          ? old
+          : { target, blocked },
+      );
+    },
+    [target],
+  );
+  return {
+    blocked: !state || state.target !== target || state.blocked,
+    onBlockedChange,
+  };
 }
 
 export default function ActiveEditors({
-  resource, id, scope, enabled = true, className, children, onBlockedChange,
+  resource,
+  id,
+  scope,
+  enabled = true,
+  className,
+  children,
+  onBlockedChange,
 }: ActiveEditorsProps) {
-  const target = useMemo(() => ({ resource, id, scope, enabled }), [resource, id, scope, enabled]);
+  const target = useMemo(
+    () => ({ resource, id, scope, enabled }),
+    [resource, id, scope, enabled],
+  );
   const [presence, setPresence] = useState<{
     target: typeof target;
     editors: Editor[];
@@ -52,9 +83,17 @@ export default function ActiveEditors({
   }>();
   const [hidden, setHidden] = useState(() => document.hidden);
   const current = presence?.target === target ? presence : undefined;
-  const blocked = enabled && (hidden || !current || current.status !== "ready" || current.editors.length > 0 || current.validUntil <= Date.now());
+  const blocked =
+    enabled &&
+    (hidden ||
+      !current ||
+      current.status !== "ready" ||
+      current.editors.length > 0 ||
+      current.validUntil <= Date.now());
 
-  useLayoutEffect(() => { onBlockedChange?.(blocked); }, [blocked, onBlockedChange]);
+  useLayoutEffect(() => {
+    onBlockedChange?.(blocked);
+  }, [blocked, onBlockedChange]);
 
   useEffect(() => {
     if (!target.enabled) return;
@@ -78,7 +117,9 @@ export default function ActiveEditors({
       setPresence({ target, editors: [], status: "pending", validUntil: 0 });
     }
     function leave(): Promise<void> {
-      return api.presence.leave.call(input).catch(() => { /* Abandoned leases expire. */ });
+      return api.presence.leave.call(input).catch(() => {
+        /* Abandoned leases expire. */
+      });
     }
     function heartbeat() {
       if (stopped || document.hidden || pending) return;
@@ -87,7 +128,8 @@ export default function ActiveEditors({
       pending = (async () => {
         try {
           const editors: Editor[] = await api.presence.touch.call(input);
-          if (stopped || document.hidden || requestGeneration !== generation) return;
+          if (stopped || document.hidden || requestGeneration !== generation)
+            return;
           const validUntil = startedAt + LEASE_MS;
           clearTimeout(expiry);
           setPresence({ target, editors, status: "ready", validUntil });
@@ -95,12 +137,20 @@ export default function ActiveEditors({
         } catch {
           if (!stopped && requestGeneration === generation) {
             clearTimeout(expiry);
-            setPresence({ target, editors: [], status: "unavailable", validUntil: 0 });
+            setPresence({
+              target,
+              editors: [],
+              status: "unavailable",
+              validUntil: 0,
+            });
           }
         }
       })().finally(() => {
         pending = undefined;
-        if (renewAfterPending) { renewAfterPending = false; heartbeat(); }
+        if (renewAfterPending) {
+          renewAfterPending = false;
+          heartbeat();
+        }
       });
     }
     function visibilityChanged() {
@@ -123,19 +173,44 @@ export default function ActiveEditors({
       clearTimeout(expiry);
       // Release one macrotask late so the StrictMode remount's setup cancels
       // it; complete a late POST before DELETE so it cannot resurrect a lease.
-      pendingReleases.set(target, setTimeout(() => { if (pending) void pending.then(leave); else void leave(); }, 0));
+      pendingReleases.set(
+        target,
+        setTimeout(() => {
+          if (pending) void pending.then(leave);
+          else void leave();
+        }, 0),
+      );
     };
   }, [target]);
 
-  const message = !enabled || !blocked ? null : hidden
-    ? "Editing paused while this tab is hidden. Checking access when you return."
-    : current?.status === "unavailable"
-      ? "Editing unavailable. Reconnecting before you can edit."
-      : current?.editors.length
-        ? `${current.editors.map((editor) => editor.name).join(", ")} is editing. You can edit when they finish.`
-        : "Checking editing access…";
-  return <>
-    {message && <span role="status" className={cn("block rounded-lg border border-warning/20 bg-warning/10 px-3 py-2 text-sm text-muted", className)}>{message}</span>}
-    {children !== undefined && <fieldset disabled={blocked} className="min-w-0 space-y-3 border-0 p-0">{children}</fieldset>}
-  </>;
+  const message =
+    !enabled || !blocked
+      ? null
+      : hidden
+        ? "Editing paused while this tab is hidden. Checking access when you return."
+        : current?.status === "unavailable"
+          ? "Editing unavailable. Reconnecting before you can edit."
+          : current?.editors.length
+            ? `${current.editors.map((editor) => editor.name).join(", ")} is editing. You can edit when they finish.`
+            : "Checking editing access…";
+  return (
+    <>
+      {message && (
+        <span
+          role="status"
+          className={cn(
+            "block rounded-lg border border-warning/20 bg-warning/10 px-3 py-2 text-sm text-muted",
+            className,
+          )}
+        >
+          {message}
+        </span>
+      )}
+      {children !== undefined && (
+        <fieldset disabled={blocked} className="min-w-0 space-y-3 border-0 p-0">
+          {children}
+        </fieldset>
+      )}
+    </>
+  );
 }

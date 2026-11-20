@@ -58,7 +58,10 @@ export class ContentModel {
       .insertOne({ ...row, kind: "requirement" } as never);
   }
 
-  static async update(id: string, patch: Partial<RequirementRow>): Promise<void> {
+  static async update(
+    id: string,
+    patch: Partial<RequirementRow>,
+  ): Promise<void> {
     await getDbSync()
       .collection(COLLECTIONS.content)
       .updateOne(

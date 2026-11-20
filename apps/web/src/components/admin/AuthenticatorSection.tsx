@@ -42,8 +42,8 @@ export default function AuthenticatorSection() {
       <p className="mt-1 text-xs text-muted">
         Google or Microsoft Authenticator, asked for at the end of every admin
         unlock. Reset it when an admin loses their phone. Resetting your own
-        authenticator uses the PIN, your password if set, and an emailed code—not
-        the lost device.
+        authenticator uses the PIN, your password if set, and an emailed
+        code—not the lost device.
       </p>
 
       {query.error ? (
@@ -91,7 +91,12 @@ export default function AuthenticatorSection() {
           title="Reset authenticator?"
           body={
             <>
-              <ActiveEditors resource="user" id={resetTarget.userId} className="mb-3 block" onBlockedChange={lock.onBlockedChange} />
+              <ActiveEditors
+                resource="user"
+                id={resetTarget.userId}
+                className="mb-3 block"
+                onBlockedChange={lock.onBlockedChange}
+              />
               Reset the authenticator for{" "}
               {resetTarget.name || resetTarget.email}? They will set up a new
               one at their next unlock.

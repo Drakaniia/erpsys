@@ -97,7 +97,11 @@ export default function SubmissionRow({
 
   function thumbs(tile: string, chipTile: string) {
     if (item.hasGoogleFormsResponse) {
-      return <span className="text-xs font-medium text-ink">Google Forms response on file</span>;
+      return (
+        <span className="text-xs font-medium text-ink">
+          Google Forms response on file
+        </span>
+      );
     }
     if (item.evidence.length === 0) return null;
     return (

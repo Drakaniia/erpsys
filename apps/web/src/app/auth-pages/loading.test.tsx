@@ -25,7 +25,10 @@ vi.mock("$lib/auth-client", () => ({
   authClient: { getSession: mocks.session, signOut: mocks.signOut },
 }));
 vi.mock("$lib/api", () => ({
-  queryClient: { cancelQueries: mocks.cancelQueries, clear: mocks.clearQueries },
+  queryClient: {
+    cancelQueries: mocks.cancelQueries,
+    clear: mocks.clearQueries,
+  },
   api: {
     instructor: {
       getMyCalendar: { call: mocks.status },
@@ -34,7 +37,9 @@ vi.mock("$lib/api", () => ({
   },
 }));
 vi.mock("$lib/notifications", () => ({ notify: { warning: mocks.warning } }));
-vi.mock("$lib/perf/persist", () => ({ clearPersistedCache: mocks.clearPersisted }));
+vi.mock("$lib/perf/persist", () => ({
+  clearPersistedCache: mocks.clearPersisted,
+}));
 vi.mock("../../components/ui/DitherLoader", () => ({ default: () => null }));
 
 beforeEach(() => {
@@ -93,19 +98,25 @@ describe("wrong-door sign-in", () => {
       fireEvent.click(dialog.getByRole("button", { name: "Continue" }));
     });
     expect(mocks.status).toHaveBeenCalledTimes(1);
-    expect(mocks.navigate).toHaveBeenCalledWith("/instructor", { replace: true });
+    expect(mocks.navigate).toHaveBeenCalledWith("/instructor", {
+      replace: true,
+    });
   });
 
   it("signs out and returns to the original door when choosing another account", async () => {
     const destination = "/instructor?tab=schedule";
     mocks.params.set("dest", destination);
-    mocks.session.mockResolvedValue({ data: { user: { role: "SBO_OFFICER" } } });
+    mocks.session.mockResolvedValue({
+      data: { user: { role: "SBO_OFFICER" } },
+    });
     await finishLogin();
 
     const dialog = within(screen.getByRole("dialog"));
     expect(dialog.getByText("SBO Officer")).toBeTruthy();
     await act(async () => {
-      fireEvent.click(dialog.getByRole("button", { name: "Choose another account" }));
+      fireEvent.click(
+        dialog.getByRole("button", { name: "Choose another account" }),
+      );
     });
     expect(mocks.signOut).toHaveBeenCalledTimes(1);
     expect(mocks.clearPersisted).toHaveBeenCalledTimes(1);
@@ -122,10 +133,14 @@ describe("wrong-door sign-in", () => {
     await finishLogin();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Choose another account" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Choose another account" }),
+      );
     });
     expect(screen.getByRole("dialog")).toBeTruthy();
-    expect(screen.getByRole("alert").textContent).toContain("Could not sign out");
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Could not sign out",
+    );
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
 });

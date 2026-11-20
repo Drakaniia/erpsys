@@ -173,8 +173,19 @@ export default function AcademicYearTable({
         </div>
       )}
 
-      {editingId && <ActiveEditors resource="academic-year" id={editingId} onBlockedChange={editLock.onBlockedChange} />}
-      {creating && <ActiveEditors resource="academic-year" onBlockedChange={createLock.onBlockedChange} />}
+      {editingId && (
+        <ActiveEditors
+          resource="academic-year"
+          id={editingId}
+          onBlockedChange={editLock.onBlockedChange}
+        />
+      )}
+      {creating && (
+        <ActiveEditors
+          resource="academic-year"
+          onBlockedChange={createLock.onBlockedChange}
+        />
+      )}
 
       <div className="apple-scrollbar overflow-x-auto rounded-xl border border-border bg-surface-raised">
         <table className="w-full min-w-[560px] border-collapse text-sm">
@@ -253,7 +264,9 @@ export default function AcademicYearTable({
                         )}
                         <button
                           onClick={submitEdit}
-                          disabled={editLock.blocked || updateMutation.isPending}
+                          disabled={
+                            editLock.blocked || updateMutation.isPending
+                          }
                           className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
                         >
                           Save

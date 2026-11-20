@@ -302,8 +302,7 @@ export async function loadRoster(
   const enrolledIds = (await StudentEnrollmentModel.listAllForYear(yearId)).map(
     (row) => row.studentProfileId,
   );
-  const unassignedTotal =
-    await UserModel.countUnenrolledProfiles(enrolledIds);
+  const unassignedTotal = await UserModel.countUnenrolledProfiles(enrolledIds);
   const students = await loadStudents(input, adviserId, yearId, enrolledIds);
 
   const profileIds = students.map((student) => student.studentProfileId);

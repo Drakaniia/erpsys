@@ -102,17 +102,15 @@ export function record(phase: "draft" | "submitted" | "cleared" | "enrolled") {
     },
   };
 }
-export const entries = people
-  .slice(0, 4)
-  .map((p, i) => ({
-    ...p,
-    entryId: `entry-${i}`,
-    joinedAt: ago(4 - i),
-    yearLevel: i % 2 ? "SECOND" : "FIRST",
-    verifiedSteps: 5,
-    missingStepNames: [],
-    locked: false,
-  }));
+export const entries = people.slice(0, 4).map((p, i) => ({
+  ...p,
+  entryId: `entry-${i}`,
+  joinedAt: ago(4 - i),
+  yearLevel: i % 2 ? "SECOND" : "FIRST",
+  verifiedSteps: 5,
+  missingStepNames: [],
+  locked: false,
+}));
 export function register(verified: boolean) {
   const data = people.map((student, i) => ({
     student,

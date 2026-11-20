@@ -252,16 +252,16 @@ Notification read markers live in account-scoped browser `localStorage`. The ser
 
 ## Users (`/api/v1`)
 
-| Method | Path                                 | Access          | Returns                           |
-| ------ | ------------------------------------ | --------------- | --------------------------------- |
-| GET    | /api/v1/users                        | session + admin | `{ data, page, pageSize, total }` |
-| POST   | /api/v1/users/invite                 | session + admin | `201 { data: { userId } }`; sends a one-time setup link |
+| Method | Path                                 | Access                    | Returns                                                 |
+| ------ | ------------------------------------ | ------------------------- | ------------------------------------------------------- |
+| GET    | /api/v1/users                        | session + admin           | `{ data, page, pageSize, total }`                       |
+| POST   | /api/v1/users/invite                 | session + admin           | `201 { data: { userId } }`; sends a one-time setup link |
 | POST   | /api/v1/users/:userId/promote-admin  | session + admin + step-up | `{ data: { userId, role } }`; revokes existing sessions |
-| PATCH  | /api/v1/users                        | session + admin | `{ data: update result }`         |
-| DELETE | /api/v1/users                        | session + admin | `{ data: delete result }`         |
-| PATCH  | /api/v1/users/:userId                | session + admin | `{ data: user }`                  |
-| DELETE | /api/v1/users/:userId                | session + admin | `{ data: purge result }`          |
-| POST   | /api/v1/users/:userId/password-reset | session + admin | `{ data: reset result }`          |
+| PATCH  | /api/v1/users                        | session + admin           | `{ data: update result }`                               |
+| DELETE | /api/v1/users                        | session + admin           | `{ data: delete result }`                               |
+| PATCH  | /api/v1/users/:userId                | session + admin           | `{ data: user }`                                        |
+| DELETE | /api/v1/users/:userId                | session + admin           | `{ data: purge result }`                                |
+| POST   | /api/v1/users/:userId/password-reset | session + admin           | `{ data: reset result }`                                |
 
 ## Audit logs (`/api/v1`)
 

@@ -254,8 +254,8 @@ function setupGuides(origin: string): Record<IntegrationKey, SetupGuide> {
             <>
               Save GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET under Google
               sign-in → Credentials. Calendar uses the same client; each
-              enrollment officer authorizes with their own Google account, so
-              no refresh token is stored here.
+              enrollment officer authorizes with their own Google account, so no
+              refresh token is stored here.
             </>
           ),
         },

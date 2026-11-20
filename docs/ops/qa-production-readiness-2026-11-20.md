@@ -46,6 +46,7 @@ Locations: `apps/server/src/config/auth/StudentSignUpPlugin.ts:127-156`; `apps/s
 The public signup endpoint purges a blocked account matching the supplied email or student number without password or verified ownership. Purge runs before validating the submitted academic placement. A registration attempt can destroy the existing account even when registration itself fails.
 
 Reproduction:
+
 1. Insert a synthetic blocked student and credential account into the isolated database.
 2. Anonymous `POST /api/auth/sign-up/student` using that email, a new student number, and an intentionally nonexistent academic year.
 3. Response: 400, `Pick a valid academic year.`
@@ -74,6 +75,7 @@ Locations: `apps/server/src/lib/db/timestamp-ordering.ts:261-298`; `apps/server/
 `writeRule` checks for stale matches, but when `upsert=true` the actual write uses the original filter rather than the timestamp freshness guard. A newer transaction can write after the stale precheck but before the older upsert.
 
 Reproduction used the real guard and a synthetic verification document, with a controlled hook immediately before the underlying Mongo update:
+
 1. Document starts at writeTs=100.
 2. Older transaction TS=200 passes stale precheck.
 3. A newer verifier writes status=VERIFIED, writeTs=300.
@@ -118,6 +120,7 @@ The hand-written client API table contains 131 route definitions: 55 GET, 32 POS
 A GET-template matrix was attempted for anonymous, student, officer, instructor, and admin sessions. One OAuth-connect route was excluded because a nominal GET initiates provider mutation. Missing IDs and invalid query combinations were deliberately included. The initial matrix was interrupted late by a network reset; a subsequent pass covered instructor/admin and targeted writes. This is broad sampling, not a claim that all 131 operations, parameters, or response contracts passed.
 
 Observed positive results:
+
 - QA API health 200; frontend-to-API proxy restored while the isolated backend was running.
 - All four synthetic credential roles signed in successfully.
 - Anonymous protected API requests returned 401 in sampled families.
@@ -137,6 +140,7 @@ Requests with invalid fixture data, wrong paths corrected during harness develop
 The router declares 16 explicit routes plus a catch-all. Mapping completed for all routes; interactive testing did not complete for all of them.
 
 Observed in In-App Browser:
+
 - `/` → `/login` signed out; page presents sign-in, registration, forgotten-password and docs navigation.
 - Login email/password form and successful synthetic student sign-in.
 - `/student` loads the synthetic student identity, progress steps and profile controls.
@@ -147,6 +151,7 @@ Observed in In-App Browser:
 Mapped but not fully browser-tested: `/docs`, `/login/register`, `/login/forgot-password`, `/login/reset-password`, `/login/copy-code`, `/loading`, `/auth/error`, `/settings/accounts`, `/complete-profile`, `/officer`, `/instructor`, `/admin`, and catch-all/legacy hash combinations. Authentication navigation exercised `/loading` as part of login, but its independent edge cases were not exhaustively tested.
 
 Console views still require interactive coverage:
+
 - Student: all evidence steps, upload/crop, return/resubmit UI, notifications, profile changes, report/download, conditional chat.
 - Officer: overview, assessment/social/profiling/mugshot/consent/SIMS review, revoke, presence, social links, form configuration, reports.
 - Instructor: departments/year coverage, queue operations, transfer accept/decline/withdraw, schedules, reminders, enrolled register/reports.
@@ -160,6 +165,7 @@ No complete button inventory was executed. No accessibility score, mobile compat
 LOCAL_ONLY=true disabled external calls in the isolated backend. It defaults true and forces development mode; explicitly verify LOCAL_ONLY=false and NODE_ENV=production in deployment, otherwise production environment checks do not provide their intended guarantees.
 
 Still unverified:
+
 - Google OAuth sign-in, verified institutional role derivation, linking/unlinking, callback/origin settings, refresh/revocation.
 - Brevo delivery, reset/invite email, admin confirmation code, delivery failures and spam behavior.
 - Turnstile success/failure/expiry, action and hostname binding.

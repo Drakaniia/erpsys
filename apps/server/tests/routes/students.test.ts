@@ -50,7 +50,6 @@ function seed(): Record<string, Row[]> {
       },
     ],
 
-
     [COLLECTIONS.studentEnrollment]: [
       {
         _id: "enr-1",
@@ -64,7 +63,13 @@ function seed(): Record<string, Row[]> {
       { _id: "dept-1", name: "College of Technologies", isActive: true },
     ],
     [COLLECTIONS.content]: [
-      { _id: "req-1", kind: "requirement", label: "TOR", order: 1, isActive: true },
+      {
+        _id: "req-1",
+        kind: "requirement",
+        label: "TOR",
+        order: 1,
+        isActive: true,
+      },
       {
         kind: "socialLink",
         _id: "sml-1",
@@ -92,7 +97,11 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.user]: [
       {
         _id: "stud1",
-        studentProfile: { _id: "profile-1", studentNumber: "12345", academicYearId: "ay-1" },
+        studentProfile: {
+          _id: "profile-1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
@@ -221,7 +230,9 @@ describe("student number", () => {
     });
     expect(response.status).toBe(200);
     expect((await response.json()).data).toEqual({ studentNumber: "54321" });
-    expect(context.store[COLLECTIONS.user].filter(user => user.studentProfile)).toHaveLength(1);
+    expect(
+      context.store[COLLECTIONS.user].filter((user) => user.studentProfile),
+    ).toHaveLength(1);
   });
 
   it("rejects a non-numeric student number", async () => {

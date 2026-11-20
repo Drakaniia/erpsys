@@ -565,7 +565,10 @@ export function DocsPage() {
                     or returns them, maintains the social media links, the
                     profiling form and their stamp, and generates reports.
                   </RoleCard>
-                  <RoleCard role="Enrollment Officer" door="Enrollment Officer door">
+                  <RoleCard
+                    role="Enrollment Officer"
+                    door="Enrollment Officer door"
+                  >
                     Opens department availability, serves students in queue
                     order, completes or reverts enrollment, keeps department
                     details, and reviews the student roster and reports.
@@ -979,8 +982,8 @@ export function DocsPage() {
                     only once. If a message looks suspicious, do not open it.
                   </li>
                   <li>
-                    Use your assigned portal. Staff should not share accounts
-                    or forward student records outside approved office channels.
+                    Use your assigned portal. Staff should not share accounts or
+                    forward student records outside approved office channels.
                     Sign out before leaving a shared device.
                   </li>
                   <li>

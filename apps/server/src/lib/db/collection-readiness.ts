@@ -11,11 +11,17 @@ const SOURCES = [
 ] as const;
 
 export async function assertCollectionReadiness(db: Db): Promise<void> {
-  const marker = await db.collection<{ _id: string; version: number; completedAt: Date }>("platform_state").findOne({
-    _id: "collection-simplification-v2",
-    version: 2,
-    completedAt: { $type: "date" },
-  });
+  const marker = await db
+    .collection<{
+      _id: string;
+      version: number;
+      completedAt: Date;
+    }>("platform_state")
+    .findOne({
+      _id: "collection-simplification-v2",
+      version: 2,
+      completedAt: { $type: "date" },
+    });
   if (marker) return;
   for (const name of SOURCES) {
     if (await db.collection(name).findOne({}, { projection: { _id: 1 } })) {

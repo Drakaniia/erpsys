@@ -22,7 +22,12 @@ describe("homeRouteForRole", () => {
 });
 
 describe("protected app paths", () => {
-  it.each(["/student", "/queue?dept=tech#status", "/officer", "/instructor?tab=schedule"])("does not let admins into %s", (path) => {
+  it.each([
+    "/student",
+    "/queue?dept=tech#status",
+    "/officer",
+    "/instructor?tab=schedule",
+  ])("does not let admins into %s", (path) => {
     const surface = surfaceForAppPath(path);
     expect(surface).toBeDefined();
     expect(canEnterSurface("ADMIN", surface!)).toBe(false);

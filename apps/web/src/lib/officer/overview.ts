@@ -210,9 +210,7 @@ export function parseDay(day: string): Date {
   return new Date(y!, (m ?? 1) - 1, d ?? 1);
 }
 
-export function trendPoints(
-  model: OfficerOverview,
-): Array<{
+export function trendPoints(model: OfficerOverview): Array<{
   date: Date;
   submitted: number;
   verified: number;

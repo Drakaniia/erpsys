@@ -225,7 +225,10 @@ export function StudentPage() {
                   chipClasses={s.sheetChip.classes}
                   onclose={s.closeSheet}
                 >
-                  <RequirementPreview key={s.openStepRow.code} step={s.openStepRow.code} />
+                  <RequirementPreview
+                    key={s.openStepRow.code}
+                    step={s.openStepRow.code}
+                  />
                   {s.openCode === "ASSESSMENT" ? (
                     <AssessmentSheet step={s.openStepRow} notify={s.toast} />
                   ) : s.openCode === "PROFILING" ? (

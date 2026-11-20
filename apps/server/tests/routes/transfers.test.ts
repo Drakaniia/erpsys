@@ -44,13 +44,23 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.department]: [
       {
         _id: "dept-1",
-        advisers: [{ _id: "link-owner", adviserId: "adv1", yearLevels: ["FIRST", "SECOND"] }],
+        advisers: [
+          {
+            _id: "link-owner",
+            adviserId: "adv1",
+            yearLevels: ["FIRST", "SECOND"],
+          },
+        ],
         name: "College of Technologies",
         isActive: true,
         yearLevels: ["FIRST", "SECOND"],
       },
-      { _id: "dept-2", name: "College of Arts", isActive: true,
-        advisers: [{ _id: "link-owner-2", adviserId: "adv1", yearLevels: [] }] },
+      {
+        _id: "dept-2",
+        name: "College of Arts",
+        isActive: true,
+        advisers: [{ _id: "link-owner-2", adviserId: "adv1", yearLevels: [] }],
+      },
     ],
 
     [COLLECTIONS.adviserSchedule]: [
@@ -128,9 +138,13 @@ const ask = (body: Record<string, unknown> = {}) =>
     }),
   });
 
-const links = (): Row[] => context.store[COLLECTIONS.department].flatMap(department =>
-  ((department.advisers ?? []) as Row[]).map((assignment) => ({ ...assignment, departmentId: department._id })),
-);
+const links = (): Row[] =>
+  context.store[COLLECTIONS.department].flatMap((department) =>
+    ((department.advisers ?? []) as Row[]).map((assignment) => ({
+      ...assignment,
+      departmentId: department._id,
+    })),
+  );
 
 describe("department transfers", () => {
   it.each([true, false])(
@@ -205,7 +219,11 @@ describe("department transfers", () => {
       ),
     ).toMatchObject({ yearLevels: ["FIRST", "SECOND"] });
     // Their queue closes and the student they were serving returns to the line.
-    expect(context.store[COLLECTIONS.adviserSchedule].find(row => row.kind === "presence")).toMatchObject({
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].find(
+        (row) => row.kind === "presence",
+      ),
+    ).toMatchObject({
       isOpen: false,
     });
     expect(context.store[COLLECTIONS.enrollmentQueue][0]).toMatchObject({
@@ -229,7 +247,11 @@ describe("department transfers", () => {
       status: "WAITING",
       servedById: null,
     });
-    expect(context.store[COLLECTIONS.adviserSchedule].find(row => row.kind === "presence")).toMatchObject({
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].find(
+        (row) => row.kind === "presence",
+      ),
+    ).toMatchObject({
       isOpen: true,
     });
   });
@@ -267,7 +289,9 @@ describe("department transfers", () => {
 
   it("transfers automatically when the request expires unanswered", async () => {
     // Owner offline → one-minute grace.
-    context.store[COLLECTIONS.adviserSchedule] = context.store[COLLECTIONS.adviserSchedule].filter(row => row.kind !== "presence");
+    context.store[COLLECTIONS.adviserSchedule] = context.store[
+      COLLECTIONS.adviserSchedule
+    ].filter((row) => row.kind !== "presence");
     const created = (await (await ask()).json()).data;
     const row = context.store[COLLECTIONS.departmentTransferRequest][0]!;
     expect(new Date(row.expiresAt as Date).getTime()).toBeLessThanOrEqual(
@@ -300,7 +324,8 @@ describe("department transfers", () => {
   });
 
   it("refuses a transfer spanning multiple owners before changing any assignment", async () => {
-    (context.store[COLLECTIONS.department][0].advisers as Row[])[0].yearLevels = ["FIRST"];
+    (context.store[COLLECTIONS.department][0].advisers as Row[])[0].yearLevels =
+      ["FIRST"];
     (context.store[COLLECTIONS.department][0].advisers as Row[]).push({
       _id: "link-third",
       adviserId: "adv3",

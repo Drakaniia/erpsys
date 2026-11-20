@@ -83,6 +83,8 @@ describe("SubmissionRow thumbs", () => {
       </table>,
     );
     expect(container.querySelectorAll("td")).toHaveLength(5);
-    expect(screen.getByRole("cell", { name: "Google Forms response on file" })).toBeTruthy();
+    expect(
+      screen.getByRole("cell", { name: "Google Forms response on file" }),
+    ).toBeTruthy();
   });
 });

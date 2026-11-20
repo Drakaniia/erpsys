@@ -13,11 +13,19 @@ export type PresenceTarget = {
 type PresenceUser = { id: string; name?: string };
 const TTL_MS = 30_000;
 
-export function presenceOwner(editors: unknown, now = Date.now()): (Editor & { leaseId: string }) | undefined {
+export function presenceOwner(
+  editors: unknown,
+  now = Date.now(),
+): (Editor & { leaseId: string }) | undefined {
   if (!Array.isArray(editors)) return;
-  return editors.find((entry) => entry && typeof entry.userId === "string"
-    && typeof entry.name === "string" && typeof entry.leaseId === "string"
-    && new Date(entry.expiresAt).getTime() > now);
+  return editors.find(
+    (entry) =>
+      entry &&
+      typeof entry.userId === "string" &&
+      typeof entry.name === "string" &&
+      typeof entry.leaseId === "string" &&
+      new Date(entry.expiresAt).getTime() > now,
+  );
 }
 
 async function updatePresence(
@@ -29,7 +37,11 @@ async function updatePresence(
   const collection = rawDb().collection<PresenceDocument>(target.collection);
   if (join && target.marker) {
     try {
-      await collection.updateOne(target.filter, { $setOnInsert: { ...target.marker, activeEditors: [] } }, { upsert: true });
+      await collection.updateOne(
+        target.filter,
+        { $setOnInsert: { ...target.marker, activeEditors: [] } },
+        { upsert: true },
+      );
     } catch (error) {
       if ((error as { code?: number }).code !== 11000) throw error;
     }
@@ -57,12 +69,21 @@ async function updatePresence(
   const existing = { $filter: { input: live, as: "editor", cond: mine } };
   const activeEditors = join
     ? {
-        $slice: [{
-          $concatArrays: [
-            { $map: { input: live, as: "editor", in: { $cond: [mine, { $literal: renewed }, "$$editor"] } } },
-            { $cond: [{ $eq: [existing, []] }, { $literal: [renewed] }, []] },
-          ],
-        }, 100],
+        $slice: [
+          {
+            $concatArrays: [
+              {
+                $map: {
+                  input: live,
+                  as: "editor",
+                  in: { $cond: [mine, { $literal: renewed }, "$$editor"] },
+                },
+              },
+              { $cond: [{ $eq: [existing, []] }, { $literal: [renewed] }, []] },
+            ],
+          },
+          100,
+        ],
       }
     : { $filter: { input: live, as: "editor", cond: { $not: [mine] } } };
   const row = await collection.findOneAndUpdate(
@@ -70,16 +91,28 @@ async function updatePresence(
     [{ $set: { activeEditors } }],
     { returnDocument: "after", projection: { activeEditors: 1 } },
   );
-  if (!row) throw new ApiError("NOT_FOUND", { message: "Presence target not found." });
+  if (!row)
+    throw new ApiError("NOT_FOUND", { message: "Presence target not found." });
   const owner = presenceOwner(row.activeEditors, now.getTime());
-  if (!owner || (owner.userId === user.id && owner.leaseId === leaseId)) return [];
-  return [{ userId: owner.userId, name: owner.name, expiresAt: owner.expiresAt }];
+  if (!owner || (owner.userId === user.id && owner.leaseId === leaseId))
+    return [];
+  return [
+    { userId: owner.userId, name: owner.name, expiresAt: owner.expiresAt },
+  ];
 }
 
-export function touchPresence(target: PresenceTarget, leaseId: string, user: PresenceUser): Promise<Editor[]> {
+export function touchPresence(
+  target: PresenceTarget,
+  leaseId: string,
+  user: PresenceUser,
+): Promise<Editor[]> {
   return updatePresence(target, leaseId, user, true);
 }
 
-export function leavePresence(target: PresenceTarget, leaseId: string, user: PresenceUser): Promise<Editor[]> {
+export function leavePresence(
+  target: PresenceTarget,
+  leaseId: string,
+  user: PresenceUser,
+): Promise<Editor[]> {
   return updatePresence(target, leaseId, user, false);
 }

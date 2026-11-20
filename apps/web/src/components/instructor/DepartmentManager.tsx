@@ -458,30 +458,37 @@ export default function DepartmentManager({
                 return (
                   <li key={item.id} className="px-4 py-3">
                     <div className="flex flex-col gap-2">
-                      <ActiveEditors resource="department" id={item.id} onBlockedChange={editLock.onBlockedChange}>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <label className="flex items-center gap-1.5 text-xs text-muted">
-                          Name
-                          <input
-                            value={editName}
-                            onChange={(e) => setEditName(e.currentTarget.value)}
-                            className="rounded-md border border-border bg-surface px-2 py-1 text-sm text-ink outline-none focus:border-primary"
-                            maxLength={120}
-                          />
-                        </label>
-                        <span className="rounded-full border border-primary/40 px-2.5 py-0.5 text-[11px] font-medium text-primary">
-                          {item.code}
-                        </span>
-                      </div>
-                      {editError && (
-                        <p className="text-xs text-error">{editError}</p>
-                      )}
+                      <ActiveEditors
+                        resource="department"
+                        id={item.id}
+                        onBlockedChange={editLock.onBlockedChange}
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <label className="flex items-center gap-1.5 text-xs text-muted">
+                            Name
+                            <input
+                              value={editName}
+                              onChange={(e) =>
+                                setEditName(e.currentTarget.value)
+                              }
+                              className="rounded-md border border-border bg-surface px-2 py-1 text-sm text-ink outline-none focus:border-primary"
+                              maxLength={120}
+                            />
+                          </label>
+                          <span className="rounded-full border border-primary/40 px-2.5 py-0.5 text-[11px] font-medium text-primary">
+                            {item.code}
+                          </span>
+                        </div>
+                        {editError && (
+                          <p className="text-xs text-error">{editError}</p>
+                        )}
                       </ActiveEditors>
                       <div className="flex gap-2">
                         <button
                           onClick={handleUpdate}
                           disabled={
-                            editLock.blocked || updateMutation.isPending ||
+                            editLock.blocked ||
+                            updateMutation.isPending ||
                             !editName.trim() ||
                             editName.trim() === item.name
                           }
@@ -665,25 +672,32 @@ export default function DepartmentManager({
         </div>
       ) : null}
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-raised px-4 py-3">
-        <ActiveEditors resource="department" onBlockedChange={createLock.onBlockedChange}>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.currentTarget.value)}
-            aria-label="Department name"
-            placeholder="Department name"
-            maxLength={120}
-            className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus:border-primary"
-          />
-          <button
-            onClick={handleCreate}
-            disabled={createLock.blocked || createDeptMutation.isPending || !newName.trim()}
-            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
-          >
-            Create department
-          </button>
-        </div>
-        {createError && <p className="text-xs text-error">{createError}</p>}
+        <ActiveEditors
+          resource="department"
+          onBlockedChange={createLock.onBlockedChange}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.currentTarget.value)}
+              aria-label="Department name"
+              placeholder="Department name"
+              maxLength={120}
+              className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-muted focus:border-primary"
+            />
+            <button
+              onClick={handleCreate}
+              disabled={
+                createLock.blocked ||
+                createDeptMutation.isPending ||
+                !newName.trim()
+              }
+              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
+            >
+              Create department
+            </button>
+          </div>
+          {createError && <p className="text-xs text-error">{createError}</p>}
         </ActiveEditors>
       </div>
       <AssignDepartmentModal
@@ -734,12 +748,22 @@ export default function DepartmentManager({
         open={deletingDept !== null}
         title="Delete department"
         body={
-          deletingDept
-            ? <>
-                <p>Delete {deletingDept.name} ({deletingDept.code})? This cannot be undone.</p>
-                <ActiveEditors resource="department" id={deletingDept.id} enabled={deletingDept !== null} onBlockedChange={deleteLock.onBlockedChange} />
-              </>
-            : ""
+          deletingDept ? (
+            <>
+              <p>
+                Delete {deletingDept.name} ({deletingDept.code})? This cannot be
+                undone.
+              </p>
+              <ActiveEditors
+                resource="department"
+                id={deletingDept.id}
+                enabled={deletingDept !== null}
+                onBlockedChange={deleteLock.onBlockedChange}
+              />
+            </>
+          ) : (
+            ""
+          )
         }
         confirmLabel="Delete"
         destructive

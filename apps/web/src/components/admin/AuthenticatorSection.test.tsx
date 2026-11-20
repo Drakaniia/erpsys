@@ -11,7 +11,8 @@ import AuthenticatorSection from "./AuthenticatorSection";
 import type { AdminAuthenticator } from "$lib/integrations/use-integrations";
 
 vi.mock("../ActiveEditors", () => ({
-  default: ({ children }: { children?: import("react").ReactNode }) => children ?? null,
+  default: ({ children }: { children?: import("react").ReactNode }) =>
+    children ?? null,
   useEditingLock: () => ({ blocked: false, onBlockedChange: () => {} }),
 }));
 

@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import FilterDropdown from "../ui/FilterDropdown";
 
-
 type Evidence = "ALL" | "HAS" | "NONE";
 type Range = "ALL" | "today" | "7d" | "30d" | "year";
-
 
 const evidenceOptions = [
   { value: "ALL", label: "Any evidence" },

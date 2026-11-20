@@ -51,14 +51,36 @@ export default function UserRowDialogs({
   onCloseDelete: () => void;
   onClosePurge: () => void;
 }) {
-  const targets = roleDialog?.targets ?? deleteDialog?.targets ?? (purgeTarget ? [purgeTarget] : reactivateTarget ? [reactivateTarget] : []);
-  const targetKey = JSON.stringify([roleDialog?.role, Boolean(deleteDialog), Boolean(purgeTarget), targets.map((target) => target.id)]);
-  const [locks, setLocks] = useState<{ key: string; values: Record<string, boolean> }>({ key: "", values: {} });
-  const blocked = targets.length === 0 || locks.key !== targetKey || targets.some((target) => locks.values[target.id] !== false);
+  const targets =
+    roleDialog?.targets ??
+    deleteDialog?.targets ??
+    (purgeTarget ? [purgeTarget] : reactivateTarget ? [reactivateTarget] : []);
+  const targetKey = JSON.stringify([
+    roleDialog?.role,
+    Boolean(deleteDialog),
+    Boolean(purgeTarget),
+    targets.map((target) => target.id),
+  ]);
+  const [locks, setLocks] = useState<{
+    key: string;
+    values: Record<string, boolean>;
+  }>({ key: "", values: {} });
+  const blocked =
+    targets.length === 0 ||
+    locks.key !== targetKey ||
+    targets.some((target) => locks.values[target.id] !== false);
   function report(id: string, value: boolean) {
-    setLocks((old) => old.key === targetKey && old.values[id] === value ? old : {
-      key: targetKey, values: { ...(old.key === targetKey ? old.values : {}), [id]: value },
-    });
+    setLocks((old) =>
+      old.key === targetKey && old.values[id] === value
+        ? old
+        : {
+            key: targetKey,
+            values: {
+              ...(old.key === targetKey ? old.values : {}),
+              [id]: value,
+            },
+          },
+    );
   }
   return (
     <>
@@ -73,7 +95,13 @@ export default function UserRowDialogs({
         onclose={onCloseRole}
       >
         {roleDialog?.targets.map((target) => (
-          <ActiveEditors key={targetKey + target.id} resource="user" id={target.id} className="mt-3" onBlockedChange={(value) => report(target.id, value)} />
+          <ActiveEditors
+            key={targetKey + target.id}
+            resource="user"
+            id={target.id}
+            className="mt-3"
+            onBlockedChange={(value) => report(target.id, value)}
+          />
         ))}
       </RoleChangeDialog>
 
@@ -93,7 +121,13 @@ export default function UserRowDialogs({
         onclose={onCloseDelete}
       >
         {deleteDialog?.targets.map((target) => (
-          <ActiveEditors key={targetKey + target.id} resource="user" id={target.id} className="mt-3" onBlockedChange={(value) => report(target.id, value)} />
+          <ActiveEditors
+            key={targetKey + target.id}
+            resource="user"
+            id={target.id}
+            className="mt-3"
+            onBlockedChange={(value) => report(target.id, value)}
+          />
         ))}
       </DeleteAccountDialog>
 
@@ -106,7 +140,13 @@ export default function UserRowDialogs({
         onclose={onCloseReactivate}
       >
         {reactivateTarget && (
-          <ActiveEditors key={targetKey} resource="user" id={reactivateTarget.id} className="mt-3" onBlockedChange={(value) => report(reactivateTarget.id, value)} />
+          <ActiveEditors
+            key={targetKey}
+            resource="user"
+            id={reactivateTarget.id}
+            className="mt-3"
+            onBlockedChange={(value) => report(reactivateTarget.id, value)}
+          />
         )}
       </ReactivateAccountDialog>
 
@@ -119,7 +159,13 @@ export default function UserRowDialogs({
         onclose={onClosePurge}
       >
         {purgeTarget && (
-          <ActiveEditors key={targetKey} resource="user" id={purgeTarget.id} className="mt-3" onBlockedChange={(value) => report(purgeTarget.id, value)} />
+          <ActiveEditors
+            key={targetKey}
+            resource="user"
+            id={purgeTarget.id}
+            className="mt-3"
+            onBlockedChange={(value) => report(purgeTarget.id, value)}
+          />
         )}
       </PurgeAccountDialog>
     </>

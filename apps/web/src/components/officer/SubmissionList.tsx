@@ -5,7 +5,6 @@ import Pagination from "../ui/Pagination";
 import SubmissionRow from "./SubmissionRow";
 import type { ListByStepData, ListItem, StepCode } from "$lib/officer/types";
 
-
 type Evidence = "ALL" | "HAS" | "NONE";
 type Range = "ALL" | "today" | "7d" | "30d" | "year";
 
@@ -81,7 +80,6 @@ export default function SubmissionList({
   onnewseend?: () => void;
   onopen: (verificationId: string) => void;
 }) {
-
   const totalPages = data
     ? Math.max(1, Math.ceil(data.total / data.pageSize))
     : 1;
@@ -100,11 +98,7 @@ export default function SubmissionList({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="flex items-center gap-2 text-sm text-muted tabular-nums">
-          {data && (
-            <>
-              {data.total} pending review
-            </>
-          )}
+          {data && <>{data.total} pending review</>}
           {newCount > 0 && (
             <button
               type="button"
@@ -169,7 +163,6 @@ export default function SubmissionList({
 
       <SubmissionFilters
         q={q}
-
         evidence={evidence}
         range={range}
         unreadOnly={unreadOnly}
@@ -266,7 +259,6 @@ export default function SubmissionList({
                       view={view}
                       unread={unreadIds.has(item.verificationId)}
                       selected={selectedId === item.verificationId}
-
                       onselect={onselect}
                       onopen={onopen}
                     />
@@ -283,7 +275,6 @@ export default function SubmissionList({
                   view={view}
                   unread={unreadIds.has(item.verificationId)}
                   selected={selectedId === item.verificationId}
-
                   onselect={onselect}
                   onopen={onopen}
                 />

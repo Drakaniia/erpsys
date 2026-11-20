@@ -121,16 +121,35 @@ export function LoadingPage() {
           <h1 id="wrong-door-title" className="text-lg font-semibold text-ink">
             Continue with this account?
           </h1>
-          <p id="wrong-door-description" className="mt-2 text-sm leading-6 text-muted">
-            You signed in as <strong className="text-ink">{roleLabel(role)}</strong>.
-            This account cannot open the requested console. Continue to your own console, or choose another account.
+          <p
+            id="wrong-door-description"
+            className="mt-2 text-sm leading-6 text-muted"
+          >
+            You signed in as{" "}
+            <strong className="text-ink">{roleLabel(role)}</strong>. This
+            account cannot open the requested console. Continue to your own
+            console, or choose another account.
           </p>
-          {error ? <p role="alert" className="auth-alert mt-4">{error}</p> : null}
+          {error ? (
+            <p role="alert" className="auth-alert mt-4">
+              {error}
+            </p>
+          ) : null}
           <div className="mt-6 flex flex-col gap-2">
-            <button type="button" className="auth-btn-primary" disabled={switching} onClick={() => setAcceptedRole(role)}>
+            <button
+              type="button"
+              className="auth-btn-primary"
+              disabled={switching}
+              onClick={() => setAcceptedRole(role)}
+            >
               Continue
             </button>
-            <button type="button" className="auth-btn-secondary" disabled={switching} onClick={() => void chooseAnotherAccount()}>
+            <button
+              type="button"
+              className="auth-btn-secondary"
+              disabled={switching}
+              onClick={() => void chooseAnotherAccount()}
+            >
               {switching ? "Signing out…" : "Choose another account"}
             </button>
           </div>

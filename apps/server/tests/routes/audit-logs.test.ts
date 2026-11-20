@@ -38,7 +38,13 @@ beforeEach(async () => {
   holder.session = admin;
   const fake = fakeDb({
     [COLLECTIONS.content]: [
-      { _id: "req-1", kind: "requirement", label: "Report Card", order: 0, isActive: true },
+      {
+        _id: "req-1",
+        kind: "requirement",
+        label: "Report Card",
+        order: 0,
+        isActive: true,
+      },
     ],
 
     [COLLECTIONS.auditLog]: [],

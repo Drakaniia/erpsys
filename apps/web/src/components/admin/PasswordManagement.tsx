@@ -266,62 +266,73 @@ export default function PasswordManagement({
                 void resetForm.handleSubmit();
               }}
             >
-              <ActiveEditors resource="user" id={selectedUser.id} onBlockedChange={lock.onBlockedChange}>
-              <resetForm.Field name="newPassword">
-                {(field) => {
-                  const rawErr = field.state.meta.isTouched
-                    ? field.state.meta.errors[0]
-                    : undefined;
-                  const errorMessage =
-                    rawErr === undefined
-                      ? ""
-                      : typeof rawErr === "string"
-                        ? rawErr
-                        : ((rawErr as { message?: string })?.message ?? "");
-                  const hasError =
-                    field.state.meta.isTouched && errorMessage.length > 0;
-                  return (
-                    <div className="space-y-1.5">
-                      <label
-                        htmlFor={field.name}
-                        className="text-sm font-medium text-auth-ink"
-                      >
-                        New Password
-                      </label>
-                      <p id="admin-password-rules" className="text-xs text-muted">{PASSWORD_REQUIREMENTS}</p>
-                      <input
-                        id={field.name}
-                        name={field.name}
-                        type="password"
-                        autoComplete="new-password"
-                        aria-describedby="admin-password-rules"
-                        placeholder="Enter new password"
-                        className={`h-11 w-full rounded-md border bg-white px-3 text-[15px] text-auth-ink outline-none placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-auth-blue ${
-                          hasError ? "border-error" : "border-auth-border"
-                        }`}
-                        aria-invalid={hasError}
-                        onBlur={field.handleBlur}
-                        value={field.state.value}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          field.handleChange(e.target.value);
-                          field.setMeta((prev) => ({
-                            ...prev,
-                            errors: [],
-                            isTouched: false,
-                          }));
-                        }}
-                      />
-                      {hasError && (
-                        <p className="text-sm text-error">{errorMessage}</p>
-                      )}
-                      <PasswordStrengthMeter
-                        value={String(field.state.value ?? "")}
-                        describedBy="admin-password-rules"
-                      />
-                    </div>
-                  );
-                }}
-              </resetForm.Field>
+              <ActiveEditors
+                resource="user"
+                id={selectedUser.id}
+                onBlockedChange={lock.onBlockedChange}
+              >
+                <resetForm.Field name="newPassword">
+                  {(field) => {
+                    const rawErr = field.state.meta.isTouched
+                      ? field.state.meta.errors[0]
+                      : undefined;
+                    const errorMessage =
+                      rawErr === undefined
+                        ? ""
+                        : typeof rawErr === "string"
+                          ? rawErr
+                          : ((rawErr as { message?: string })?.message ?? "");
+                    const hasError =
+                      field.state.meta.isTouched && errorMessage.length > 0;
+                    return (
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor={field.name}
+                          className="text-sm font-medium text-auth-ink"
+                        >
+                          New Password
+                        </label>
+                        <p
+                          id="admin-password-rules"
+                          className="text-xs text-muted"
+                        >
+                          {PASSWORD_REQUIREMENTS}
+                        </p>
+                        <input
+                          id={field.name}
+                          name={field.name}
+                          type="password"
+                          autoComplete="new-password"
+                          aria-describedby="admin-password-rules"
+                          placeholder="Enter new password"
+                          className={`h-11 w-full rounded-md border bg-white px-3 text-[15px] text-auth-ink outline-none placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-auth-blue ${
+                            hasError ? "border-error" : "border-auth-border"
+                          }`}
+                          aria-invalid={hasError}
+                          onBlur={field.handleBlur}
+                          value={field.state.value}
+                          onChange={(
+                            e: React.ChangeEvent<HTMLInputElement>,
+                          ) => {
+                            field.handleChange(e.target.value);
+                            field.setMeta((prev) => ({
+                              ...prev,
+                              errors: [],
+                              isTouched: false,
+                            }));
+                          }}
+                        />
+                        {hasError && (
+                          <p className="text-sm text-error">{errorMessage}</p>
+                        )}
+                        <PasswordStrengthMeter
+                          value={String(field.state.value ?? "")}
+                          describedBy="admin-password-rules"
+                        />
+                      </div>
+                    );
+                  }}
+                </resetForm.Field>
               </ActiveEditors>
 
               <div className="flex justify-end gap-3 pt-2">

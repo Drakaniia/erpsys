@@ -28,15 +28,13 @@ const officerOverview = {
     verified: day.completed * 3,
     returned: (i % 3) + 1,
   })),
-  recentActivity: people
-    .slice(0, 4)
-    .map((student, i) => ({
-      id: `decision-${i}`,
-      studentName: student.name,
-      stepCode: "PROFILING",
-      action: i === 2 ? "RETURNED" : "VERIFIED",
-      at: ago(i * 7 + 1),
-    })),
+  recentActivity: people.slice(0, 4).map((student, i) => ({
+    id: `decision-${i}`,
+    studentName: student.name,
+    stepCode: "PROFILING",
+    action: i === 2 ? "RETURNED" : "VERIFIED",
+    at: ago(i * 7 + 1),
+  })),
 };
 export function useOfficerState() {
   const state = useFilmOfficerState();

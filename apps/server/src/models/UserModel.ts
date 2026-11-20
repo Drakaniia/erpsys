@@ -14,7 +14,12 @@ export type StudentProfileRow = StudentProfile & { userId: string };
 
 function profileOf(user: UserRow | null): StudentProfileRow | null {
   return user?.studentProfile
-    ? { ...user.studentProfile, _id: String(user.studentProfile._id), academicYearId: String(user.studentProfile.academicYearId), userId: String(user._id) }
+    ? {
+        ...user.studentProfile,
+        _id: String(user.studentProfile._id),
+        academicYearId: String(user.studentProfile.academicYearId),
+        userId: String(user._id),
+      }
     : null;
 }
 
@@ -37,68 +42,125 @@ export type UserRow = {
 
 export class UserModel {
   static async findProfileById(id: string): Promise<StudentProfileRow | null> {
-    return profileOf(await getDbSync().collection<UserRow>(COLLECTIONS.user)
-      .findOne({ "studentProfile._id": refIn([id]) } as never));
+    return profileOf(
+      await getDbSync()
+        .collection<UserRow>(COLLECTIONS.user)
+        .findOne({ "studentProfile._id": refIn([id]) } as never),
+    );
   }
 
-  static async findProfileByUserId(userId: string): Promise<StudentProfileRow | null> {
-    return profileOf(await getDbSync().collection<UserRow>(COLLECTIONS.user)
-      .findOne(idIn([userId]) as never));
+  static async findProfileByUserId(
+    userId: string,
+  ): Promise<StudentProfileRow | null> {
+    return profileOf(
+      await getDbSync()
+        .collection<UserRow>(COLLECTIONS.user)
+        .findOne(idIn([userId]) as never),
+    );
   }
 
-  static async findProfileByStudentNumber(studentNumber: string): Promise<StudentProfileRow | null> {
-    return profileOf(await getDbSync().collection<UserRow>(COLLECTIONS.user)
-      .findOne({ "studentProfile.studentNumber": studentNumber } as never));
+  static async findProfileByStudentNumber(
+    studentNumber: string,
+  ): Promise<StudentProfileRow | null> {
+    return profileOf(
+      await getDbSync()
+        .collection<UserRow>(COLLECTIONS.user)
+        .findOne({ "studentProfile.studentNumber": studentNumber } as never),
+    );
   }
 
   static async searchProfilesByStudentNumber(
-    pattern: { $regex: string; $options: string }, limit = 500,
+    pattern: { $regex: string; $options: string },
+    limit = 500,
   ): Promise<Array<{ _id: string }>> {
-    const users = await getDbSync().collection<UserRow>(COLLECTIONS.user)
-      .find({ "studentProfile.studentNumber": pattern } as never).limit(limit).toArray();
-    return users.flatMap(user => user.studentProfile ? [{ _id: String(user.studentProfile._id) }] : []);
+    const users = await getDbSync()
+      .collection<UserRow>(COLLECTIONS.user)
+      .find({ "studentProfile.studentNumber": pattern } as never)
+      .limit(limit)
+      .toArray();
+    return users.flatMap((user) =>
+      user.studentProfile ? [{ _id: String(user.studentProfile._id) }] : [],
+    );
   }
 
-  static async listProfilesByUserIds(userIds: string[], limit = 500): Promise<StudentProfileRow[]> {
+  static async listProfilesByUserIds(
+    userIds: string[],
+    limit = 500,
+  ): Promise<StudentProfileRow[]> {
     if (userIds.length === 0) return [];
-    const users = await getDbSync().collection<UserRow>(COLLECTIONS.user)
-      .find({ ...idIn(userIds), "studentProfile._id": { $exists: true } } as never).limit(limit).toArray();
-    return users.flatMap(user => profileOf(user) ?? []);
+    const users = await getDbSync()
+      .collection<UserRow>(COLLECTIONS.user)
+      .find({
+        ...idIn(userIds),
+        "studentProfile._id": { $exists: true },
+      } as never)
+      .limit(limit)
+      .toArray();
+    return users.flatMap((user) => profileOf(user) ?? []);
   }
 
   static async findProfilesByIds(ids: string[]): Promise<StudentProfileRow[]> {
     if (ids.length === 0) return [];
-    const users = await getDbSync().collection<UserRow>(COLLECTIONS.user)
-      .find({ "studentProfile._id": refIn([...new Set(ids)]) } as never).toArray();
-    return users.flatMap(user => profileOf(user) ?? []);
+    const users = await getDbSync()
+      .collection<UserRow>(COLLECTIONS.user)
+      .find({ "studentProfile._id": refIn([...new Set(ids)]) } as never)
+      .toArray();
+    return users.flatMap((user) => profileOf(user) ?? []);
   }
 
-  static async listUnenrolledProfiles(enrolledIds: string[], qProfileIds?: string[] | null): Promise<StudentProfileRow[]> {
-    const users = await getDbSync().collection<UserRow>(COLLECTIONS.user).find({
-      "studentProfile._id": { $exists: true, $nin: refIn(enrolledIds).$in, ...(qProfileIds ? refIn(qProfileIds) : {}) },
-    } as never).toArray();
-    return users.flatMap(user => profileOf(user) ?? []);
+  static async listUnenrolledProfiles(
+    enrolledIds: string[],
+    qProfileIds?: string[] | null,
+  ): Promise<StudentProfileRow[]> {
+    const users = await getDbSync()
+      .collection<UserRow>(COLLECTIONS.user)
+      .find({
+        "studentProfile._id": {
+          $exists: true,
+          $nin: refIn(enrolledIds).$in,
+          ...(qProfileIds ? refIn(qProfileIds) : {}),
+        },
+      } as never)
+      .toArray();
+    return users.flatMap((user) => profileOf(user) ?? []);
   }
 
   static async countUnenrolledProfiles(enrolledIds: string[]): Promise<number> {
-    return getDbSync().collection<UserRow>(COLLECTIONS.user).countDocuments({
-      "studentProfile._id": { $exists: true, $nin: refIn(enrolledIds).$in },
-    } as never);
+    return getDbSync()
+      .collection<UserRow>(COLLECTIONS.user)
+      .countDocuments({
+        "studentProfile._id": { $exists: true, $nin: refIn(enrolledIds).$in },
+      } as never);
   }
 
   static async insertProfile(row: StudentProfileRow): Promise<void> {
     const { userId, ...profile } = row;
     const now = new Date();
-    const result = await getDbSync().collection<UserRow>(COLLECTIONS.user).updateOne({
-      ...idIn([userId]), studentProfile: null,
-    } as never, { $set: { studentProfile: { ...profile, createdAt: profile.createdAt ?? now, updatedAt: now } } } as never);
+    const result = await getDbSync()
+      .collection<UserRow>(COLLECTIONS.user)
+      .updateOne(
+        {
+          ...idIn([userId]),
+          studentProfile: null,
+        } as never,
+        {
+          $set: {
+            studentProfile: {
+              ...profile,
+              createdAt: profile.createdAt ?? now,
+              updatedAt: now,
+            },
+          },
+        } as never,
+      );
     if (!result.matchedCount) {
-      const error = new Error("User is missing or already has a student profile.");
+      const error = new Error(
+        "User is missing or already has a student profile.",
+      );
       Object.assign(error, { code: 11000 });
       throw error;
     }
   }
-
 
   static async findById(id: string): Promise<UserRow | null> {
     return getDbSync()

@@ -96,14 +96,13 @@ export default function YearLevelModal({
           className="mt-3"
           onBlockedChange={lock.onBlockedChange}
         >
-        <div className="mt-4">
-          <YearLevelChips
-            selected={selected}
-            disabled={busy}
-            onchange={(levels) => setSelected(levels)}
-          />
-        </div>
-
+          <div className="mt-4">
+            <YearLevelChips
+              selected={selected}
+              disabled={busy}
+              onchange={(levels) => setSelected(levels)}
+            />
+          </div>
         </ActiveEditors>
         <div className="mt-5 flex justify-end gap-2">
           <button

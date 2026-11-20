@@ -42,8 +42,20 @@ function seed(): Record<string, Row[]> {
     ],
 
     [COLLECTIONS.content]: [
-      { _id: "req-1", kind: "requirement", label: "Form 5", isActive: true, order: 1 },
-      { _id: "req-2", kind: "requirement", label: "Retired form", isActive: false, order: 2 },
+      {
+        _id: "req-1",
+        kind: "requirement",
+        label: "Form 5",
+        isActive: true,
+        order: 1,
+      },
+      {
+        _id: "req-2",
+        kind: "requirement",
+        label: "Retired form",
+        isActive: false,
+        order: 2,
+      },
     ],
     [COLLECTIONS.upload]: [
       {
@@ -58,7 +70,11 @@ function seed(): Record<string, Row[]> {
     [COLLECTIONS.user]: [
       {
         _id: "stud1",
-        studentProfile: { _id: "profile-1", studentNumber: "12345", academicYearId: "ay-1" },
+        studentProfile: {
+          _id: "profile-1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         image: "  ",
@@ -237,36 +253,50 @@ describe("submission review", () => {
   });
 
   it("filters by student number", async () => {
-
     const noMatch = await (await call("/submissions?q=99999")).json();
     expect(noMatch.data).toEqual([]);
   });
 
   it("lists a revoked assessment again only after the student reapplies", async () => {
-
     const row = verification("ver-2");
     row.stepId = "ASSESSMENT";
     row.appliedAt = new Date("2025-07-01");
-    expect((await call("/submissions/ver-2/verification", { method: "DELETE" })).status).toBe(200);
-    const queue = () => call("/submissions?step=ASSESSMENT").then((response) => response.json());
+    expect(
+      (await call("/submissions/ver-2/verification", { method: "DELETE" }))
+        .status,
+    ).toBe(200);
+    const queue = () =>
+      call("/submissions?step=ASSESSMENT").then((response) => response.json());
     expect(await queue()).toMatchObject({ total: 0, data: [] });
-    holder.session = { user: { id: "stud1", email: "12345@student.buksu.edu.ph", role: "STUDENT" } };
-    const applied = await call("/me/assessment", { method: "POST", body: "{}" });
+    holder.session = {
+      user: {
+        id: "stud1",
+        email: "12345@student.buksu.edu.ph",
+        role: "STUDENT",
+      },
+    };
+    const applied = await call("/me/assessment", {
+      method: "POST",
+      body: "{}",
+    });
     expect(applied.status).toBe(200);
     holder.session = OFFICER;
     expect(await queue()).toMatchObject({
-      total: 1, data: [{ verificationId: "ver-2", status: "PENDING", evidence: [] }],
+      total: 1,
+      data: [{ verificationId: "ver-2", status: "PENDING", evidence: [] }],
     });
     expect(verification("ver-2").appliedAt).not.toEqual(new Date("2025-07-01"));
   });
 
   it("identifies an imported Google Forms response without exposing its answers in the list", async () => {
-
     const row = verification();
     row.stepId = "PROFILING";
     row.answers = [];
     const { data } = await (await call("/submissions?step=PROFILING")).json();
-    expect(data[0]).toMatchObject({ hasGoogleFormsResponse: true, evidence: [] });
+    expect(data[0]).toMatchObject({
+      hasGoogleFormsResponse: true,
+      evidence: [],
+    });
     expect(data[0]).not.toHaveProperty("answers");
   });
 
@@ -361,7 +391,6 @@ describe("submission review", () => {
   });
 
   it("only captures for the Mugshot step", async () => {
-
     context.store[COLLECTIONS.stepVerification].push({
       _id: "ver-assessment",
       studentProfileId: "profile-1",

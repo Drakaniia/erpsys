@@ -51,8 +51,7 @@ const linkBody = {
   name: z.string().trim().min(1).max(120),
   url: z.string().url().max(1000),
 };
-const links = () =>
-  getDbSync().collection<SocialLinkRow>(COLLECTIONS.content);
+const links = () => getDbSync().collection<SocialLinkRow>(COLLECTIONS.content);
 
 type KnowledgeDoc = {
   _id: string;
@@ -148,7 +147,10 @@ contentRouter.put(
 );
 
 async function rename(id: string, input: { name: string; url: string }) {
-  const existing = await links().findOne({ ...idIn([id]), kind: "socialLink" } as never);
+  const existing = await links().findOne({
+    ...idIn([id]),
+    kind: "socialLink",
+  } as never);
   if (!existing) {
     throw new ApiError("NOT_FOUND", { message: "That link no longer exists." });
   }
@@ -288,7 +290,11 @@ contentRouter.post(
       order: (highest?.order ?? 0) + 1,
       isActive: true,
     };
-    await links().insertOne({ ...row, kind: "socialLink", createdAt: new Date() } as never);
+    await links().insertOne({
+      ...row,
+      kind: "socialLink",
+      createdAt: new Date(),
+    } as never);
     okOne(res, socialLinkView(row), 201);
   }),
 );

@@ -29,7 +29,6 @@ const ADVISER = {
   },
 };
 
-
 function profile(id: string): Row {
   return {
     _id: id,
@@ -50,10 +49,14 @@ function seed(): Record<string, Row[]> {
         createdAt: new Date("2025-06-01"),
       },
     ],
-    [COLLECTIONS.department]: [{
-      _id: "dept-1", name: "College of Technologies", isActive: true,
-      advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: [] }],
-    }],
+    [COLLECTIONS.department]: [
+      {
+        _id: "dept-1",
+        name: "College of Technologies",
+        isActive: true,
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: [] }],
+      },
+    ],
     [COLLECTIONS.user]: ["p1", "p2", "p3"].map((id) => ({
       _id: `u-${id}`,
       studentProfile: profile(id),

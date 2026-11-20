@@ -11,13 +11,16 @@ import { ApiError } from "../config/errors.js";
 
 import { AdminActionLogModel } from "../models/AdminActionLogModel.js";
 import { AdviserScheduleModel } from "../models/AdviserScheduleModel.js";
-import { DepartmentModel, type DepartmentRow, type AdviserAssignmentRow } from "../models/DepartmentModel.js";
+import {
+  DepartmentModel,
+  type DepartmentRow,
+  type AdviserAssignmentRow,
+} from "../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../models/EnrollmentQueueModel.js";
 import { UserModel } from "../models/UserModel.js";
 import { syncAfterScheduleChange } from "./calendar.js";
 
 type Assignment = { departmentId: string; yearLevels: YearLevel[] };
-
 
 export function assertLevelsOffered(
   department: { name: string; yearLevels?: YearLevel[] },
@@ -76,7 +79,11 @@ async function writeAssignments(
       unchanged.map((link) => link.departmentId),
     );
   }
-  await DepartmentModel.replaceAdviserAssignments(adviserId, assignments, departments);
+  await DepartmentModel.replaceAdviserAssignments(
+    adviserId,
+    assignments,
+    departments,
+  );
 }
 
 export async function replaceAssignments(
@@ -106,11 +113,29 @@ export async function replaceAssignments(
     yearLevels: normalizeYearLevels(yearLevels),
   }));
 
-  const departments = await DepartmentModel.listForAdviserChanges(adviserId, unique.map(row => row.departmentId));
-  if (unique.some(row => !departments.some(department => String(department._id) === row.departmentId))) {
-    throw new ApiError("NOT_FOUND", { message: "One or more departments don't exist." });
+  const departments = await DepartmentModel.listForAdviserChanges(
+    adviserId,
+    unique.map((row) => row.departmentId),
+  );
+  if (
+    unique.some(
+      (row) =>
+        !departments.some(
+          (department) => String(department._id) === row.departmentId,
+        ),
+    )
+  ) {
+    throw new ApiError("NOT_FOUND", {
+      message: "One or more departments don't exist.",
+    });
   }
-  const holders = departments.flatMap(department => (department.advisers ?? []).map(holder => ({ ...holder, adviserId: String(holder.adviserId), departmentId: String(department._id) })));
+  const holders = departments.flatMap((department) =>
+    (department.advisers ?? []).map((holder) => ({
+      ...holder,
+      adviserId: String(holder.adviserId),
+      departmentId: String(department._id),
+    })),
+  );
   const previous = holders.filter((holder) => holder.adviserId === adviserId);
   const departmentOf = (id: string) =>
     departments.find((d) => String(d._id) === id);
@@ -153,12 +178,25 @@ export async function assignSelf(
 ): Promise<{ departmentIds: string[]; yearLevels: YearLevel[] }> {
   const departmentIds = [...new Set(input.departmentIds)];
   const requested = normalizeYearLevels(input.yearLevels);
-  const allDepartments = await DepartmentModel.listForAdviserChanges(adviserId, departmentIds);
-  const departments = allDepartments.filter(department => departmentIds.includes(String(department._id)));
+  const allDepartments = await DepartmentModel.listForAdviserChanges(
+    adviserId,
+    departmentIds,
+  );
+  const departments = allDepartments.filter((department) =>
+    departmentIds.includes(String(department._id)),
+  );
   if (departments.length !== departmentIds.length) {
-    throw new ApiError("NOT_FOUND", { message: "One or more departments don't exist." });
+    throw new ApiError("NOT_FOUND", {
+      message: "One or more departments don't exist.",
+    });
   }
-  const holders = allDepartments.flatMap(department => (department.advisers ?? []).map(holder => ({ ...holder, adviserId: String(holder.adviserId), departmentId: String(department._id) })));
+  const holders = allDepartments.flatMap((department) =>
+    (department.advisers ?? []).map((holder) => ({
+      ...holder,
+      adviserId: String(holder.adviserId),
+      departmentId: String(department._id),
+    })),
+  );
   const previous = holders.filter((holder) => holder.adviserId === adviserId);
 
   if (departments.some((dept) => !dept.isActive)) {

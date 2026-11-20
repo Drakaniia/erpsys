@@ -45,8 +45,11 @@ export default function ProfilingFormPanel({
   const formsEnabled = flags.googleForms;
   const editor = useFormEditorWindow(data?.editUrl);
   const [editRequested, setEditRequested] = useState(false);
-  const editing = !data?.editUrl || confirmRemove || editRequested || editor.editing || busy;
-  const { blocked, onBlockedChange } = useEditingLock(`${data?.editUrl ?? "new"}:${editing}`);
+  const editing =
+    !data?.editUrl || confirmRemove || editRequested || editor.editing || busy;
+  const { blocked, onBlockedChange } = useEditingLock(
+    `${data?.editUrl ?? "new"}:${editing}`,
+  );
 
   function openEditor() {
     if (!editRequested && !editor.editing) {
@@ -86,28 +89,31 @@ export default function ProfilingFormPanel({
           if (!blocked && !busy && title.trim()) onsave(title.trim());
         }}
       >
-        <ActiveEditors resource="profiling-form" onBlockedChange={onBlockedChange}>
-        <EmptyState
-          title="No profiling form yet"
-          hint="Create a Google Form, then add the questions in Google Forms. Students answer it signed in with their school Google account."
-          icon="form"
-        />
-        <div className="flex flex-wrap gap-2">
-          <input
-            aria-label="Form title"
-            className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
-            maxLength={200}
-            value={title}
-            onChange={(e) => setTitle(e.currentTarget.value)}
+        <ActiveEditors
+          resource="profiling-form"
+          onBlockedChange={onBlockedChange}
+        >
+          <EmptyState
+            title="No profiling form yet"
+            hint="Create a Google Form, then add the questions in Google Forms. Students answer it signed in with their school Google account."
+            icon="form"
           />
-          <button
-            type="submit"
-            disabled={busy || !title.trim()}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
-            {busy ? "Creating…" : "Create Google Form"}
-          </button>
-        </div>
+          <div className="flex flex-wrap gap-2">
+            <input
+              aria-label="Form title"
+              className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink"
+              maxLength={200}
+              value={title}
+              onChange={(e) => setTitle(e.currentTarget.value)}
+            />
+            <button
+              type="submit"
+              disabled={busy || !title.trim()}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {busy ? "Creating…" : "Create Google Form"}
+            </button>
+          </div>
         </ActiveEditors>
       </form>
     );

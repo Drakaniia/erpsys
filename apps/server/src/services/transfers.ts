@@ -3,7 +3,6 @@ import {
   departmentAcceptsLevel,
   deriveDepartmentCode,
   normalizeYearLevels,
-
   yearLevelsOverlap,
   type YearLevel,
 } from "../config/constants.js";
@@ -105,7 +104,10 @@ export async function runTransfer(opts: {
     requested,
     owner?.adviserId ?? null,
   );
-  await DepartmentModel.deleteOtherAdviserAssignments(opts.adviserId, opts.departmentId);
+  await DepartmentModel.deleteOtherAdviserAssignments(
+    opts.adviserId,
+    opts.departmentId,
+  );
   await AdviserScheduleModel.closeOpenForAdviser(opts.adviserId, [
     opts.departmentId,
   ]);
@@ -114,9 +116,11 @@ export async function runTransfer(opts: {
   ]);
 
   if (owner) {
-    const remaining = await DepartmentModel.findAdviserLink(owner.adviserId, opts.departmentId);
+    const remaining = await DepartmentModel.findAdviserLink(
+      owner.adviserId,
+      opts.departmentId,
+    );
     if (!remaining) {
-
       await AdviserScheduleModel.closeForDepartment(
         owner.adviserId,
         opts.departmentId,
@@ -131,7 +135,6 @@ export async function runTransfer(opts: {
         opts.departmentId,
         owner.adviserId,
       );
-
     }
     await AdminActionLogModel.log(
       opts.adviserId,
@@ -148,7 +151,10 @@ export async function runTransfer(opts: {
     );
   }
 
-  await EnrollmentQueueModel.releaseServingBy(opts.departmentId, opts.adviserId);
+  await EnrollmentQueueModel.releaseServingBy(
+    opts.departmentId,
+    opts.adviserId,
+  );
 
   return owner ? userName(owner.adviserId) : null;
 }

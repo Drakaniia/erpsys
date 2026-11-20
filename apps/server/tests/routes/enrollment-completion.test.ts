@@ -50,8 +50,12 @@ function seed(): Record<string, Row[]> {
       },
     ],
     [COLLECTIONS.department]: [
-      { _id: "dept-1", name: "College of Technologies", isActive: true,
-        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: ["FIRST"] }] },
+      {
+        _id: "dept-1",
+        name: "College of Technologies",
+        isActive: true,
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: ["FIRST"] }],
+      },
     ],
 
     [COLLECTIONS.studentEnrollment]: [
@@ -71,8 +75,16 @@ function seed(): Record<string, Row[]> {
       },
     ],
     [COLLECTIONS.user]: [
-      { _id: "stud1", name: "Ana", email: "12345@student.buksu.edu.ph",
-        studentProfile: { _id: "profile-1", studentNumber: "12345", academicYearId: "ay-1" } },
+      {
+        _id: "stud1",
+        name: "Ana",
+        email: "12345@student.buksu.edu.ph",
+        studentProfile: {
+          _id: "profile-1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
+      },
       { _id: "adv1", name: "Adviser", email: "adv@buksu.edu.ph" },
     ],
 

@@ -142,7 +142,9 @@ async function activeSubmissionEditors(
     editor,
   );
   if (!entries) {
-    throw new ApiError("NOT_FOUND", { message: "Reviewable submission not found." });
+    throw new ApiError("NOT_FOUND", {
+      message: "Reviewable submission not found.",
+    });
   }
   return entries.map(({ userId, name }) => ({ userId, name }));
 }

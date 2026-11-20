@@ -3,13 +3,7 @@ import { api } from "$lib/api";
 
 type Editor = { userId: string; name: string };
 
-export default function SubmissionActiveEditors({
-  id,
-
-}: {
-  id: string;
-
-}) {
+export default function SubmissionActiveEditors({ id }: { id: string }) {
   const [editors, setEditors] = useState<Editor[]>([]);
 
   useEffect(() => {
@@ -22,7 +16,9 @@ export default function SubmissionActiveEditors({
       pending = true;
       clearTimeout(timer);
       try {
-        const result: Editor[] = await api.officer.getActiveEditors.call({ id });
+        const result: Editor[] = await api.officer.getActiveEditors.call({
+          id,
+        });
         if (!stopped) setEditors(result);
       } catch {
         if (!stopped) setEditors([]);

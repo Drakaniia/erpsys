@@ -161,12 +161,20 @@ describe("Better Auth authentication contract", () => {
   it("rejects client profile injection and never returns embedded identity in auth or session payloads", async () => {
     const response = await call("/sign-up/student", {
       ...signup,
-      studentProfile: { _id: "forged", studentNumber: "999999", academicYearId: "forged-year" },
+      studentProfile: {
+        _id: "forged",
+        studentNumber: "999999",
+        academicYearId: "forged-year",
+      },
     });
     expect(response.status).toBe(200);
     expect(state.data.user[0].studentProfile).toBeUndefined();
     expect(await response.json()).not.toHaveProperty("user.studentProfile");
-    state.data.user[0].studentProfile = { _id: "real-profile", studentNumber: "1234567890", academicYearId: "year" };
+    state.data.user[0].studentProfile = {
+      _id: "real-profile",
+      studentNumber: "1234567890",
+      academicYearId: "year",
+    };
     const session = await call("/get-session", undefined, cookieOf(response));
     expect(session.status).toBe(200);
     expect(await session.json()).not.toHaveProperty("user.studentProfile");
@@ -336,31 +344,56 @@ describe("Better Auth authentication contract", () => {
 
   it("accepts a real invite token once, without creating a session", async () => {
     const id = await inviteAccount("Invited", "invited@example.com");
-    expect(state.data.user[0]).toMatchObject({ id, role: "STUDENT", emailVerified: false });
+    expect(state.data.user[0]).toMatchObject({
+      id,
+      role: "STUDENT",
+      emailVerified: false,
+    });
     expect(state.data.account).toHaveLength(0);
     expect(state.mail[0].to).toBe("invited@example.com");
-    const token = new URL(state.mail[0].text.match(/http[^\s]+/)![0]).searchParams.get("token");
+    const token = new URL(
+      state.mail[0].text.match(/http[^\s]+/)![0],
+    ).searchParams.get("token");
     expect(state.data.verification[0].identifier).not.toContain(token);
-    expect((state.data.verification[0].expiresAt as Date).getTime() - Date.now()).toBeGreaterThan(3590_000);
-    const reset = async (newPassword: string) => call("/reset-password", { token, newPassword });
+    expect(
+      (state.data.verification[0].expiresAt as Date).getTime() - Date.now(),
+    ).toBeGreaterThan(3590_000);
+    const reset = async (newPassword: string) =>
+      call("/reset-password", { token, newPassword });
     expect((await reset("lowercase-only-password")).status).toBe(400);
     expect((await reset(signup.password)).status).toBe(200);
     expect(state.data.session).toHaveLength(0);
     expect((await reset(signup.password)).ok).toBe(false);
-    expect((await call("/sign-in/email", { email: "invited@example.com", password: signup.password })).ok).toBe(true);
+    expect(
+      (
+        await call("/sign-in/email", {
+          email: "invited@example.com",
+          password: signup.password,
+        })
+      ).ok,
+    ).toBe(true);
   });
 
   it("rejects expired invitations and cleans up undeliverable invitations", async () => {
     state.mailFails = true;
-    await expect(inviteAccount("Invited", "invited@example.com")).rejects.toMatchObject({ status: 503 });
+    await expect(
+      inviteAccount("Invited", "invited@example.com"),
+    ).rejects.toMatchObject({ status: 503 });
     expect(state.data.user).toHaveLength(0);
     expect(state.data.verification).toHaveLength(0);
     state.mailFails = false;
     await inviteAccount("Invited", "invited@example.com");
-    await expect(inviteAccount("Duplicate", "invited@example.com")).rejects.toMatchObject({ status: 409 });
-    const token = new URL(state.mail[0].text.match(/http[^\s]+/)![0]).searchParams.get("token");
+    await expect(
+      inviteAccount("Duplicate", "invited@example.com"),
+    ).rejects.toMatchObject({ status: 409 });
+    const token = new URL(
+      state.mail[0].text.match(/http[^\s]+/)![0],
+    ).searchParams.get("token");
     state.data.verification[0].expiresAt = new Date(0);
-    expect((await call("/reset-password", { token, newPassword: signup.password })).ok).toBe(false);
+    expect(
+      (await call("/reset-password", { token, newPassword: signup.password }))
+        .ok,
+    ).toBe(false);
     expect(state.data.account).toHaveLength(0);
   });
 

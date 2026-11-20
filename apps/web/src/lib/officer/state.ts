@@ -12,7 +12,6 @@ import type { ListItem, StepCode } from "$lib/officer/types";
 import { useOfficerQueries } from "$lib/officer/queries";
 import { useOfficerMutations } from "$lib/officer/mutations";
 
-
 const EVIDENCE_FILTERS = ["ALL", "HAS", "NONE"] as const;
 type EvidenceFilter = (typeof EVIDENCE_FILTERS)[number];
 const RANGE_FILTERS = ["ALL", "today", "7d", "30d", "year"] as const;
@@ -70,7 +69,6 @@ export function useOfficerState(officerId: string) {
   const unreadOnly = param("unread", "") === "1";
   const filterActive =
     Boolean(searchQ) ||
-
     evidenceFilter !== "ALL" ||
     rangeFilter !== "ALL" ||
     unreadOnly;
@@ -174,7 +172,11 @@ export function useOfficerState(officerId: string) {
   // returns the admin shape (stepTotals) for them — same normalization as
   // StepOverview so the step-tab badges read the right field either way.
   const counts: Partial<Record<StepCode, number>> = {};
-  const countSteps: Array<{ code: StepCode; awaitingReview?: number; unverified?: number }> =
+  const countSteps: Array<{
+    code: StepCode;
+    awaitingReview?: number;
+    unverified?: number;
+  }> =
     queries.overviewQuery.data?.steps ??
     queries.overviewQuery.data?.stepTotals ??
     [];

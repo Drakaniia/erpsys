@@ -9,7 +9,12 @@ import {
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "$lib/api";
 import ScheduleDialog from "./ScheduleDialog";
-const activeEditors = vi.hoisted(() => vi.fn(({ children }: { children?: import("react").ReactNode }) => children ?? null));
+const activeEditors = vi.hoisted(() =>
+  vi.fn(
+    ({ children }: { children?: import("react").ReactNode }) =>
+      children ?? null,
+  ),
+);
 vi.mock("../ActiveEditors", () => ({
   default: activeEditors,
   useEditingLock: () => ({ blocked: false, onBlockedChange: () => {} }),

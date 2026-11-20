@@ -110,16 +110,16 @@ export default function DetailSheetMain({
         onreplysend={onreplysend}
       />
       <fieldset disabled={editingBlocked} className="min-w-0 border-0 p-0">
-      <DetailSheetActions
-        isVerified={isVerified}
-        busyAny={busyAny}
-        replyOpen={replyOpen}
-        sendBackLabel={sendBackLabel}
-        revokeBusy={revokeBusy}
-        onstamp={onstamp}
-        onrevoke={onrevoke}
-        ontogglesendback={ontogglesendback}
-      />
+        <DetailSheetActions
+          isVerified={isVerified}
+          busyAny={busyAny}
+          replyOpen={replyOpen}
+          sendBackLabel={sendBackLabel}
+          revokeBusy={revokeBusy}
+          onstamp={onstamp}
+          onrevoke={onrevoke}
+          ontogglesendback={ontogglesendback}
+        />
       </fieldset>
       {justVerified && (
         <StampLanding

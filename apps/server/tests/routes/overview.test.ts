@@ -83,20 +83,27 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p1",
-        studentProfile: { _id: "p1", studentNumber: "12345", academicYearId: "ay-1" },
+        studentProfile: {
+          _id: "p1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
       },
       {
         _id: "u-p2",
-        studentProfile: { _id: "p2", studentNumber: "12346", academicYearId: "ay-1" },
+        studentProfile: {
+          _id: "p2",
+          studentNumber: "12346",
+          academicYearId: "ay-1",
+        },
         name: "Ben",
         email: "12346@student.buksu.edu.ph",
         role: "STUDENT",
       },
     ],
-
 
     [COLLECTIONS.stepVerification]: [
       {

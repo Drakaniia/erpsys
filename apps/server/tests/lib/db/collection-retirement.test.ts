@@ -10,21 +10,31 @@ const state = vi.hoisted(() => ({
   mutate: false,
 }));
 
-vi.mock("../../../src/lib/platform/env.js", () => ({ env: { DATABASE_URL: "mongodb://unused/erpsys" } }));
-vi.mock("mongodb", async importOriginal => {
+vi.mock("../../../src/lib/platform/env.js", () => ({
+  env: { DATABASE_URL: "mongodb://unused/erpsys" },
+}));
+vi.mock("mongodb", async (importOriginal) => {
   const original = await importOriginal<typeof import("mongodb")>();
   return {
     ...original,
     MongoClient: class {
       async connect() {}
-      async close() { state.closed = true; }
+      async close() {
+        state.closed = true;
+      }
       db() {
         return {
           databaseName: state.database,
-          listCollections: () => ({ toArray: async () => Object.keys(state.rows).map(name => ({ name })) }),
+          listCollections: () => ({
+            toArray: async () =>
+              Object.keys(state.rows).map((name) => ({ name })),
+          }),
           collection: (name: string) => ({
-            findOne: async () => state.marker ? { version: 2, completedAt: new Date() } : null,
-            find: () => ({ toArray: async () => [...(state.rows[name] ?? [])] }),
+            findOne: async () =>
+              state.marker ? { version: 2, completedAt: new Date() } : null,
+            find: () => ({
+              toArray: async () => [...(state.rows[name] ?? [])],
+            }),
             drop: async () => {
               state.drops.push(name);
               delete state.rows[name];
@@ -37,26 +47,53 @@ vi.mock("mongodb", async importOriginal => {
   };
 });
 
-vi.mock("../../../src/lib/db/collection-simplification.js", async importOriginal => {
-  const original = await importOriginal<typeof import("../../../src/lib/db/collection-simplification.js")>();
-  return {
-    ...original,
-    planCollectionSimplification: () => ({ changes: state.changes ? [{}] : [] }),
-    verifySimplificationSnapshot: (expected: unknown, actual: unknown) => {
-      expect(actual).toEqual(expected);
-    },
-  };
-});
+vi.mock(
+  "../../../src/lib/db/collection-simplification.js",
+  async (importOriginal) => {
+    const original =
+      await importOriginal<
+        typeof import("../../../src/lib/db/collection-simplification.js")
+      >();
+    return {
+      ...original,
+      planCollectionSimplification: () => ({
+        changes: state.changes ? [{}] : [],
+      }),
+      verifySimplificationSnapshot: (expected: unknown, actual: unknown) => {
+        expect(actual).toEqual(expected);
+      },
+    };
+  },
+);
 
-import { RETIRED_SOURCES, parseRetirementArgs, runCollectionRetirement } from "../../../src/scripts/retire-simplified-collections.js";
+import {
+  RETIRED_SOURCES,
+  parseRetirementArgs,
+  runCollectionRetirement,
+} from "../../../src/scripts/retire-simplified-collections.js";
 
-const apply = ["--apply", "--writers-stopped", "--restore-verified", "--backup-reference", "verified-private-backup", "--database", "erpsys"];
+const apply = [
+  "--apply",
+  "--writers-stopped",
+  "--restore-verified",
+  "--backup-reference",
+  "verified-private-backup",
+  "--database",
+  "erpsys",
+];
 
 beforeEach(() => {
   state.marker = true;
   state.changes = false;
   state.database = "erpsys";
-  state.rows = Object.fromEntries([...RETIRED_SOURCES, "user", "admin_action_log", "integration_credential"].map(name => [name, []]));
+  state.rows = Object.fromEntries(
+    [
+      ...RETIRED_SOURCES,
+      "user",
+      "admin_action_log",
+      "integration_credential",
+    ].map((name) => [name, []]),
+  );
   state.drops = [];
   state.closed = false;
   state.mutate = false;
@@ -86,14 +123,17 @@ describe("offline source retirement", () => {
     expect(state.drops).toHaveLength(6);
   });
 
-  it.each(["marker", "changes", "database"] as const)("fails closed for %s", async field => {
-    if (field === "marker") state.marker = false;
-    if (field === "changes") state.changes = true;
-    if (field === "database") state.database = "test";
-    await expect(runCollectionRetirement(apply)).rejects.toThrow();
-    expect(state.drops).toEqual([]);
-    expect(state.closed).toBe(true);
-  });
+  it.each(["marker", "changes", "database"] as const)(
+    "fails closed for %s",
+    async (field) => {
+      if (field === "marker") state.marker = false;
+      if (field === "changes") state.changes = true;
+      if (field === "database") state.database = "test";
+      await expect(runCollectionRetirement(apply)).rejects.toThrow();
+      expect(state.drops).toEqual([]);
+      expect(state.closed).toBe(true);
+    },
+  );
 
   it("stops immediately when verification detects a concurrent destination edit", async () => {
     state.mutate = true;
@@ -104,7 +144,7 @@ describe("offline source retirement", () => {
 
   it.each([
     ["--apply"],
-    apply.filter(arg => arg !== "--restore-verified"),
+    apply.filter((arg) => arg !== "--restore-verified"),
     ["--drop", "integration_credential"],
     ["--dry-run", "--apply"],
     ["--database"],

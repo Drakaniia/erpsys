@@ -8,7 +8,8 @@ import IntegrationsPanel from "./IntegrationsPanel";
 import type { AdminIntegrationRow } from "$lib/integrations/use-integrations";
 
 vi.mock("../ActiveEditors", () => ({
-  default: ({ children }: { children?: import("react").ReactNode }) => children ?? null,
+  default: ({ children }: { children?: import("react").ReactNode }) =>
+    children ?? null,
   useEditingLock: () => ({ blocked: false, onBlockedChange: () => {} }),
 }));
 

@@ -49,21 +49,35 @@ describe("timestamp ordering", () => {
     });
     const guarded = guardDb(db as unknown as Db);
     const users = guarded.collection("user");
-    expect(() => users.insertOne({ _id: "marker", kind: "edit-presence" } as never)).toThrow("Reserved presence record");
-    expect(() => users.insertOne({ _id: "@edit-presence:fake" } as never)).toThrow("Reserved presence record");
+    expect(() =>
+      users.insertOne({ _id: "marker", kind: "edit-presence" } as never),
+    ).toThrow("Reserved presence record");
+    expect(() =>
+      users.insertOne({ _id: "@edit-presence:fake" } as never),
+    ).toThrow("Reserved presence record");
     expect(await users.countDocuments()).toBe(1);
     expect(await users.find({}).toArray()).toHaveLength(1);
-    expect(await users.findOne({ _id: "@edit-presence:user:new" } as never)).toBeNull();
-    expect(() => users.updateOne({}, { $set: { kind: "edit-presence" } })).toThrow("Reserved presence record");
+    expect(
+      await users.findOne({ _id: "@edit-presence:user:new" } as never),
+    ).toBeNull();
+    expect(() =>
+      users.updateOne({}, { $set: { kind: "edit-presence" } }),
+    ).toThrow("Reserved presence record");
     await inTx(nextTs(), "GET", async () => {
       expect(await users.countDocuments()).toBe(1);
       expect(await users.find({}).toArray()).toHaveLength(1);
     });
     await users.updateMany({}, { $set: { touched: true } });
     expect(store.user[1].touched).toBeUndefined();
-    expect(await guarded.collection("content").countDocuments({ kind: "edit-presence" })).toBe(0);
+    expect(
+      await guarded
+        .collection("content")
+        .countDocuments({ kind: "edit-presence" }),
+    ).toBe(0);
     await guarded.collection("content").deleteMany({});
-    expect(store.content).toEqual([{ _id: "@edit-presence:social-link:new", kind: "edit-presence" }]);
+    expect(store.content).toEqual([
+      { _id: "@edit-presence:social-link:new", kind: "edit-presence" },
+    ]);
   });
   it("reports TS_ABORTED when a racing writer makes the atomic write filter match nothing", async () => {
     const { db, store } = fakeDb({ things: [{ _id: "x", value: 0 }] });

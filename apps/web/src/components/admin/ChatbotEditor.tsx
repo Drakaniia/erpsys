@@ -160,8 +160,16 @@ export default function ChatbotEditor({
         </div>
       )}
 
-      <ActiveEditors resource="chatbot-knowledge" enabled={loaded} onBlockedChange={lock.onBlockedChange}>
-        <KnowledgeEditor value={draft} onChange={setDraft} disabled={lock.blocked || !loaded} />
+      <ActiveEditors
+        resource="chatbot-knowledge"
+        enabled={loaded}
+        onBlockedChange={lock.onBlockedChange}
+      >
+        <KnowledgeEditor
+          value={draft}
+          onChange={setDraft}
+          disabled={lock.blocked || !loaded}
+        />
       </ActiveEditors>
 
       <ConfirmDialog

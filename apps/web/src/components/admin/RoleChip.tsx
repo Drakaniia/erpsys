@@ -19,7 +19,6 @@ export default function RoleChip({ role }: { role: string }) {
     return () => cancelAnimationFrame(raf);
   }, [role, setT]);
 
-
   const chipClass =
     role === "SBO_OFFICER"
       ? "bg-primary text-white"
@@ -33,9 +32,10 @@ export default function RoleChip({ role }: { role: string }) {
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${chipClass}`}
       style={{ transform: `scale(${t})` }}
-
     >
-      {role === "ENROLLMENT_ADVISER" ? roleLabel(role) : role.replaceAll("_", " ")}
+      {role === "ENROLLMENT_ADVISER"
+        ? roleLabel(role)
+        : role.replaceAll("_", " ")}
     </span>
   );
 }

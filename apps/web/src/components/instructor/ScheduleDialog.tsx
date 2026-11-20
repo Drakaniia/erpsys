@@ -232,7 +232,9 @@ function ScheduleEditor({
             <button
               type="button"
               onClick={() => void submit()}
-              disabled={lock.blocked || save.isPending || !ready || !dirty || conflict}
+              disabled={
+                lock.blocked || save.isPending || !ready || !dirty || conflict
+              }
               className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               {save.isPending ? "Saving…" : "Save schedule"}
@@ -242,152 +244,159 @@ function ScheduleEditor({
       }
     >
       <div className="max-h-[60dvh] space-y-3 overflow-y-auto px-5">
-        <ActiveEditors resource="schedule" scope={department.id} enabled={open} onBlockedChange={lock.onBlockedChange}>
-        <p className="text-sm text-muted">
-          Students see these hours on the queue card. They never open or close
-          the queue — the “Accepting students” switch still does that.
-        </p>
-        {schedule.isError ? (
-          <div role="alert" className="text-sm text-error">
-            Couldn&apos;t load your schedule.
-            <button
-              type="button"
-              className={GHOST}
-              onClick={() => void schedule.refetch()}
-            >
-              Retry
-            </button>
-          </div>
-        ) : null}
-        {rows.length === 0 && ready ? (
-          <p className="rounded-xl border border-border bg-surface px-3 py-3 text-sm text-muted">
-            No hours posted yet.
-          </p>
-        ) : null}
-        <fieldset
-          disabled={!ready || save.isPending || conflict}
-          className="space-y-2"
+        <ActiveEditors
+          resource="schedule"
+          scope={department.id}
+          enabled={open}
+          onBlockedChange={lock.onBlockedChange}
         >
-          <legend className="sr-only">Schedule hours</legend>
-          <ul className="space-y-2">
-            {rows.map((row) => (
-              <li
-                key={row.key}
-                className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2"
+          <p className="text-sm text-muted">
+            Students see these hours on the queue card. They never open or close
+            the queue — the “Accepting students” switch still does that.
+          </p>
+          {schedule.isError ? (
+            <div role="alert" className="text-sm text-error">
+              Couldn&apos;t load your schedule.
+              <button
+                type="button"
+                className={GHOST}
+                onClick={() => void schedule.refetch()}
               >
-                <FilterDropdown
-                  ariaLabel="Type"
-                  value={row.kind}
-                  onchange={(value) =>
-                    patch(row.key, { kind: value as WindowKind })
-                  }
-                  options={(Object.keys(KIND_LABEL) as WindowKind[]).map(
-                    (kind) => ({
-                      value: kind,
-                      label: KIND_LABEL[kind],
-                    }),
-                  )}
-                  disabled={!ready || save.isPending || conflict}
-                  compact
-                />
-                {row.kind === "WEEKLY" ? (
+                Retry
+              </button>
+            </div>
+          ) : null}
+          {rows.length === 0 && ready ? (
+            <p className="rounded-xl border border-border bg-surface px-3 py-3 text-sm text-muted">
+              No hours posted yet.
+            </p>
+          ) : null}
+          <fieldset
+            disabled={!ready || save.isPending || conflict}
+            className="space-y-2"
+          >
+            <legend className="sr-only">Schedule hours</legend>
+            <ul className="space-y-2">
+              {rows.map((row) => (
+                <li
+                  key={row.key}
+                  className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2"
+                >
                   <FilterDropdown
-                    ariaLabel="Weekday"
-                    value={String(row.weekday)}
+                    ariaLabel="Type"
+                    value={row.kind}
                     onchange={(value) =>
-                      patch(row.key, { weekday: Number(value) })
+                      patch(row.key, { kind: value as WindowKind })
                     }
-                    options={WEEKDAY_LABELS.map((label, index) => ({
-                      value: String(index + 1),
-                      label,
-                    }))}
+                    options={(Object.keys(KIND_LABEL) as WindowKind[]).map(
+                      (kind) => ({
+                        value: kind,
+                        label: KIND_LABEL[kind],
+                      }),
+                    )}
                     disabled={!ready || save.isPending || conflict}
                     compact
                   />
-                ) : (
-                  <input
-                    type="date"
-                    aria-label="Date"
-                    value={row.date}
-                    onChange={(e) => patch(row.key, { date: e.target.value })}
-                    className={FIELD}
-                  />
-                )}
-                {row.kind !== "CANCEL" ? (
-                  <>
-                    <input
-                      type="time"
-                      aria-label="Start"
-                      step={SCHEDULE_SLOT_MINUTES * 60}
-                      value={row.start}
-                      onChange={(e) =>
-                        patch(row.key, { start: e.target.value })
+                  {row.kind === "WEEKLY" ? (
+                    <FilterDropdown
+                      ariaLabel="Weekday"
+                      value={String(row.weekday)}
+                      onchange={(value) =>
+                        patch(row.key, { weekday: Number(value) })
                       }
-                      className={FIELD}
+                      options={WEEKDAY_LABELS.map((label, index) => ({
+                        value: String(index + 1),
+                        label,
+                      }))}
+                      disabled={!ready || save.isPending || conflict}
+                      compact
                     />
-                    <span className="text-muted" aria-hidden="true">
-                      –
-                    </span>
+                  ) : (
                     <input
-                      type="time"
-                      aria-label="End"
-                      step={SCHEDULE_SLOT_MINUTES * 60}
-                      value={row.end}
-                      onChange={(e) => patch(row.key, { end: e.target.value })}
+                      type="date"
+                      aria-label="Date"
+                      value={row.date}
+                      onChange={(e) => patch(row.key, { date: e.target.value })}
                       className={FIELD}
                     />
-                  </>
-                ) : null}
-                <button
-                  type="button"
-                  aria-label="Remove"
-                  onClick={() =>
-                    setRows((all) => all.filter((r) => r.key !== row.key))
-                  }
-                  className="ml-auto text-sm text-muted hover:text-error"
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={() => setRows((all) => [...all, newRow()])}
-            className={GHOST}
-          >
-            + Add hours
-          </button>
-        </fieldset>
-        {conflict ? (
-          <button
-            type="button"
-            className={GHOST}
-            onClick={async () => {
-              if (
-                !window.confirm(
-                  "Discard your draft and reload the saved schedule?",
+                  )}
+                  {row.kind !== "CANCEL" ? (
+                    <>
+                      <input
+                        type="time"
+                        aria-label="Start"
+                        step={SCHEDULE_SLOT_MINUTES * 60}
+                        value={row.start}
+                        onChange={(e) =>
+                          patch(row.key, { start: e.target.value })
+                        }
+                        className={FIELD}
+                      />
+                      <span className="text-muted" aria-hidden="true">
+                        –
+                      </span>
+                      <input
+                        type="time"
+                        aria-label="End"
+                        step={SCHEDULE_SLOT_MINUTES * 60}
+                        value={row.end}
+                        onChange={(e) =>
+                          patch(row.key, { end: e.target.value })
+                        }
+                        className={FIELD}
+                      />
+                    </>
+                  ) : null}
+                  <button
+                    type="button"
+                    aria-label="Remove"
+                    onClick={() =>
+                      setRows((all) => all.filter((r) => r.key !== row.key))
+                    }
+                    className="ml-auto text-sm text-muted hover:text-error"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => setRows((all) => [...all, newRow()])}
+              className={GHOST}
+            >
+              + Add hours
+            </button>
+          </fieldset>
+          {conflict ? (
+            <button
+              type="button"
+              className={GHOST}
+              onClick={async () => {
+                if (
+                  !window.confirm(
+                    "Discard your draft and reload the saved schedule?",
+                  )
                 )
-              )
-                return;
-              const result = await schedule.refetch();
-              if (result.isError || !result.data) return;
-              const loaded = windowsToRows(result.data.windows);
-              presence.saved(result.data);
-              setRows(loaded);
-              setBaseline(JSON.stringify(rowsToWindows(loaded)));
-              setConflict(false);
-              setError(null);
-            }}
-          >
-            Reload saved schedule
-          </button>
-        ) : null}
-        {error ? (
-          <p className="text-sm text-error" role="alert">
-            {error}
-          </p>
-        ) : null}
+                  return;
+                const result = await schedule.refetch();
+                if (result.isError || !result.data) return;
+                const loaded = windowsToRows(result.data.windows);
+                presence.saved(result.data);
+                setRows(loaded);
+                setBaseline(JSON.stringify(rowsToWindows(loaded)));
+                setConflict(false);
+                setError(null);
+              }}
+            >
+              Reload saved schedule
+            </button>
+          ) : null}
+          {error ? (
+            <p className="text-sm text-error" role="alert">
+              {error}
+            </p>
+          ) : null}
         </ActiveEditors>
         <CalendarSection departmentSync={sync} />
       </div>

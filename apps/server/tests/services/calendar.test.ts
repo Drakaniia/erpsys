@@ -274,7 +274,9 @@ describe("calendar sweep", () => {
     connection().nextAttemptAt = null;
     await sweepCalendars(new Date());
     expect(
-      context.store[COLLECTIONS.adviserSchedule].filter(w => w.kind === "window").map((w) => w._id),
+      context.store[COLLECTIONS.adviserSchedule]
+        .filter((w) => w.kind === "window")
+        .map((w) => w._id),
     ).not.toContain("old");
     expect(google.listEvents).toHaveBeenCalled();
   });

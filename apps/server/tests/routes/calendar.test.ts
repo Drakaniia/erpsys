@@ -312,7 +312,11 @@ describe("disconnecting", () => {
       "gcal-1",
     );
     expect(google.revokeToken).toHaveBeenCalledWith("refresh");
-    expect(context.store[COLLECTIONS.adviserSchedule].filter(row => row.kind === "window")).toHaveLength(1);
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].filter(
+        (row) => row.kind === "window",
+      ),
+    ).toHaveLength(1);
   });
 
   it("still drops our copy when Google cannot be reached", async () => {

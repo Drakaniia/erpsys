@@ -51,11 +51,19 @@ it("deduplicates two active editors without changing review timestamp ordering",
   try {
     await new Promise<void>((resolve) => server.once("listening", resolve));
     const { port } = server.address() as AddressInfo;
-    const call = (suffix: string, officer: string, method = "GET", ts?: number) =>
+    const call = (
+      suffix: string,
+      officer: string,
+      method = "GET",
+      ts?: number,
+    ) =>
       fetch(`http://127.0.0.1:${port}/api/v1/submissions/review${suffix}`, {
         method,
         signal: AbortSignal.timeout(3_000),
-        headers: { "x-test-officer": officer, "content-type": "application/json" },
+        headers: {
+          "x-test-officer": officer,
+          "content-type": "application/json",
+        },
         body: ts === undefined ? undefined : JSON.stringify({ ts }),
       });
     const { ts } = await (await call("", "Alice")).json();
@@ -71,14 +79,20 @@ it("deduplicates two active editors without changing review timestamp ordering",
       { userId: "Alice", name: "Alice" },
       { userId: "Bob", name: "Bob" },
     ];
-    expect(await renewed.json()).toEqual({ data: expect.arrayContaining(editors) });
+    expect(await renewed.json()).toEqual({
+      data: expect.arrayContaining(editors),
+    });
     const viewed = await call("/active-editors", "Carol");
     expect(viewed.status).toBe(200);
     const presence = await viewed.json();
     expect(presence).toEqual({ data: expect.arrayContaining(editors) });
     expect(presence.data).toHaveLength(2);
     expect(record.activeEditors).toHaveLength(2);
-    expect(record).toMatchObject({ readTs: ts, writeTs: 1, updatedAt: new Date(0) });
+    expect(record).toMatchObject({
+      readTs: ts,
+      writeTs: 1,
+      updatedAt: new Date(0),
+    });
 
     // Heartbeats must not stale the anchored save; a newer real review write must.
     expect((await call("/verification", "Alice", "POST", ts)).status).toBe(200);
@@ -90,12 +104,25 @@ it("deduplicates two active editors without changing review timestamp ordering",
 
     // Legacy heartbeats must not erase a same-account tab's exclusive lease.
     const leaseId = "11111111-1111-4111-8111-111111111111";
-    record.activeEditors = [{ userId: "Alice", name: "Alice", leaseId, expiresAt: new Date(Date.now() + 30_000) }];
+    record.activeEditors = [
+      {
+        userId: "Alice",
+        name: "Alice",
+        leaseId,
+        expiresAt: new Date(Date.now() + 30_000),
+      },
+    ];
     expect((await renew("Alice")).status).toBe(200);
-    expect(record.activeEditors).toEqual(expect.arrayContaining([expect.objectContaining({ userId: "Alice", leaseId })]));
+    expect(record.activeEditors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: "Alice", leaseId }),
+      ]),
+    );
     const blocked = await call("/verification", "Alice", "POST");
     expect(blocked.status).toBe(409);
-    expect(await blocked.json()).toMatchObject({ data: { code: "EDIT_LOCKED" } });
+    expect(await blocked.json()).toMatchObject({
+      data: { code: "EDIT_LOCKED" },
+    });
   } finally {
     await new Promise<void>((resolve) => {
       server.close(() => resolve());

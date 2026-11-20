@@ -194,11 +194,15 @@ async function send(route: ClientRoute, input: unknown): Promise<unknown> {
   const response = await fetch(url, {
     method: def.method,
     credentials: "include",
-    headers: def.method === "GET" ? undefined : {
-      ...(hasBody ? { "content-type": "application/json" } : {}),
-      ...(!path.startsWith("/api/v1/presence")
-        ? { "x-edit-leases": editLeaseHeader() } : {}),
-    },
+    headers:
+      def.method === "GET"
+        ? undefined
+        : {
+            ...(hasBody ? { "content-type": "application/json" } : {}),
+            ...(!path.startsWith("/api/v1/presence")
+              ? { "x-edit-leases": editLeaseHeader() }
+              : {}),
+          },
     body: hasBody ? JSON.stringify(rest) : undefined,
   });
 

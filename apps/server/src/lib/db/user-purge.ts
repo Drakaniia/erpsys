@@ -3,12 +3,18 @@ import { COLLECTIONS, idIn, refIn } from "./db.js";
 
 export async function purgeUserById(db: Db, userId: string): Promise<void> {
   const user = await db
-    .collection<{ _id: string; email?: string; studentProfile?: { _id: string } }>(COLLECTIONS.user)
+    .collection<{
+      _id: string;
+      email?: string;
+      studentProfile?: { _id: string };
+    }>(COLLECTIONS.user)
     .findOne(idIn([userId]) as never, {
       projection: { _id: 1, email: 1, studentProfile: 1 },
     });
 
-  const profileIds = user?.studentProfile ? [String(user.studentProfile._id)] : [];
+  const profileIds = user?.studentProfile
+    ? [String(user.studentProfile._id)]
+    : [];
 
   const profileFilter = { studentProfileId: refIn(profileIds) };
   await db.collection(COLLECTIONS.stepVerification).deleteMany({
@@ -29,11 +35,14 @@ export async function purgeUserById(db: Db, userId: string): Promise<void> {
       { movedToEndById: refIn([userId]) },
     ],
   } as never);
-  await db.collection(COLLECTIONS.department).updateMany(
-    { advisers: { $elemMatch: { adviserId: refIn([userId]) } } } as never,
-    { $pull: { advisers: { adviserId: refIn([userId]) } } } as never,
-  );
-  await db.collection(COLLECTIONS.adviserSchedule)
+  await db
+    .collection(COLLECTIONS.department)
+    .updateMany(
+      { advisers: { $elemMatch: { adviserId: refIn([userId]) } } } as never,
+      { $pull: { advisers: { adviserId: refIn([userId]) } } } as never,
+    );
+  await db
+    .collection(COLLECTIONS.adviserSchedule)
     .deleteMany({ adviserId: refIn([userId]) } as never);
   await db
     .collection(COLLECTIONS.calendarConnection)

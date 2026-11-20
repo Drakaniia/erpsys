@@ -74,8 +74,17 @@ function seed(): Record<string, Row[]> {
     ],
 
     [COLLECTIONS.user]: [
-      { _id: "u-p1", name: "Ana", email: "12345@student.buksu.edu.ph", role: "STUDENT",
-        studentProfile: { _id: "p1", studentNumber: "12345", academicYearId: "ay-1" } },
+      {
+        _id: "u-p1",
+        name: "Ana",
+        email: "12345@student.buksu.edu.ph",
+        role: "STUDENT",
+        studentProfile: {
+          _id: "p1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
+      },
       {
         _id: "adm1",
         name: "Admin",
@@ -150,7 +159,12 @@ const call = async (path: string, method = "GET", body?: unknown) => {
 };
 
 describe("department listing", () => {
-  it.each(["/me/queue", "/me/stamp", "/queues", "/departments/dept-1/enrollments"])("blocks admin access to %s", async (path) => {
+  it.each([
+    "/me/queue",
+    "/me/stamp",
+    "/queues",
+    "/departments/dept-1/enrollments",
+  ])("blocks admin access to %s", async (path) => {
     const { status } = await call(path);
     expect(status).toBe(403);
   });
@@ -262,7 +276,11 @@ describe("department writes", () => {
   it("deletes an empty department and its assignments", async () => {
     const { body } = await call("/departments/dept-2", "DELETE");
     expect(body.data).toEqual({ id: "dept-2", deleted: true });
-    expect(context.store[COLLECTIONS.department].flatMap(department => department.advisers ?? [])).toHaveLength(1);
+    expect(
+      context.store[COLLECTIONS.department].flatMap(
+        (department) => department.advisers ?? [],
+      ),
+    ).toHaveLength(1);
   });
 
   it("returns a serving student when the instructor changes assigned levels", async () => {

@@ -4,7 +4,11 @@ import { dialogTrap } from "$lib/ui/dialog-trap";
 import { usePresence } from "$lib/ui/use-presence";
 import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 
-function EnrollmentLocks({ ids, open, children }: {
+function EnrollmentLocks({
+  ids,
+  open,
+  children,
+}: {
   ids: string[];
   open: boolean;
   children: (blocked: boolean) => ReactNode;
@@ -12,12 +16,24 @@ function EnrollmentLocks({ ids, open, children }: {
   const id = ids[0];
   const lock = useEditingLock(open ? id : null);
   if (!id) return children(true);
-  return <>
-    <ActiveEditors resource="enrollment" id={id} enabled={open} className="mt-3" onBlockedChange={lock.onBlockedChange} />
-    {ids.length > 1
-      ? <EnrollmentLocks key={ids[1]} ids={ids.slice(1)} open={open}>{(blocked) => children(lock.blocked || blocked)}</EnrollmentLocks>
-      : children(lock.blocked)}
-  </>;
+  return (
+    <>
+      <ActiveEditors
+        resource="enrollment"
+        id={id}
+        enabled={open}
+        className="mt-3"
+        onBlockedChange={lock.onBlockedChange}
+      />
+      {ids.length > 1 ? (
+        <EnrollmentLocks key={ids[1]} ids={ids.slice(1)} open={open}>
+          {(blocked) => children(lock.blocked || blocked)}
+        </EnrollmentLocks>
+      ) : (
+        children(lock.blocked)
+      )}
+    </>
+  );
 }
 
 const REASON_CHIPS = [
@@ -143,109 +159,117 @@ export default function RevertConfirmDialog({
             </svg>
           </button>
         </div>
-        <EnrollmentLocks ids={[...new Set(enrollmentIds)]} open={open}>{(blocked) => <>
-        <div className="mt-4 rounded-xl bg-surface px-4 py-3 text-sm space-y-1">
-          {bulk ? (
+        <EnrollmentLocks ids={[...new Set(enrollmentIds)]} open={open}>
+          {(blocked) => (
             <>
-              <p className="font-medium text-ink">
-                {count} student{count === 1 ? "" : "s"} selected
-              </p>
-              <p className="text-muted">Department: {departmentName}</p>
+              <div className="mt-4 rounded-xl bg-surface px-4 py-3 text-sm space-y-1">
+                {bulk ? (
+                  <>
+                    <p className="font-medium text-ink">
+                      {count} student{count === 1 ? "" : "s"} selected
+                    </p>
+                    <p className="text-muted">Department: {departmentName}</p>
+                  </>
+                ) : student ? (
+                  <>
+                    <p className="font-medium text-ink">{student.name}</p>
+                    {student.number && (
+                      <p className="text-muted tabular-nums">
+                        {student.number}
+                      </p>
+                    )}
+                    <p className="text-muted">Department: {departmentName}</p>
+                    <p className="text-muted">
+                      Enrolled {relativeTime(student.completedAt)} by{" "}
+                      <span className="text-ink">{student.servedByName}</span>
+                    </p>
+                  </>
+                ) : null}
+              </div>
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-medium text-muted uppercase tracking-wide">
+                  Reason
+                </p>
+                <div
+                  className="flex flex-wrap gap-2"
+                  role="group"
+                  aria-label="Reason presets"
+                >
+                  {REASON_CHIPS.map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      disabled={busy || blocked}
+                      onClick={() => {
+                        if (blocked) return;
+                        setSelectedChip(chip);
+                        setReason(chip);
+                      }}
+                      className={`rounded-full border px-3 py-1 text-xs transition-colors ${selectedChip === chip ? "border-error bg-error/10 text-error font-medium" : "border-border text-muted hover:border-muted hover:text-ink"}`}
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-3">
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.currentTarget.value)}
+                  rows={3}
+                  maxLength={REASON_MAX}
+                  placeholder={
+                    bulk
+                      ? "Describe the reason for reverting these enrollments…"
+                      : "Describe the reason for reverting this enrollment…"
+                  }
+                  disabled={busy || blocked}
+                  aria-label={
+                    bulk ? "Reason for bulk revert" : "Reason for reverting"
+                  }
+                  aria-required="true"
+                  className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
+                />
+                <div className="mt-1 flex items-center justify-between">
+                  <p
+                    className={`text-xs ${reasonLen < REASON_MIN && reasonLen > 0 ? "text-error" : "text-muted"}`}
+                  >
+                    {reasonLen === 0
+                      ? `Minimum ${REASON_MIN} characters required`
+                      : reasonLen < REASON_MIN
+                        ? `${REASON_MIN - reasonLen} more characters needed`
+                        : `${reasonLen}/${REASON_MAX}`}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={onclose}
+                  disabled={busy}
+                  className="press rounded-lg px-3 py-1.5 text-sm text-muted hover:text-ink disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    !blocked && canSubmit && onconfirm(reason.trim())
+                  }
+                  disabled={blocked || !canSubmit}
+                  aria-disabled={blocked || !canSubmit}
+                  className="press rounded-lg bg-error px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  {busy
+                    ? "Reverting…"
+                    : bulk
+                      ? `Revert ${count}`
+                      : "Revert enrollment"}
+                </button>
+              </div>
             </>
-          ) : student ? (
-            <>
-              <p className="font-medium text-ink">{student.name}</p>
-              {student.number && (
-                <p className="text-muted tabular-nums">{student.number}</p>
-              )}
-              <p className="text-muted">Department: {departmentName}</p>
-              <p className="text-muted">
-                Enrolled {relativeTime(student.completedAt)} by{" "}
-                <span className="text-ink">{student.servedByName}</span>
-              </p>
-            </>
-          ) : null}
-        </div>
-        <div className="mt-4">
-          <p className="mb-2 text-xs font-medium text-muted uppercase tracking-wide">
-            Reason
-          </p>
-          <div
-            className="flex flex-wrap gap-2"
-            role="group"
-            aria-label="Reason presets"
-          >
-            {REASON_CHIPS.map((chip) => (
-              <button
-                key={chip}
-                type="button"
-                disabled={busy || blocked}
-                onClick={() => {
-                  if (blocked) return;
-                  setSelectedChip(chip);
-                  setReason(chip);
-                }}
-                className={`rounded-full border px-3 py-1 text-xs transition-colors ${selectedChip === chip ? "border-error bg-error/10 text-error font-medium" : "border-border text-muted hover:border-muted hover:text-ink"}`}
-              >
-                {chip}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="mt-3">
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.currentTarget.value)}
-            rows={3}
-            maxLength={REASON_MAX}
-            placeholder={
-              bulk
-                ? "Describe the reason for reverting these enrollments…"
-                : "Describe the reason for reverting this enrollment…"
-            }
-            disabled={busy || blocked}
-            aria-label={
-              bulk ? "Reason for bulk revert" : "Reason for reverting"
-            }
-            aria-required="true"
-            className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
-          />
-          <div className="mt-1 flex items-center justify-between">
-            <p
-              className={`text-xs ${reasonLen < REASON_MIN && reasonLen > 0 ? "text-error" : "text-muted"}`}
-            >
-              {reasonLen === 0
-                ? `Minimum ${REASON_MIN} characters required`
-                : reasonLen < REASON_MIN
-                  ? `${REASON_MIN - reasonLen} more characters needed`
-                  : `${reasonLen}/${REASON_MAX}`}
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onclose}
-            disabled={busy}
-            className="press rounded-lg px-3 py-1.5 text-sm text-muted hover:text-ink disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => !blocked && canSubmit && onconfirm(reason.trim())}
-            disabled={blocked || !canSubmit}
-            aria-disabled={blocked || !canSubmit}
-            className="press rounded-lg bg-error px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-          >
-            {busy
-              ? "Reverting…"
-              : bulk
-                ? `Revert ${count}`
-                : "Revert enrollment"}
-          </button>
-        </div>
-        </>}</EnrollmentLocks>
+          )}
+        </EnrollmentLocks>
       </div>
     </div>
   );

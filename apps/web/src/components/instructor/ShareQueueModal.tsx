@@ -19,10 +19,23 @@ export default function ShareQueueModal({
   onclose: () => void;
 }) {
   if (!open || !department) return null;
-  return <ShareQueueContent key={department.id} open={open} department={department} anchorRect={anchorRect} onclose={onclose} />;
+  return (
+    <ShareQueueContent
+      key={department.id}
+      open={open}
+      department={department}
+      anchorRect={anchorRect}
+      onclose={onclose}
+    />
+  );
 }
 
-function ShareQueueContent({ open, department, anchorRect, onclose }: {
+function ShareQueueContent({
+  open,
+  department,
+  anchorRect,
+  onclose,
+}: {
   open: boolean;
   department: DepartmentQueue;
   anchorRect: DOMRect | null;
@@ -43,7 +56,13 @@ function ShareQueueContent({ open, department, anchorRect, onclose }: {
   }, [open, department?.id]);
 
   useEffect(() => {
-    if (!open || !department || lock.blocked || mintedFor.current === department.id) return;
+    if (
+      !open ||
+      !department ||
+      lock.blocked ||
+      mintedFor.current === department.id
+    )
+      return;
     mintedFor.current = department.id;
     mint.mutate({ departmentId: department.id });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -203,87 +222,87 @@ function ShareQueueContent({ open, department, anchorRect, onclose }: {
           className="mb-3"
           onBlockedChange={lock.onBlockedChange}
         >
-        {mintError ? (
-          <div
-            className="rounded-xl border border-error/25 bg-error/5 px-3 py-2.5 text-sm text-error"
-            role="alert"
-          >
-            {mintError}
-          </div>
-        ) : (
-          <div className="group flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-[border-color,box-shadow] focus-within:border-primary/30 focus-within:shadow-[0_0_0_3px_rgba(0,64,128,0.08)]">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              className="shrink-0 text-muted"
-              aria-hidden="true"
+          {mintError ? (
+            <div
+              className="rounded-xl border border-error/25 bg-error/5 px-3 py-2.5 text-sm text-error"
+              role="alert"
             >
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-            </svg>
-            {url ? (
-              <>
-                <input
-                  readOnly
-                  value={url}
-                  aria-label="Queue link"
-                  onClick={(e) =>
-                    (e.currentTarget as HTMLInputElement).select()
-                  }
-                  className="min-w-0 flex-1 truncate bg-transparent text-sm tabular-nums text-ink selection:bg-primary/20 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  aria-label={copied ? "Copied" : "Copy link"}
-                  data-modal-initial-focus
-                  className={`press inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-[transform,background-color,border-color,color] duration-100 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${copied ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-border bg-white text-ink hover:bg-surface active:scale-[0.97]"}`}
-                >
-                  {copied ? (
-                    <>
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        aria-hidden="true"
-                      >
-                        <path d="M5 13l4 4L19 7" />
-                      </svg>
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        aria-hidden="true"
-                      >
-                        <rect x="9" y="9" width="11" height="11" rx="2" />
-                        <path d="M15 9V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
-                      </svg>
-                      Copy
-                    </>
-                  )}
-                </button>
-              </>
-            ) : (
-              <span className="min-w-0 flex-1 text-sm text-muted">
-                Creating link…
-              </span>
-            )}
-          </div>
-        )}
+              {mintError}
+            </div>
+          ) : (
+            <div className="group flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-[border-color,box-shadow] focus-within:border-primary/30 focus-within:shadow-[0_0_0_3px_rgba(0,64,128,0.08)]">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                className="shrink-0 text-muted"
+                aria-hidden="true"
+              >
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+              {url ? (
+                <>
+                  <input
+                    readOnly
+                    value={url}
+                    aria-label="Queue link"
+                    onClick={(e) =>
+                      (e.currentTarget as HTMLInputElement).select()
+                    }
+                    className="min-w-0 flex-1 truncate bg-transparent text-sm tabular-nums text-ink selection:bg-primary/20 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    aria-label={copied ? "Copied" : "Copy link"}
+                    data-modal-initial-focus
+                    className={`press inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-[transform,background-color,border-color,color] duration-100 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${copied ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-border bg-white text-ink hover:bg-surface active:scale-[0.97]"}`}
+                  >
+                    {copied ? (
+                      <>
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          aria-hidden="true"
+                        >
+                          <path d="M5 13l4 4L19 7" />
+                        </svg>
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          aria-hidden="true"
+                        >
+                          <rect x="9" y="9" width="11" height="11" rx="2" />
+                          <path d="M15 9V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+                        </svg>
+                        Copy
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : (
+                <span className="min-w-0 flex-1 text-sm text-muted">
+                  Creating link…
+                </span>
+              )}
+            </div>
+          )}
         </ActiveEditors>
         <p
           className="mt-2 text-xs leading-relaxed text-muted"

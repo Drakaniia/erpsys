@@ -13,7 +13,11 @@ export type ClientRoute = {
 export const ROUTES = {
   presence: {
     touch: { method: "POST", path: "/api/v1/presence", serverTimestamp: true },
-    leave: { method: "DELETE", path: "/api/v1/presence", serverTimestamp: true },
+    leave: {
+      method: "DELETE",
+      path: "/api/v1/presence",
+      serverTimestamp: true,
+    },
   },
   me: {
     // The aggregate launch read — one round trip for the landing surface.
@@ -29,7 +33,10 @@ export const ROUTES = {
     getOverview: { method: "GET", path: "/api/v1/me/overview" },
     listUsers: { method: "GET", path: "/api/v1/users", list: true },
     inviteAccount: { method: "POST", path: "/api/v1/users/invite" },
-    promoteAdmin: { method: "POST", path: "/api/v1/users/:userId/promote-admin" },
+    promoteAdmin: {
+      method: "POST",
+      path: "/api/v1/users/:userId/promote-admin",
+    },
     reactivateAccount: {
       method: "POST",
       path: "/api/v1/users/:userId/reactivate",

@@ -124,7 +124,11 @@ it.each([true, false])(
     await screen.findByRole("button", { name: "Unassign" });
     if (assigned) {
       fireEvent.click(screen.getByRole("button", { name: "Assign" }));
-      await waitFor(() => expect(screen.getByRole("checkbox", { name: "1st Year" })).toBeEnabled());
+      await waitFor(() =>
+        expect(
+          screen.getByRole("checkbox", { name: "1st Year" }),
+        ).toBeEnabled(),
+      );
       fireEvent.click(screen.getByRole("checkbox", { name: "1st Year" }));
       fireEvent.click(
         within(screen.getByRole("dialog")).getByRole("button", {
@@ -243,7 +247,9 @@ it("lets an instructor request held levels without exposing another department's
   fireEvent.click(
     await screen.findByRole("button", { name: "Request transfer" }),
   );
-  await waitFor(() => expect(screen.getByRole("checkbox", { name: "1st Year" })).toBeEnabled());
+  await waitFor(() =>
+    expect(screen.getByRole("checkbox", { name: "1st Year" })).toBeEnabled(),
+  );
   fireEvent.click(screen.getByRole("checkbox", { name: "1st Year" }));
   fireEvent.click(
     within(screen.getByRole("dialog")).getByRole("button", {

@@ -89,7 +89,11 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p1",
-        studentProfile: { _id: "p1", studentNumber: "12345", academicYearId: "ay-1" },
+        studentProfile: {
+          _id: "p1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
@@ -165,7 +169,11 @@ describe("instructor schedule", () => {
       windows: [monday],
       sync: "NOT_CONNECTED",
     });
-    expect(context.store[COLLECTIONS.adviserSchedule].filter(row => row.kind === "window")).toHaveLength(1);
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].filter(
+        (row) => row.kind === "window",
+      ),
+    ).toHaveLength(1);
     const read = await call("/me/schedule?departmentId=dept-1");
     expect(read.body.data.windows).toEqual([monday]);
   });
@@ -176,7 +184,11 @@ describe("instructor schedule", () => {
       windows: [monday],
     });
     await call("/me/schedule", "PUT", { departmentId: "dept-1", windows: [] });
-    expect(context.store[COLLECTIONS.adviserSchedule].filter(row => row.kind === "window")).toHaveLength(0);
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].filter(
+        (row) => row.kind === "window",
+      ),
+    ).toHaveLength(0);
   });
 
   it("saves a deletion after a newer calendar-status read without reporting a failed save", async () => {
@@ -200,7 +212,11 @@ describe("instructor schedule", () => {
     });
     expect(saved.status).toBe(200);
     expect(saved.body.data.windows).toEqual([]);
-    expect(context.store[COLLECTIONS.adviserSchedule].filter(row => row.kind === "window")).toHaveLength(0);
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].filter(
+        (row) => row.kind === "window",
+      ),
+    ).toHaveLength(0);
   });
 
   it("rejects a stale schedule without deleting posted hours", async () => {
@@ -217,7 +233,11 @@ describe("instructor schedule", () => {
     });
     expect(saved.status).toBe(409);
     expect(saved.body.data.code).toBe("TS_ABORTED");
-    expect(context.store[COLLECTIONS.adviserSchedule].filter(row => row.kind === "window")).toHaveLength(1);
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].filter(
+        (row) => row.kind === "window",
+      ),
+    ).toHaveLength(1);
   });
 
   it("refuses overlapping hours with a 409", async () => {
@@ -227,7 +247,11 @@ describe("instructor schedule", () => {
     });
     expect(status).toBe(409);
     expect(body.error).toMatch(/Overlaps/);
-    expect(context.store[COLLECTIONS.adviserSchedule].filter(row => row.kind === "window")).toHaveLength(0);
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].filter(
+        (row) => row.kind === "window",
+      ),
+    ).toHaveLength(0);
   });
 
   it("refuses off-grid times with a 400", async () => {
@@ -298,7 +322,11 @@ describe("admin remapping", () => {
     await call("/advisers/adv1", "PATCH", {
       assignments: [{ departmentId: "dept-2", yearLevels: [] }],
     });
-    expect(context.store[COLLECTIONS.adviserSchedule].filter(row => row.kind === "window")).toHaveLength(0);
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].filter(
+        (row) => row.kind === "window",
+      ),
+    ).toHaveLength(0);
   });
 
   it("keeps schedules for departments that stay mapped", async () => {
@@ -310,6 +338,10 @@ describe("admin remapping", () => {
     await call("/advisers/adv1", "PATCH", {
       assignments: [{ departmentId: "dept-1", yearLevels: ["FIRST"] }],
     });
-    expect(context.store[COLLECTIONS.adviserSchedule].filter(row => row.kind === "window")).toHaveLength(1);
+    expect(
+      context.store[COLLECTIONS.adviserSchedule].filter(
+        (row) => row.kind === "window",
+      ),
+    ).toHaveLength(1);
   });
 });

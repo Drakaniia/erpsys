@@ -187,8 +187,19 @@ export default function RequirementList({
         </div>
       )}
 
-      {editingId && <ActiveEditors resource="requirement" id={editingId} onBlockedChange={editLock.onBlockedChange} />}
-      {adding && <ActiveEditors resource="requirement" onBlockedChange={addLock.onBlockedChange} />}
+      {editingId && (
+        <ActiveEditors
+          resource="requirement"
+          id={editingId}
+          onBlockedChange={editLock.onBlockedChange}
+        />
+      )}
+      {adding && (
+        <ActiveEditors
+          resource="requirement"
+          onBlockedChange={addLock.onBlockedChange}
+        />
+      )}
 
       <div className="overflow-hidden rounded-xl border border-border bg-surface-raised">
         {listQuery.isPending ? (
@@ -270,19 +281,26 @@ export default function RequirementList({
 
                 {editingId === item.id ? (
                   <>
-                  <input
-                    disabled={editLock.blocked}
-                    value={editLabel}
-                    onChange={(e) => setEditLabel(e.currentTarget.value)}
-                    aria-label="Requirement label"
-                    className="min-w-0 flex-1 rounded-lg border border-primary/40 bg-surface px-3 py-1.5 text-sm text-ink"
-                    onBlur={commitEdit}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") commitEdit();
-                      if (e.key === "Escape") setEditingId(null);
-                    }}
-                  />
-                  <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => setEditingId(null)} className="text-xs text-muted">Cancel</button>
+                    <input
+                      disabled={editLock.blocked}
+                      value={editLabel}
+                      onChange={(e) => setEditLabel(e.currentTarget.value)}
+                      aria-label="Requirement label"
+                      className="min-w-0 flex-1 rounded-lg border border-primary/40 bg-surface px-3 py-1.5 text-sm text-ink"
+                      onBlur={commitEdit}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitEdit();
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => setEditingId(null)}
+                      className="text-xs text-muted"
+                    >
+                      Cancel
+                    </button>
                   </>
                 ) : (
                   <button

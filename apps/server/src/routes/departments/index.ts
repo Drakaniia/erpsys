@@ -23,7 +23,6 @@ import {
 import { AdminActionLogModel } from "../../models/AdminActionLogModel.js";
 import { AdviserScheduleModel } from "../../models/AdviserScheduleModel.js";
 
-
 import { DepartmentModel } from "../../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../../models/EnrollmentQueueModel.js";
 import { activeYearOrThrow } from "../../services/academic-years.js";

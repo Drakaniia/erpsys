@@ -41,7 +41,9 @@ export default function AssignDepartmentModal({
   onsubmit: (scope: YearLevel[]) => void | Promise<void>;
   onclose: () => void;
 }) {
-  const lock = useEditingLock(open ? `${mode}:${department?.id}:${myAdviserId}` : null);
+  const lock = useEditingLock(
+    open ? `${mode}:${department?.id}:${myAdviserId}` : null,
+  );
   const [selected, setSelected] = useState<YearLevel[]>([]);
   const seededFor = useRef<string | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -151,17 +153,17 @@ export default function AssignDepartmentModal({
           className="mt-3"
           onBlockedChange={lock.onBlockedChange}
         >
-        <div className="mt-4">
-          <YearLevelChips
-            selected={selected}
-            options={options}
-            taken={taken}
-            disabled={busy}
-            label="Year levels to serve"
-            emptyNote="Pick at least one year level to serve."
-            onchange={(levels) => setSelected(levels)}
-          />
-        </div>
+          <div className="mt-4">
+            <YearLevelChips
+              selected={selected}
+              options={options}
+              taken={taken}
+              disabled={busy}
+              label="Year levels to serve"
+              emptyNote="Pick at least one year level to serve."
+              onchange={(levels) => setSelected(levels)}
+            />
+          </div>
         </ActiveEditors>
         <div className="mt-5 flex justify-end gap-2">
           <button
@@ -176,7 +178,8 @@ export default function AssignDepartmentModal({
             type="button"
             onClick={() => onsubmit(selected)}
             disabled={
-              lock.blocked || busy ||
+              lock.blocked ||
+              busy ||
               selected.length === 0 ||
               (mode === "edit" &&
                 JSON.stringify(normalizeYearLevels(selected)) ===

@@ -18,8 +18,13 @@ export type SimplificationOptions = {
   backupReference?: string;
 };
 
-export function parseSimplificationArgs(args: readonly string[]): SimplificationOptions {
-  const options: SimplificationOptions = { apply: false, writersStopped: false };
+export function parseSimplificationArgs(
+  args: readonly string[],
+): SimplificationOptions {
+  const options: SimplificationOptions = {
+    apply: false,
+    writersStopped: false,
+  };
   const seen = new Set<string>();
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
@@ -30,11 +35,13 @@ export function parseSimplificationArgs(args: readonly string[]): Simplification
     else if (arg === "--writers-stopped") options.writersStopped = true;
     else if (arg === "--backup-reference") {
       const value = args[++i];
-      if (!value?.trim() || value.startsWith("--")) throw new Error("INVALID_ARGUMENTS");
+      if (!value?.trim() || value.startsWith("--"))
+        throw new Error("INVALID_ARGUMENTS");
       options.backupReference = value.trim();
     } else throw new Error("INVALID_ARGUMENTS");
   }
-  if (seen.has("--apply") && seen.has("--dry-run")) throw new Error("INVALID_ARGUMENTS");
+  if (seen.has("--apply") && seen.has("--dry-run"))
+    throw new Error("INVALID_ARGUMENTS");
   if (options.apply && (!options.writersStopped || !options.backupReference)) {
     throw new Error("APPLY_REQUIRES_OFFLINE_ACKNOWLEDGEMENT_AND_BACKUP");
   }
@@ -47,7 +54,10 @@ export function parseSimplificationArgs(args: readonly string[]): Simplification
 async function snapshot(db: Db): Promise<SimplificationSnapshot> {
   const result = {} as SimplificationSnapshot;
   for (const collection of SIMPLIFICATION_COLLECTIONS) {
-    result[collection] = await db.collection<MigrationRow>(collection).find({}).toArray();
+    result[collection] = await db
+      .collection<MigrationRow>(collection)
+      .find({})
+      .toArray();
   }
   return result;
 }
@@ -58,31 +68,45 @@ async function snapshot(db: Db): Promise<SimplificationSnapshot> {
  * Pass: preserve readTs/writeTs and update only the planned embedded field or stepId.
  * Abort: stop on any changed document; never overwrite concurrent writes or retry automatically.
  */
-async function applyChange(db: Db, change: SimplificationChange): Promise<void> {
+async function applyChange(
+  db: Db,
+  change: SimplificationChange,
+): Promise<void> {
   const collection = db.collection<MigrationRow>(change.collection);
   if (change.before === null) {
     await collection.insertOne(change.after);
     return;
   }
   const entries = Object.entries(change.before).map(([key, value]) => ({
-    $eq: [{ $getField: { field: { $literal: key }, input: "$$ROOT" } }, { $literal: value }],
+    $eq: [
+      { $getField: { field: { $literal: key }, input: "$$ROOT" } },
+      { $literal: value },
+    ],
   }));
   const result = await collection.updateOne(
     {
       _id: change.before._id,
       $expr: {
         $and: [
-          { $eq: [{ $size: { $objectToArray: "$$ROOT" } }, Object.keys(change.before).length] },
+          {
+            $eq: [
+              { $size: { $objectToArray: "$$ROOT" } },
+              Object.keys(change.before).length,
+            ],
+          },
           ...entries,
         ],
       },
     } as Document,
     { $set: change.set },
   );
-  if (result.matchedCount !== 1) throw new Error("OFFLINE_COMPARE_AND_SWAP_FAILED");
+  if (result.matchedCount !== 1)
+    throw new Error("OFFLINE_COMPARE_AND_SWAP_FAILED");
 }
 
-export async function runCollectionSimplification(args: readonly string[]): Promise<void> {
+export async function runCollectionSimplification(
+  args: readonly string[],
+): Promise<void> {
   const options = parseSimplificationArgs(args);
   const { env } = await import("../lib/platform/env.js");
   const client = new MongoClient(env.DATABASE_URL, {
@@ -94,11 +118,18 @@ export async function runCollectionSimplification(args: readonly string[]): Prom
     await client.connect();
     const db = client.db();
     const markers = db.collection<MigrationRow>("platform_state");
-    const marker = await markers.findOne({ _id: "collection-simplification-v2" });
+    const marker = await markers.findOne({
+      _id: "collection-simplification-v2",
+    });
     if (marker) throw new Error("MIGRATION_ALREADY_COMPLETED");
     const before = await snapshot(db);
     const plan = planCollectionSimplification(before);
-    console.log(JSON.stringify({ mode: options.apply ? "apply" : "dry-run", ...plan.summary }));
+    console.log(
+      JSON.stringify({
+        mode: options.apply ? "apply" : "dry-run",
+        ...plan.summary,
+      }),
+    );
     if (!options.apply) return;
     const rechecked = await snapshot(db);
     for (const collection of SIMPLIFICATION_COLLECTIONS) {
@@ -114,26 +145,33 @@ export async function runCollectionSimplification(args: readonly string[]): Prom
       version: 2,
       completedAt: new Date(),
     });
-    console.log(JSON.stringify({ verified: true, changedRows: plan.changes.length }));
+    console.log(
+      JSON.stringify({ verified: true, changedRows: plan.changes.length }),
+    );
   } finally {
     await client.close();
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   runCollectionSimplification(process.argv.slice(2)).catch((error: unknown) => {
-    const code = error instanceof SimplificationError
-      ? `${error.code} (${error.collection})`
-      : error instanceof Error && [
-          "INVALID_ARGUMENTS",
-          "APPLY_REQUIRES_OFFLINE_ACKNOWLEDGEMENT_AND_BACKUP",
-          "ACKNOWLEDGEMENTS_REQUIRE_APPLY",
-          "OFFLINE_COMPARE_AND_SWAP_FAILED",
-          "OFFLINE_SNAPSHOT_CHANGED",
-          "MIGRATION_ALREADY_COMPLETED",
-        ].includes(error.message)
-        ? error.message
-        : "MIGRATION_FAILED";
+    const code =
+      error instanceof SimplificationError
+        ? `${error.code} (${error.collection})`
+        : error instanceof Error &&
+            [
+              "INVALID_ARGUMENTS",
+              "APPLY_REQUIRES_OFFLINE_ACKNOWLEDGEMENT_AND_BACKUP",
+              "ACKNOWLEDGEMENTS_REQUIRE_APPLY",
+              "OFFLINE_COMPARE_AND_SWAP_FAILED",
+              "OFFLINE_SNAPSHOT_CHANGED",
+              "MIGRATION_ALREADY_COMPLETED",
+            ].includes(error.message)
+          ? error.message
+          : "MIGRATION_FAILED";
     console.error(code);
     process.exitCode = 1;
   });

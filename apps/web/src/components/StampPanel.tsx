@@ -119,7 +119,6 @@ export default function StampPanel({
   return (
     <>
       <div className="space-y-3 px-3 py-2">
-
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-ink">My stamp</p>
           <button
@@ -130,55 +129,58 @@ export default function StampPanel({
           </button>
         </div>
 
-        <ActiveEditors resource="stamp" enabled={open && isOfficerSurface} onBlockedChange={onBlockedChange}>
-        <div>
-          <label
-            htmlFor="stamp-name"
-            className="mb-1 block text-xs font-medium text-ink"
-          >
-            Name on stamp
-          </label>
-          <input
-            id="stamp-name"
-            value={stampName}
-            onChange={(e) => setStampName(e.target.value)}
-            maxLength={80}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-ink"
-            placeholder="e.g. M. Santos"
-          />
-        </div>
-
-        <div>
-          <span className="mb-1 block text-xs font-medium text-ink">
-            Signature (optional)
-          </span>
-          {stampSignatureUrl ? (
-            <img
-              src={stampSignatureUrl}
-              alt="Signature preview"
-              className="mb-1 flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border border-border bg-surface object-contain"
-              style={{ mixBlendMode: "multiply" }}
-            />
-          ) : null}
-          {canUpload ? (
-            <label className="flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-surface text-xs text-muted hover:text-ink">
-              {!stampSignatureUrl ? "Upload" : "Replace"}
-              <input
-                type="file"
-                accept={STORAGE_ACCEPT}
-                className="sr-only"
-                onChange={(e) =>
-                  void onFileSelected(e.currentTarget.files?.[0])
-                }
-              />
+        <ActiveEditors
+          resource="stamp"
+          enabled={open && isOfficerSurface}
+          onBlockedChange={onBlockedChange}
+        >
+          <div>
+            <label
+              htmlFor="stamp-name"
+              className="mb-1 block text-xs font-medium text-ink"
+            >
+              Name on stamp
             </label>
-          ) : !stampSignatureUrl ? (
-            <span className="block text-xs text-muted">
-              Uploads are paused — set the name above to save without one.
-            </span>
-          ) : null}
-        </div>
+            <input
+              id="stamp-name"
+              value={stampName}
+              onChange={(e) => setStampName(e.target.value)}
+              maxLength={80}
+              className="w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-ink"
+              placeholder="e.g. M. Santos"
+            />
+          </div>
 
+          <div>
+            <span className="mb-1 block text-xs font-medium text-ink">
+              Signature (optional)
+            </span>
+            {stampSignatureUrl ? (
+              <img
+                src={stampSignatureUrl}
+                alt="Signature preview"
+                className="mb-1 flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border border-border bg-surface object-contain"
+                style={{ mixBlendMode: "multiply" }}
+              />
+            ) : null}
+            {canUpload ? (
+              <label className="flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-surface text-xs text-muted hover:text-ink">
+                {!stampSignatureUrl ? "Upload" : "Replace"}
+                <input
+                  type="file"
+                  accept={STORAGE_ACCEPT}
+                  className="sr-only"
+                  onChange={(e) =>
+                    void onFileSelected(e.currentTarget.files?.[0])
+                  }
+                />
+              </label>
+            ) : !stampSignatureUrl ? (
+              <span className="block text-xs text-muted">
+                Uploads are paused — set the name above to save without one.
+              </span>
+            ) : null}
+          </div>
         </ActiveEditors>
 
         {errorMsg ? (

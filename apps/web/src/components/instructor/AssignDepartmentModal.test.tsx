@@ -7,7 +7,12 @@ import {
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import AssignDepartmentModal from "./AssignDepartmentModal";
-const activeEditors = vi.hoisted(() => vi.fn(({ children }: { children?: import("react").ReactNode }) => children ?? null));
+const activeEditors = vi.hoisted(() =>
+  vi.fn(
+    ({ children }: { children?: import("react").ReactNode }) =>
+      children ?? null,
+  ),
+);
 vi.mock("../ActiveEditors", () => ({
   default: activeEditors,
   useEditingLock: () => ({ blocked: false, onBlockedChange: () => {} }),

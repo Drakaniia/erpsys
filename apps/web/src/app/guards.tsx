@@ -112,7 +112,6 @@ export function RootGate() {
   return <Outlet />;
 }
 
-
 const AUTH_PATHS = new Set([
   "/login",
   "/login/register",

@@ -241,7 +241,9 @@ async function officerOverview() {
   const isAwaiting = (row: TimelineRow) =>
     AWAITING_REVIEW.has(row.status ?? "") ||
     (row.status === "PENDING" && Boolean(row.appliedAt));
-  const awaitingBy = countBy(rows.filter(isAwaiting).map((row) => String(row.stepId)));
+  const awaitingBy = countBy(
+    rows.filter(isAwaiting).map((row) => String(row.stepId)),
+  );
   const returnedBy = ofStatus((status) => status === "RETURNED");
   const oldestAwaitingBy = new Map<string, number>();
   for (const row of rows) {

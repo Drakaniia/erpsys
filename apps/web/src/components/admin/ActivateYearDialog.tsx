@@ -90,7 +90,12 @@ export default function ActivateYearDialog({
           Activate {year.label} · {year.semesterLabel}?
         </h2>
 
-        <ActiveEditors resource="academic-year" id={year.id} className="mt-3" onBlockedChange={lock.onBlockedChange} />
+        <ActiveEditors
+          resource="academic-year"
+          id={year.id}
+          className="mt-3"
+          onBlockedChange={lock.onBlockedChange}
+        />
 
         <div className="mt-3 space-y-2 rounded-xl border border-border bg-surface p-4">
           {previewQuery.isPending ? (
@@ -141,7 +146,8 @@ export default function ActivateYearDialog({
             type="button"
             onClick={confirmActivate}
             disabled={
-              lock.blocked || activateMutation.isPending ||
+              lock.blocked ||
+              activateMutation.isPending ||
               previewQuery.isPending ||
               activationBlocked
             }

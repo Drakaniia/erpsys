@@ -129,63 +129,69 @@ export default function SocialMediaLinksPanel({
             id={editingId === "new" ? undefined : editingId}
             onBlockedChange={onBlockedChange}
           >
-          <div className="flex flex-col gap-1">
-            <label htmlFor="link-name" className="text-sm font-medium text-ink">
-              Page name
-            </label>
-            <input
-              id="link-name"
-              value={nameInput}
-              onChange={(e) => {
-                setNameInput(e.currentTarget.value);
-                if (nameError) validate(e.currentTarget.value, urlInput);
-              }}
-              type="text"
-              placeholder="e.g. COT SBO"
-              className={`w-full max-w-xl rounded-lg border bg-surface px-3 py-2 text-sm text-ink ${nameError ? "border-error" : "border-border"}`}
-              aria-invalid={!!nameError}
-              aria-describedby={nameError ? "link-name-error" : undefined}
-            />
-            {nameError && (
-              <p
-                id="link-name-error"
-                className="text-xs text-error"
-                role="alert"
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="link-name"
+                className="text-sm font-medium text-ink"
               >
-                {nameError}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="link-url" className="text-sm font-medium text-ink">
-              Page link
-            </label>
-            <input
-              id="link-url"
-              value={urlInput}
-              onChange={(e) => {
-                setUrlInput(e.currentTarget.value);
-                if (urlError) validate(nameInput, e.currentTarget.value);
-              }}
-              type="url"
-              placeholder="https://www.facebook.com/…"
-              className={`w-full max-w-xl rounded-lg border bg-surface px-3 py-2 text-sm text-ink ${urlError ? "border-error" : "border-border"}`}
-              aria-invalid={!!urlError}
-              aria-describedby={urlError ? "link-url-error" : undefined}
-            />
-            <p className="text-xs text-muted">
-              Opens in a new tab for students in step 2.
-            </p>
-            {urlError && (
-              <p
-                id="link-url-error"
-                className="text-xs text-error"
-                role="alert"
+                Page name
+              </label>
+              <input
+                id="link-name"
+                value={nameInput}
+                onChange={(e) => {
+                  setNameInput(e.currentTarget.value);
+                  if (nameError) validate(e.currentTarget.value, urlInput);
+                }}
+                type="text"
+                placeholder="e.g. COT SBO"
+                className={`w-full max-w-xl rounded-lg border bg-surface px-3 py-2 text-sm text-ink ${nameError ? "border-error" : "border-border"}`}
+                aria-invalid={!!nameError}
+                aria-describedby={nameError ? "link-name-error" : undefined}
+              />
+              {nameError && (
+                <p
+                  id="link-name-error"
+                  className="text-xs text-error"
+                  role="alert"
+                >
+                  {nameError}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="link-url"
+                className="text-sm font-medium text-ink"
               >
-                {urlError}
+                Page link
+              </label>
+              <input
+                id="link-url"
+                value={urlInput}
+                onChange={(e) => {
+                  setUrlInput(e.currentTarget.value);
+                  if (urlError) validate(nameInput, e.currentTarget.value);
+                }}
+                type="url"
+                placeholder="https://www.facebook.com/…"
+                className={`w-full max-w-xl rounded-lg border bg-surface px-3 py-2 text-sm text-ink ${urlError ? "border-error" : "border-border"}`}
+                aria-invalid={!!urlError}
+                aria-describedby={urlError ? "link-url-error" : undefined}
+              />
+              <p className="text-xs text-muted">
+                Opens in a new tab for students in step 2.
               </p>
-            )}
-          </div>
+              {urlError && (
+                <p
+                  id="link-url-error"
+                  className="text-xs text-error"
+                  role="alert"
+                >
+                  {urlError}
+                </p>
+              )}
+            </div>
           </ActiveEditors>
           <div className="flex gap-2">
             <button
@@ -303,7 +309,11 @@ export default function SocialMediaLinksPanel({
         </div>
       )}
       {confirmRemoveId !== null && (
-        <ActiveEditors resource="social-link" id={confirmRemoveId} onBlockedChange={onBlockedChange} />
+        <ActiveEditors
+          resource="social-link"
+          id={confirmRemoveId}
+          onBlockedChange={onBlockedChange}
+        />
       )}
       <ConfirmDialog
         open={confirmRemoveId !== null}
