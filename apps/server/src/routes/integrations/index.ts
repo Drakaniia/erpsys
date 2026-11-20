@@ -1,9 +1,13 @@
 import { Router } from "express";
 import type { NextFunction, Request, Response } from "express";
 import { z } from "zod";
-import { resetAuthenticator } from "../../config/auth/admin-gate.js";
+import {
+  requireAuthenticatorReset,
+  resetAuthenticator,
+} from "../../config/auth/admin-gate.js";
 import { ApiError } from "../../config/errors.js";
 import { canEnterSurface } from "../../config/roles.js";
+import { outsideTransaction } from "../../lib/db/timestamp-ordering.js";
 import {
   publicIntegrationPayload,
   setIntegrationEnabled,
@@ -77,8 +81,9 @@ integrationsRouter.get(
 
 /**
  * `DELETE /api/v1/integrations/authenticators/:userId`
- * Access: session + admin surface + step-up unlock.
- * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
+ * Access: session + admin surface; self-reset needs PIN, password (if set),
+ * and emailed code; resetting another admin needs the full step-up unlock.
+ * Concurrency: auth-state reset outside business-record timestamp ordering.
  * Use: forget one admin's authenticator and end their unlock; they scan a new
  * QR code at their next step-up.
  * Returns: `{ data: { userId, enrolled: false } }`; `403` `STEP_UP_REQUIRED`
@@ -86,22 +91,35 @@ integrationsRouter.get(
  */
 integrationsRouter.delete(
   "/integrations/authenticators/:userId",
-  admin,
-  catchAsync(async (req, res) => {
-    const { userId } = parseQuery(z.object({ userId: z.string().min(1) }), req);
-    const target = await UserModel.findById(userId);
-    if (target?.role !== "ADMIN") {
-      throw new ApiError("NOT_FOUND", { message: "Admin not found." });
+  requireSession,
+  requireSurface("admin"),
+  catchAsync(async (req, res, next) => {
+    if (String(req.params.userId) === sessionUser(req).id) {
+      await requireAuthenticatorReset(sessionUser(req).id);
+      return next();
     }
-    await resetAuthenticator(userId);
-    await AdminActionLogModel.log(
-      sessionUser(req).id,
-      "Reset authenticator",
-      `User:${userId}`,
-      target.email ?? target.name ?? undefined,
-    );
-    okOne(res, { userId, enrolled: false });
+    return requireStepUp(req, res, next);
   }),
+  catchAsync((req, res) =>
+    outsideTransaction(async () => {
+      const { userId } = parseQuery(
+        z.object({ userId: z.string().min(1) }),
+        req,
+      );
+      const target = await UserModel.findById(userId);
+      if (target?.role !== "ADMIN") {
+        throw new ApiError("NOT_FOUND", { message: "Admin not found." });
+      }
+      await resetAuthenticator(userId);
+      await AdminActionLogModel.log(
+        sessionUser(req).id,
+        "Reset authenticator",
+        `User:${userId}`,
+        target.email ?? target.name ?? undefined,
+      );
+      okOne(res, { userId, enrolled: false });
+    }),
+  ),
 );
 
 /**

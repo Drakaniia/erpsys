@@ -1,4 +1,7 @@
 import express from "express";
+import type { Db } from "mongodb";
+import { guardDb } from "../../src/lib/db/timestamp-ordering.js";
+import { timestampOrdering } from "../../src/middleware/timestamp.js";
 import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COLLECTIONS } from "../../src/lib/db/db.js";
@@ -68,6 +71,7 @@ function seed(): Record<string, Row[]> {
 async function serve(): Promise<{ url: string; close: () => Promise<void> }> {
   const app = express();
   app.use(express.json());
+  app.use(timestampOrdering);
   app.use("/api/v1", v1Router);
   app.use(errorHandler);
   const server = app.listen(0);
@@ -608,6 +612,12 @@ describe("the always-on Better Auth core", () => {
 
 describe("/integrations/authenticators", () => {
   it("lists admins with their enrollment, and a reset forgets the device and ends the unlock", async () => {
+    context.store[COLLECTIONS.adminStepUp][0] = {
+      _id: "admin1",
+      pinAt: new Date(),
+      passwordAt: new Date(),
+      codeAt: new Date(),
+    };
     context.store.twoFactor = [
       { _id: "tf1", userId: "admin1", verified: true },
     ];
@@ -630,6 +640,101 @@ describe("/integrations/authenticators", () => {
     expect(context.store[COLLECTIONS.adminStepUp]).toHaveLength(0);
     expect(context.store[COLLECTIONS.user][0].twoFactorEnabled).toBe(false);
     expect(audits()[0].action).toBe("Reset authenticator");
+  });
+
+  it.each(["pinAt", "passwordAt", "codeAt"])(
+    "requires fresh %s for self-recovery even with an existing unlock",
+    async (missing) => {
+      context.store.twoFactor = [{ _id: "tf1", userId: "admin1" }];
+      Object.assign(context.store[COLLECTIONS.adminStepUp][0], {
+        pinAt: new Date(),
+        passwordAt: new Date(),
+        codeAt: new Date(),
+        [missing]: new Date(Date.now() - 11 * 60_000),
+      });
+      const response = await call("/integrations/authenticators/admin1", {
+        method: "DELETE",
+      });
+      expect(response.status).toBe(403);
+      expect((await response.json()).data).toMatchObject({
+        code: "STEP_UP_REQUIRED",
+        authenticatorReset: true,
+      });
+      expect(context.store.twoFactor).toHaveLength(1);
+      expect(audits()).toHaveLength(0);
+    },
+  );
+
+  it("does not let self-recovery unlock secrets or reset another admin", async () => {
+    context.store[COLLECTIONS.adminStepUp] = [
+      {
+        _id: "admin1",
+        pinAt: new Date(),
+        passwordAt: new Date(),
+        codeAt: new Date(),
+      },
+    ];
+    context.store[COLLECTIONS.user].push({ _id: "admin2", role: "ADMIN" });
+    const other = await call("/integrations/authenticators/admin2", {
+      method: "DELETE",
+    });
+    expect(other.status).toBe(403);
+    expect((await other.json()).data.authenticatorReset).toBeUndefined();
+    const secrets = await call("/integrations/credentials/export");
+    expect(secrets.status).toBe(403);
+    expect(audits()).toHaveLength(0);
+  });
+
+  it("resets auth state despite a stale directory timestamp and a read racing the reset", async () => {
+    holder.db = guardDb(context.db as unknown as Db);
+    Object.assign(context.store[COLLECTIONS.adminStepUp][0], {
+      pinAt: new Date(),
+      passwordAt: new Date(),
+      codeAt: new Date(),
+    });
+    context.store.twoFactor = [
+      { _id: "tf1", userId: "admin1", verified: true },
+    ];
+    const first = await (await call("/integrations/authenticators")).json();
+    await call("/integrations/authenticators");
+    const rawCollection = context.db.collection.bind(context.db);
+    vi.spyOn(context.db, "collection").mockImplementation((name) => {
+      const collection = rawCollection(name);
+      if (name !== "twoFactor") return collection;
+      const remove = collection.deleteMany.bind(collection);
+      return {
+        ...collection,
+        deleteMany: async (...args: Parameters<typeof remove>) => {
+          const result = await remove(...args);
+          context.store[COLLECTIONS.user][0].readTs = Date.now() + 60_000;
+          return result;
+        },
+      };
+    });
+    const response = await call("/integrations/authenticators/admin1", {
+      method: "DELETE",
+      body: JSON.stringify({ ts: first.ts }),
+    });
+    expect(response.status).toBe(200);
+    expect(context.store.twoFactor).toHaveLength(0);
+    expect(context.store[COLLECTIONS.user][0].twoFactorEnabled).toBe(false);
+  });
+
+  it("rejects unauthenticated and non-admin recovery requests", async () => {
+    for (const [session, status] of [
+      [null, 401],
+      [{ user: { ...ADMIN.user, role: "STUDENT" } }, 403],
+    ] as const) {
+      holder.session = session;
+      expect(
+        (
+          await call("/integrations/authenticators/admin1", {
+            method: "DELETE",
+          })
+        ).status,
+      ).toBe(status);
+    }
+    expect(audits()).toHaveLength(0);
   });
 
   it("refuses to reset a non-admin", async () => {
