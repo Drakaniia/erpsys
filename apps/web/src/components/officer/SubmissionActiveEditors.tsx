@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { api } from "$lib/api";
+import { authClient } from "$lib/auth-client";
 
 type Editor = { userId: string; name: string };
 
 export default function SubmissionActiveEditors({ id }: { id: string }) {
   const [editors, setEditors] = useState<Editor[]>([]);
+  const session = authClient.useSession();
 
   useEffect(() => {
     let stopped = false;
@@ -42,8 +44,16 @@ export default function SubmissionActiveEditors({ id }: { id: string }) {
     <div role="status" className="shrink-0">
       {names.length > 0 && (
         <p className="border-b border-border bg-warning/10 px-5 py-2 text-sm text-ink">
-          <span className="font-medium">{names.join(", ")}</span> is editing.
-          You can edit when they finish.
+          {editors.some(
+            (editor) => editor.userId === session.data?.user.id,
+          ) ? (
+            "Your account is editing in another tab or session. Close that editor or wait for it to finish."
+          ) : (
+            <>
+              <span className="font-medium">{names.join(", ")}</span> is
+              editing. You can edit when they finish.
+            </>
+          )}
         </p>
       )}
     </div>

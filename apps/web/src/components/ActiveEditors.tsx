@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { api } from "$lib/api";
+import { authClient } from "$lib/auth-client";
 import { cn } from "$lib/utils";
 import { registerEditLease } from "$lib/edit-leases";
 
@@ -29,16 +30,28 @@ type Target = {
 };
 const LEASE_MS = 30_000;
 
-// One lease per target survives the dev StrictMode remount, so the second
-// effect renews the first mount's lease instead of contending with itself.
+// Reuse one tab lease when the same form remounts, including dev StrictMode.
+// Separate browser tabs still create independent leases and contend normally.
 const leases = new WeakMap<Target, string>();
-const pendingReleases = new WeakMap<Target, ReturnType<typeof setTimeout>>();
+const tabLeases = new Map<string, string>();
+const pendingReleases = new Map<string, ReturnType<typeof setTimeout>>();
+function targetKey(target: Target): string {
+  return JSON.stringify([
+    target.resource,
+    target.id ?? null,
+    target.scope ?? null,
+  ]);
+}
 function leaseFor(target: Target): string {
   let leaseId = leases.get(target);
+  if (leaseId) return leaseId;
+  const key = targetKey(target);
+  leaseId = tabLeases.get(key);
   if (!leaseId) {
     leaseId = crypto.randomUUID();
-    leases.set(target, leaseId);
+    tabLeases.set(key, leaseId);
   }
+  leases.set(target, leaseId);
   return leaseId;
 }
 
@@ -82,6 +95,7 @@ export default function ActiveEditors({
     validUntil: number;
   }>();
   const [hidden, setHidden] = useState(() => document.hidden);
+  const session = authClient.useSession();
   const current = presence?.target === target ? presence : undefined;
   const blocked =
     enabled &&
@@ -103,7 +117,8 @@ export default function ActiveEditors({
       ...(target.scope === undefined ? {} : { scope: target.scope }),
       leaseId: leaseFor(target),
     };
-    clearTimeout(pendingReleases.get(target));
+    clearTimeout(pendingReleases.get(input.leaseId));
+    pendingReleases.delete(input.leaseId);
     const unregister = registerEditLease(input.leaseId);
     let stopped = false;
     let pending: Promise<void> | undefined;
@@ -174,8 +189,9 @@ export default function ActiveEditors({
       // Release one macrotask late so the StrictMode remount's setup cancels
       // it; complete a late POST before DELETE so it cannot resurrect a lease.
       pendingReleases.set(
-        target,
+        input.leaseId,
         setTimeout(() => {
+          pendingReleases.delete(input.leaseId);
           if (pending) void pending.then(leave);
           else void leave();
         }, 0),
@@ -191,8 +207,12 @@ export default function ActiveEditors({
         : current?.status === "unavailable"
           ? "Editing unavailable. Reconnecting before you can edit."
           : current?.editors.length
-            ? `${current.editors.map((editor) => editor.name).join(", ")} is editing. You can edit when they finish.`
-            : "Checking editing access…";
+            ? current.editors.some(
+                (editor) => editor.userId === session.data?.user.id,
+              )
+              ? "Your account is editing in another tab or session. Close that editor or wait for it to finish."
+              : `${current.editors.map((editor) => editor.name).join(", ")} is editing. You can edit when they finish.`
+            : null;
   return (
     <>
       {message && (
