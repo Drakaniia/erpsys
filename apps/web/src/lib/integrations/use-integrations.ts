@@ -20,6 +20,7 @@ export type IntegrationFlags = {
 
 export type CredentialFieldView = {
   envKey: string;
+  customEnvKey: string;
   label: string;
   hint: string;
   helpUrl: string | null;
@@ -27,7 +28,7 @@ export type CredentialFieldView = {
   required: boolean;
   value: string | null;
   masked: string | null;
-  source: "env" | "stored" | "missing";
+  source: "env" | "customEnv" | "stored" | "missing";
   unreadable: boolean;
   updatedAt: string | null;
   updatedByName: string | null;

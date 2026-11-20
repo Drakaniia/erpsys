@@ -10,10 +10,20 @@ import { fileURLToPath } from "node:url";
 
 const BASE: Record<string, string | undefined> = { ...process.env };
 const LOCAL_ONLY = BASE.LOCAL_ONLY !== "false";
+if (BASE.NODE_ENV === "production" && LOCAL_ONLY) {
+  throw new Error("[env] production requires LOCAL_ONLY=false");
+}
 let overrides: Record<string, string> = {};
 
+export const customEnvKey = (key: string): string => `CUSTOM_${key}`;
+export const defaultEnvValue = (key: string): string => BASE[key] ?? "";
+export const customEnvValue = (key: string): string =>
+  BASE[customEnvKey(key)] ?? "";
+export const baseEnvValue = (key: string): string =>
+  customEnvValue(key).trim() ? customEnvValue(key) : defaultEnvValue(key);
+
 const get = (key: string, fallback = "") =>
-  (overrides[key] ?? BASE[key])?.trim() || fallback;
+  (overrides[key]?.trim() || baseEnvValue(key)).trim() || fallback;
 const off = (key: string) => get(key).toLowerCase() === "false";
 const num = (key: string, fallback: number) => {
   const value = Number(get(key));
@@ -25,7 +35,6 @@ export function applyEnvOverrides(values: Record<string, string>): void {
   Object.assign(process.env, overrides);
 }
 
-export const baseEnvValue = (key: string): string => BASE[key] ?? "";
 export const effectiveValue = (key: string): string => get(key);
 
 const DEFAULT_DATABASE_URL = "mongodb://localhost:27017/erpsys";
@@ -34,6 +43,7 @@ export const env = {
   LOCAL_ONLY,
   DATABASE_URL: get("DATABASE_URL", DEFAULT_DATABASE_URL),
   BETTER_AUTH_SECRET: get("BETTER_AUTH_SECRET"),
+  INTEGRATION_CREDENTIAL_KEY: get("INTEGRATION_CREDENTIAL_KEY"),
   BETTER_AUTH_URL: LOCAL_ONLY
     ? "http://localhost:5173"
     : get("BETTER_AUTH_URL", "http://localhost:5173"),

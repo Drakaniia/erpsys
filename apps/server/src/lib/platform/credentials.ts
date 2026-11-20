@@ -190,7 +190,7 @@ let cachedSecret: string | null = null;
 let cachedKey: Buffer | null = null;
 
 function derivedKey(): Buffer {
-  const secret = env.BETTER_AUTH_SECRET;
+  const secret = env.INTEGRATION_CREDENTIAL_KEY || env.BETTER_AUTH_SECRET;
   if (cachedKey && cachedSecret === secret) return cachedKey;
   cachedKey = Buffer.from(
     hkdfSync(

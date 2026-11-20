@@ -19,7 +19,13 @@ import {
   type CredentialFieldSpec,
   type IntegrationCredentialDoc,
 } from "../lib/platform/credentials.js";
-import { baseEnvValue, effectiveValue, env } from "../lib/platform/env.js";
+import {
+  baseEnvValue,
+  customEnvValue,
+  defaultEnvValue,
+  effectiveValue,
+  env,
+} from "../lib/platform/env.js";
 import {
   INTEGRATION_CONSEQUENCE,
   INTEGRATION_KEYS,
@@ -47,7 +53,6 @@ const DESCRIPTION: Record<IntegrationKey, string> = {
 };
 
 const ROW_ORDER: readonly IntegrationKey[] = [
-  "betterAuth",
   "googleAuth",
   "googleForms",
   "googleCalendar",
@@ -55,6 +60,7 @@ const ROW_ORDER: readonly IntegrationKey[] = [
   "r2",
   "cloudflareChat",
   "email",
+  "betterAuth",
 ];
 
 const EMAIL_ADDRESS = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -101,6 +107,7 @@ function fieldView(
   const set = effective.trim() !== "";
   return {
     envKey: spec.envKey,
+    customEnvKey: `CUSTOM_${spec.envKey}`,
     label: spec.label,
     hint: spec.hint,
     helpUrl: spec.helpUrl ?? null,
@@ -111,9 +118,11 @@ function fieldView(
     source:
       stored !== undefined
         ? "stored"
-        : baseEnvValue(spec.envKey).trim()
-          ? "env"
-          : "missing",
+        : customEnvValue(spec.envKey).trim()
+          ? "customEnv"
+          : defaultEnvValue(spec.envKey).trim()
+            ? "env"
+            : "missing",
     unreadable,
     updatedAt,
     updatedByName,
@@ -355,7 +364,8 @@ function candidateGroup(
     if (incoming === "") {
       failures.push({
         key: spec.envKey,
-        reason: "must not be empty — use Reset to fall back to .env",
+        reason:
+          "must not be empty — use Reset to default to remove the override",
       });
       continue;
     }
@@ -546,8 +556,8 @@ export async function resetCredentials(actorId: string, key: IntegrationKey) {
   const doc = await credentialCollection().findOne({ key } as never);
   const keys = doc ? Object.keys(doc.values ?? {}) : [];
   if (doc && keys.length > 0) {
-    await credentialCollection().updateOne(
-      { _id: doc._id } as never,
+    const result = await credentialCollection().updateOne(
+      { _id: doc._id, version: doc.version } as never,
       {
         $set: {
           values: {},
@@ -557,6 +567,7 @@ export async function resetCredentials(actorId: string, key: IntegrationKey) {
         },
       } as never,
     );
+    if (result.matchedCount === 0) throw conflict();
     invalidateIntegrationCache();
     console.log(
       `[integrations] credentials reset key=${key} actor=${actorId} fields=${keys.join(",")}`,

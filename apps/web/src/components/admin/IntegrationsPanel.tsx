@@ -120,9 +120,7 @@ export default function IntegrationsPanel({
           queryClient.invalidateQueries({ queryKey: ["integrations"] });
           if (!announce) return;
           sonnerToast.success(
-            next
-              ? `${row.label} enabled.`
-              : `${row.label} disabled. ${row.consequence}`,
+            "Integration settings saved.",
             {
               duration: 5_000,
               action: {
