@@ -213,8 +213,30 @@ function evaluate(expr: unknown, row: Row, vars: Row = {}): unknown {
         evaluate(cond, row, { ...vars, [as]: value }),
       );
     }
+    case "$map": {
+      const { input, as, in: expression } = arg as { input: unknown; as: string; in: unknown };
+      return (evaluate(input, row, vars) as unknown[]).map((value) =>
+        evaluate(expression, row, { ...vars, [as]: value }),
+      );
+    }
+    case "$cond": {
+      const [condition, yes, no] = arg as unknown[];
+      return evaluate(evaluate(condition, row, vars) ? yes : no, row, vars);
+    }
+    case "$eq": {
+      const [a, b] = values();
+      return isDeepStrictEqual(a, b);
+    }
+    case "$not":
+      return !values()[0];
     case "$and":
       return values().every(Boolean);
+    case "$or":
+      return values().some(Boolean);
+    case "$slice": {
+      const [items, count] = values() as [unknown[], number];
+      return count < 0 ? items.slice(count) : items.slice(0, count);
+    }
     case "$gt": {
       const [a, b] = values();
       return asTime(a) > asTime(b);

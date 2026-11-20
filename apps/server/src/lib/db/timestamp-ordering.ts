@@ -37,6 +37,11 @@ const FILTER_WRITES = new Set([
 ]);
 
 const store = new AsyncLocalStorage<Transaction>();
+const unguarded = new WeakMap<Db, Db>();
+
+export function unguardDb(db: Db): Db {
+  return unguarded.get(db) ?? db;
+}
 let last = 0;
 let sharedOracle: (() => Promise<number>) | undefined;
 
@@ -412,6 +417,51 @@ function guardCollection(
   });
 }
 
+function businessCollection(raw: Collection<Document>): Collection<Document> {
+  const filtered = new Set([
+    "find", "findOne", "countDocuments", "distinct", ...FILTER_WRITES,
+  ]);
+  return new Proxy(raw, {
+    get(target, prop) {
+      const value = Reflect.get(target, prop, target);
+      if (typeof value !== "function") return value;
+      const op = (value as Op).bind(target);
+      if (prop === "insertOne" || prop === "insertMany" || prop === "replaceOne") {
+        return (...args: unknown[]) => {
+          const rows = prop === "insertMany" ? args[0] as Row[]
+            : [args[prop === "replaceOne" ? 1 : 0] as Row];
+          if (rows.some(row => row.kind === "edit-presence" || String(row._id ?? "").startsWith("@edit-presence:"))) {
+            throw new ApiError("BAD_REQUEST", { message: "Reserved presence record." });
+          }
+          if (prop === "replaceOne") {
+            args[0] = { $and: [args[0] ?? {}, { kind: { $ne: "edit-presence" } }] };
+          }
+          return op(...args);
+        };
+      }
+      if (typeof prop !== "string" || !filtered.has(prop)) return op;
+      return (...args: unknown[]) => {
+        if (FILTER_WRITES.has(prop) && !prop.toLowerCase().includes("delete")) {
+          const update = args[1] as Row | Row[];
+          const values = Array.isArray(update) ? update : [update];
+          if (values.some(value => {
+            const set = value?.$set as Row | undefined;
+            const insert = value?.$setOnInsert as Row | undefined;
+            return [set, insert].some(row => row && (row.kind === "edit-presence" || String(row._id ?? "").startsWith("@edit-presence:")));
+          })) throw new ApiError("BAD_REQUEST", { message: "Reserved presence record." });
+        }
+        const index = prop === "distinct" ? 1 : 0;
+        const filter = (args[index] ?? {}) as Row;
+        const visible = { kind: { $ne: "edit-presence" } };
+        args[index] = "kind" in filter
+          ? { $and: [filter, visible] }
+          : { ...filter, ...visible };
+        return op(...args);
+      };
+    },
+  });
+}
+
 /**
  * Concurrency: timestamp ordering — the single enforcement point.
  * Rule: every collection handed out by `getDbSync()` applies the read, write and
@@ -419,16 +469,18 @@ function guardCollection(
  * `EXEMPT` (Better Auth state, logs, usage counters) are never guarded.
  */
 export function guardDb(db: Db): Db {
-  return new Proxy(db, {
+  const guarded = new Proxy(db, {
     get(target, prop) {
       const value = Reflect.get(target, prop, target);
       if (prop !== "collection") {
         return typeof value === "function" ? value.bind(target) : value;
       }
       return (name: string, ...rest: unknown[]) => {
-        const raw = target.collection(name, ...(rest as []));
+        const raw = businessCollection(target.collection(name, ...(rest as [])));
         return EXEMPT.has(name) ? raw : guardCollection(raw, name);
       };
     },
   });
+  unguarded.set(guarded, db);
+  return guarded;
 }

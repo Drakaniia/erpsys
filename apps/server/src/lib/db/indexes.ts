@@ -1,4 +1,5 @@
-import type { IndexDescription } from "mongodb";
+import { isDeepStrictEqual } from "node:util";
+import type { IndexDescription, IndexDescriptionInfo } from "mongodb";
 import { COLLECTIONS, getDb, type CollectionName } from "./db.js";
 
 const ix = (
@@ -180,11 +181,34 @@ const INDEXES: [CollectionName, IndexDescription[]][] = [
   ],
 ];
 
+function equivalentIndex(
+  existing: IndexDescriptionInfo,
+  desired: IndexDescription,
+): boolean {
+  const { name: existingName, key: existingKey, v, ns, ...existingOptions } = existing;
+  const { name: desiredName, key: desiredKey, ...desiredOptions } = desired;
+  return (
+    isDeepStrictEqual(Object.entries(existingKey), Object.entries(desiredKey)) &&
+    isDeepStrictEqual(
+      { unique: false, sparse: false, hidden: false, ...existingOptions },
+      { unique: false, sparse: false, hidden: false, ...desiredOptions },
+    )
+  );
+}
+
 export async function ensureIndexes(): Promise<void> {
   const db = await getDb();
   for (const [name, indexes] of INDEXES) {
     try {
-      await db.collection(name).createIndexes(indexes);
+      const collection = db.collection(name);
+      const existing = await collection.listIndexes().toArray().catch((error: unknown) => {
+        if ((error as { code?: number }).code === 26) return [];
+        throw error;
+      });
+      await collection.createIndexes(indexes.map(index => {
+        const match = existing.find(candidate => equivalentIndex(candidate, index));
+        return match ? { ...index, name: match.name } : index;
+      }));
     } catch (error) {
       console.error(`[indexes] ${name}: ${(error as Error).message}`);
       if (

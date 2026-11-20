@@ -63,6 +63,11 @@ export async function getDb(): Promise<Db> {
   return handle;
 }
 
+export function rawDb(): Db {
+  getDbSync();
+  return client!.db();
+}
+
 export async function closeDb(): Promise<void> {
   const open = client;
   client = null;

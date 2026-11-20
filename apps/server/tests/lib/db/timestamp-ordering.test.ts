@@ -36,6 +36,35 @@ const abortCode = (error: unknown) =>
   (error as { data?: { code?: string } }).data?.code;
 
 describe("timestamp ordering", () => {
+  it("hides collection-local editor markers from reads, counts and bulk writes", async () => {
+    const { db, store } = fakeDb({
+      user: [
+        { _id: "real", email: "real@example.com" },
+        { _id: "@edit-presence:user:new", kind: "edit-presence" },
+      ],
+      content: [
+        { _id: "link", kind: "social-link" },
+        { _id: "@edit-presence:social-link:new", kind: "edit-presence" },
+      ],
+    });
+    const guarded = guardDb(db as unknown as Db);
+    const users = guarded.collection("user");
+    expect(() => users.insertOne({ _id: "marker", kind: "edit-presence" } as never)).toThrow("Reserved presence record");
+    expect(() => users.insertOne({ _id: "@edit-presence:fake" } as never)).toThrow("Reserved presence record");
+    expect(await users.countDocuments()).toBe(1);
+    expect(await users.find({}).toArray()).toHaveLength(1);
+    expect(await users.findOne({ _id: "@edit-presence:user:new" } as never)).toBeNull();
+    expect(() => users.updateOne({}, { $set: { kind: "edit-presence" } })).toThrow("Reserved presence record");
+    await inTx(nextTs(), "GET", async () => {
+      expect(await users.countDocuments()).toBe(1);
+      expect(await users.find({}).toArray()).toHaveLength(1);
+    });
+    await users.updateMany({}, { $set: { touched: true } });
+    expect(store.user[1].touched).toBeUndefined();
+    expect(await guarded.collection("content").countDocuments({ kind: "edit-presence" })).toBe(0);
+    await guarded.collection("content").deleteMany({});
+    expect(store.content).toEqual([{ _id: "@edit-presence:social-link:new", kind: "edit-presence" }]);
+  });
   it("reports TS_ABORTED when a racing writer makes the atomic write filter match nothing", async () => {
     const { db, store } = fakeDb({ things: [{ _id: "x", value: 0 }] });
     const raw = db.collection("things");
