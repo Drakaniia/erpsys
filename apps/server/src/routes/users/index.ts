@@ -7,6 +7,7 @@ import { newPasswordSchema } from "../../config/password.js";
 import { ApiError } from "../../config/errors.js";
 import { COLLECTIONS, getDbSync, idIn, refIn } from "../../lib/db/db.js";
 import { purgeUserById } from "../../lib/db/user-purge.js";
+import { outsideTransaction } from "../../lib/db/timestamp-ordering.js";
 import {
   requireSession,
   requireStepUp,
@@ -57,12 +58,64 @@ const users = () => getDbSync().collection<Target>(COLLECTIONS.user);
 const notFound = () =>
   new ApiError("NOT_FOUND", { message: "User not found." });
 
+type DeleteSkip = "SELF" | "LAST_ADMIN" | "BLOCKED" | "NOT_FOUND";
+
+async function protectDeletion(
+  target: Target,
+  actorId: string,
+): Promise<DeleteSkip | null> {
+  const userId = String(target._id);
+  if (userId === actorId) return "SELF";
+  if (target.role !== "ADMIN") return null;
+
+  const db = getDbSync();
+  const session = db.client.startSession();
+  try {
+    return await outsideTransaction(() =>
+      session.withTransaction(async () => {
+        const accounts = db.collection<Target>(COLLECTIONS.user);
+        await accounts.updateMany(
+          { role: "ADMIN" },
+          { $inc: { adminDeletionVersion: 1 } },
+          { session },
+        );
+        const current = await accounts.findOne(idIn([userId]) as never, {
+          session,
+        });
+        if (!current) return "NOT_FOUND";
+        if (!target.blockedAt && current.blockedAt) return "BLOCKED";
+        const survivor = await accounts.findOne(
+          {
+            role: "ADMIN",
+            blockedAt: null,
+            _id: { $nin: refIn([userId]).$in },
+          } as never,
+          { session },
+        );
+        if (!survivor) return "LAST_ADMIN";
+        if (!current.blockedAt) {
+          await accounts.updateOne(
+            { _id: current._id } as never,
+            { $set: { blockedAt: new Date() } },
+            { session },
+          );
+        }
+        return null;
+      }),
+    );
+  } finally {
+    await session.endSession();
+  }
+}
+
 async function profileIds(actor: unknown): Promise<string[]> {
   const owners = await getDbSync()
     .collection<{ studentProfile?: { _id: string } }>(COLLECTIONS.user)
     .find({ _id: actor } as never, { projection: { studentProfile: 1 } })
     .toArray();
-  return owners.flatMap(owner => owner.studentProfile ? [String(owner.studentProfile._id)] : []);
+  return owners.flatMap((owner) =>
+    owner.studentProfile ? [String(owner.studentProfile._id)] : [],
+  );
 }
 
 async function hasActivity(userId: string): Promise<boolean> {
@@ -84,8 +137,14 @@ async function hasActivity(userId: string): Promise<boolean> {
     db.collection(COLLECTIONS.enrollmentQueue).countDocuments({
       $or: [inProfiles, { servedById: actor }, { movedToEndById: actor }],
     } as never),
-    db.collection(COLLECTIONS.department).countDocuments({ advisers: { $elemMatch: { adviserId: actor } } } as never),
-    db.collection(COLLECTIONS.adviserSchedule).countDocuments({ kind: "presence", adviserId: actor } as never),
+    db
+      .collection(COLLECTIONS.department)
+      .countDocuments({
+        advisers: { $elemMatch: { adviserId: actor } },
+      } as never),
+    db
+      .collection(COLLECTIONS.adviserSchedule)
+      .countDocuments({ kind: "presence", adviserId: actor } as never),
     db
       .collection(COLLECTIONS.notification)
       .countDocuments({ userId: actor } as never),
@@ -118,30 +177,16 @@ async function disableAccount(target: Target): Promise<void> {
       $set: { isOpen: false, closedAt: new Date(), autoClosedAt: null },
     } as never,
   );
-  await db
-    .collection(COLLECTIONS.enrollmentQueue)
-    .updateMany(
-      { servedById: actor, status: "IN_PROGRESS" } as never,
-      {
-        $set: { status: "WAITING", servedById: null, servedAt: null },
-      } as never,
-    );
+  await db.collection(COLLECTIONS.enrollmentQueue).updateMany(
+    { servedById: actor, status: "IN_PROGRESS" } as never,
+    {
+      $set: { status: "WAITING", servedById: null, servedAt: null },
+    } as never,
+  );
 }
 
 async function hardDeleteAccount(target: Target): Promise<void> {
-  const db = getDbSync();
-  const actor = refIn([String(target._id)]);
-  await db
-    .collection(COLLECTIONS.notification)
-    .deleteMany({ userId: actor } as never);
-  await db
-    .collection(COLLECTIONS.verification)
-    .deleteMany({ identifier: target.email } as never);
-  await db.collection(COLLECTIONS.studentEnrollment).deleteMany({
-    studentProfileId: refIn(await profileIds(actor)),
-  } as never);
-
-  await users().deleteOne({ _id: target._id } as never);
+  await purgeUserById(getDbSync(), String(target._id));
 }
 
 /**
@@ -171,12 +216,19 @@ usersRouter.post(
   "/users/invite",
   admin,
   catchAsync(async (req, res) => {
-    const { name, email } = parseBody(z.object({
-      name: z.string().trim().min(1).max(100),
-      email: z.string().trim().max(254).email().toLowerCase(),
-    }), req);
+    const { name, email } = parseBody(
+      z.object({
+        name: z.string().trim().min(1).max(100),
+        email: z.string().trim().max(254).email().toLowerCase(),
+      }),
+      req,
+    );
     const userId = await inviteAccount(name, email);
-    await AdminActionLogModel.log(sessionUser(req).id, "Invited account", `User:${userId}`);
+    await AdminActionLogModel.log(
+      sessionUser(req).id,
+      "Invited account",
+      `User:${userId}`,
+    );
     okOne(res, { userId }, 201);
   }),
 );
@@ -197,21 +249,81 @@ usersRouter.post(
     const target = await users().findOne(idIn([userId]) as never);
     if (!target) throw notFound();
     const eligible = ["STUDENT", "SBO_OFFICER", "ENROLLMENT_ADVISER"];
-    if (!eligible.includes(target.role) || target.blockedAt || target.emailVerified !== true) {
+    if (
+      !eligible.includes(target.role) ||
+      target.blockedAt ||
+      target.emailVerified !== true
+    ) {
       throw new ApiError("CONFLICT", {
-        message: "Only active non-admin accounts with a verified email can be promoted to admin.",
+        message:
+          "Only active non-admin accounts with a verified email can be promoted to admin.",
       });
     }
     const { matchedCount } = await users().updateOne(
-      { _id: target._id, role: target.role, emailVerified: true, blockedAt: null } as never,
+      {
+        _id: target._id,
+        role: target.role,
+        emailVerified: true,
+        blockedAt: null,
+      } as never,
       { $set: { role: "ADMIN" } },
     );
     if (!matchedCount) {
-      throw new ApiError("CONFLICT", { message: "The account changed. Refresh and try again." });
+      throw new ApiError("CONFLICT", {
+        message: "The account changed. Refresh and try again.",
+      });
     }
-    await getDbSync().collection(COLLECTIONS.session).deleteMany({ userId: refIn([userId]) } as never);
-    await AdminActionLogModel.log(sessionUser(req).id, "Promoted to admin", `User:${userId}`);
+    await getDbSync()
+      .collection(COLLECTIONS.session)
+      .deleteMany({ userId: refIn([userId]) } as never);
+    await AdminActionLogModel.log(
+      sessionUser(req).id,
+      "Promoted to admin",
+      `User:${userId}`,
+    );
     okOne(res, { userId, role: "ADMIN" });
+  }),
+);
+
+/**
+ * `POST /api/v1/users/:userId/reactivate`
+ * Access: session + admin surface (step-up required).
+ * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
+ * Concurrency: conditional blockedAt update permits one reactivation; changed account → `409`.
+ * Use: reactivate a disabled account without changing its role or records; revoke sessions for fresh sign-in.
+ * Returns: `{ data: { userId } }`.
+ */
+usersRouter.post(
+  "/users/:userId/reactivate",
+  admin,
+  requireStepUp,
+  catchAsync(async (req, res) => {
+    const { userId } = parseQuery(userIdParams, req);
+    const target = await users().findOne(idIn([userId]) as never);
+    if (!target) throw notFound();
+    if (!target.blockedAt) {
+      throw new ApiError("CONFLICT", {
+        message: "Only disabled accounts can be reactivated.",
+      });
+    }
+    const { matchedCount } = await users().updateOne(
+      { _id: target._id, blockedAt: target.blockedAt } as never,
+      { $set: { blockedAt: null } },
+    );
+    if (!matchedCount) {
+      throw new ApiError("CONFLICT", {
+        message: "The account changed. Refresh and try again.",
+      });
+    }
+    await getDbSync()
+      .collection(COLLECTIONS.session)
+      .deleteMany({ userId: refIn([userId]) } as never);
+    await AdminActionLogModel.log(
+      sessionUser(req).id,
+      "Reactivated account",
+      `User:${userId}`,
+    );
+    okOne(res, { userId: String(target._id) });
   }),
 );
 
@@ -267,20 +379,22 @@ usersRouter.patch(
  * `DELETE /api/v1/users`
  * Access: session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
- * Use: delete up to 500 accounts — body `{ userIds }`.
- * Returns: `{ data: delete result }`.
+ * Concurrency: admin removals reserve a disabled account in a Mongo transaction; shared admin writes serialize survivor checks.
+ * Use: delete up to 500 accounts — body `{ userIds }`; skip self and preserve an active admin.
+ * Returns: `{ data: { hardDeleted, blocked, skipped } }`; skip reasons `SELF`, `LAST_ADMIN`, `BLOCKED`, `NOT_FOUND`.
  */
 usersRouter.delete(
   "/users",
   admin,
   catchAsync(async (req, res) => {
-    const { userIds: ids } = parseBody(z.object({ userIds }), req);
+    const { userIds: requestedIds } = parseBody(z.object({ userIds }), req);
+    const ids = [...new Set(requestedIds)];
     const actorId = sessionUser(req).id;
     const hardDeleted: string[] = [];
     const blocked: string[] = [];
     const skipped: Array<{
       userId: string;
-      reason: "ADMIN" | "BLOCKED" | "NOT_FOUND";
+      reason: DeleteSkip;
     }> = [];
     if (ids.length === 0) return okOne(res, { hardDeleted, blocked, skipped });
 
@@ -291,11 +405,15 @@ usersRouter.delete(
     for (const id of ids) {
       const target = byId.get(id);
       if (!target) skipped.push({ userId: id, reason: "NOT_FOUND" });
-      else if (target.role === "ADMIN")
-        skipped.push({ userId: id, reason: "ADMIN" });
+      else if (id === actorId) skipped.push({ userId: id, reason: "SELF" });
       else if (target.blockedAt)
         skipped.push({ userId: id, reason: "BLOCKED" });
       else {
+        const reason = await protectDeletion(target, actorId);
+        if (reason) {
+          skipped.push({ userId: id, reason });
+          continue;
+        }
         await removeCalendarData(id);
         if (await hasActivity(id)) {
           await disableAccount(target);
@@ -384,7 +502,8 @@ usersRouter.patch(
  * `DELETE /api/v1/users/:userId`
  * Access: session + admin surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
- * Use: purge one account and its records.
+ * Concurrency: admin survivor checks serialize through shared admin writes in a Mongo transaction.
+ * Use: purge one blocked account and its records; reject self and preserve an active admin.
  * Returns: `{ data: purge result }`.
  */
 usersRouter.delete(
@@ -394,15 +513,24 @@ usersRouter.delete(
     const { userId } = parseQuery(userIdParams, req);
     const target = await users().findOne(idIn([userId]) as never);
     if (!target) throw notFound();
-    if (target.role === "ADMIN") {
+    if (String(target._id) === sessionUser(req).id) {
       throw new ApiError("FORBIDDEN", {
-        message: "Admin accounts cannot be deleted.",
+        message: "You cannot delete yourself.",
       });
     }
     if (!target.blockedAt) {
       throw new ApiError("CONFLICT", {
         message:
           "Only blocked accounts can be permanently deleted. Use Delete instead.",
+      });
+    }
+    const reason = await protectDeletion(target, sessionUser(req).id);
+    if (reason) {
+      throw new ApiError("FORBIDDEN", {
+        message:
+          reason === "LAST_ADMIN"
+            ? "The last active admin cannot be deleted."
+            : "This account can no longer be deleted. Reload and try again.",
       });
     }
     await removeCalendarData(userId);

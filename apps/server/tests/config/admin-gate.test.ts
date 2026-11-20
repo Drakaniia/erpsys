@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { COLLECTIONS } from "../../src/lib/db/db.js";
 import {
   beforeAuthenticator,
+  requireAuthenticatorReset,
   sendCode,
   stepUpStatus,
   submitPin,
@@ -73,6 +74,24 @@ describe("submitPin", () => {
       "Incorrect PIN.",
     );
     expect((await stepUpStatus("google-admin-2")).next).toBe("pin");
+  });
+});
+
+describe("authenticator recovery", () => {
+  it("accepts the PIN and emailed code without the lost device for a passwordless admin", async () => {
+    const user = { id: "lost-device-admin", email: "admin@example.test" };
+    await submitPin(user.id, "123456");
+    await expect(requireAuthenticatorReset(user.id)).rejects.toMatchObject({
+      data: { code: "STEP_UP_REQUIRED", authenticatorReset: true },
+    });
+    await sendCode(user);
+    await expect(verifyCode(user.id, "not-the-code")).rejects.toThrow(
+      "Incorrect code",
+    );
+    await expect(requireAuthenticatorReset(user.id)).rejects.toThrow();
+    await verifyCode(user.id, holder.code);
+    await expect(requireAuthenticatorReset(user.id)).resolves.toBeUndefined();
+    expect((await stepUpStatus(user.id)).unlocked).toBe(false);
   });
 });
 

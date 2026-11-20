@@ -208,6 +208,19 @@ export async function requireCodeStep(
     throw order("code", "Confirm the emailed code first.");
 }
 
+export async function requireAuthenticatorReset(
+  userId: string,
+  now = new Date(),
+): Promise<void> {
+  const row = await AdminStepUpModel.find(userId);
+  if (nextStep(row, now) !== "totp") {
+    throw new ApiError("FORBIDDEN", {
+      message: "Confirm the PIN, your password and the emailed code first.",
+      data: { code: STEP_UP_REQUIRED, authenticatorReset: true },
+    });
+  }
+}
+
 export async function beforeAuthenticator(
   userId: string,
   now = new Date(),

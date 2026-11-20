@@ -14,6 +14,7 @@ export default function StepUpHost() {
   if (!waiter) return null;
   return (
     <StepUpDialog
+      authenticatorReset={waiter.authenticatorReset}
       onDone={() => {
         waiter.ok();
         setWaiter(null);
