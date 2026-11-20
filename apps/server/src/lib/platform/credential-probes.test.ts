@@ -148,7 +148,7 @@ describe("cloudflareChat", () => {
       ok: true,
     });
     expect(mock).toHaveBeenCalledExactlyOnceWith(
-      "https://api.cloudflare.com/client/v4/accounts/acct/ai/models/search",
+      "https://api.cloudflare.com/client/v4/accounts/acct/ai/models/search?per_page=1",
       expect.objectContaining({
         method: "GET",
         headers: {
@@ -157,6 +157,60 @@ describe("cloudflareChat", () => {
         },
       }),
     );
+  });
+
+  it("accepts a valid response larger than the old 8192-character cap", async () => {
+    const body = {
+      result: [{ description: "x".repeat(72_000) }],
+      success: true,
+    };
+    stubFetch(json(200, body));
+    await expect(probeCredentials("cloudflareChat", values)).resolves.toEqual({
+      ok: true,
+    });
+  });
+
+  it("rejects an oversized response explicitly instead of parsing truncated JSON", async () => {
+    stubFetch(json(200, { result: ["x".repeat(262_144)], success: true }));
+    await expect(probeCredentials("cloudflareChat", values)).resolves.toEqual({
+      ok: false,
+      failures: [
+        {
+          key: "CLOUDFLARE_API_TOKEN",
+          reason: "provider response exceeded the size limit",
+        },
+      ],
+    });
+  });
+
+  it.each([
+    "<html>bad gateway</html>",
+    '{"success":true',
+    JSON.stringify({ success: false, errors: [{ code: 10000 }] }),
+  ])(
+    "rejects malformed or unsuccessful HTTP 200 responses: %s",
+    async (body) => {
+      stubFetch(new Response(body, { status: 200 }));
+      await expect(probeCredentials("cloudflareChat", values)).resolves.toEqual(
+        {
+          ok: false,
+          failures: [
+            {
+              key: "CLOUDFLARE_API_TOKEN",
+              reason: "provider returned an unexpected response",
+            },
+          ],
+        },
+      );
+    },
+  );
+
+  it.each([401, 403])("rejects an unauthorized token (%s)", async (status) => {
+    stubFetch(json(status, {}));
+    await expect(probeCredentials("cloudflareChat", values)).resolves.toEqual({
+      ok: false,
+      failures: [{ key: "CLOUDFLARE_API_TOKEN", reason: "token rejected" }],
+    });
   });
 
   it("rejects a token and a missing account separately", async () => {

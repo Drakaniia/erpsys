@@ -10,6 +10,8 @@ export type ProbeResult =
 
 const TIMEOUT_MS = 8_000;
 const MAX_BODY_BYTES = 8_192;
+const MAX_CLOUDFLARE_BODY_BYTES = 262_144;
+
 const R2_ENDPOINT_PATTERN =
   /^https:\/\/([a-f0-9]{32})\.r2\.cloudflarestorage\.com$/;
 
@@ -224,7 +226,7 @@ async function probeCloudflareChat(
   let response: Response;
   try {
     response = await send(
-      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/models/search`,
+      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/ai/models/search?per_page=1`,
       {
         method: "GET",
         headers: {
@@ -249,7 +251,33 @@ async function probeCloudflareChat(
       `provider returned an unexpected response (${response.status})`,
     );
   }
-  const json = parseJson(await readCapped(response));
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+  let body = "";
+  let bytes = 0;
+  try {
+    if (reader) {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        bytes += value.byteLength;
+        if (bytes > MAX_CLOUDFLARE_BODY_BYTES) {
+          await reader.cancel().catch(() => {});
+          return failed(
+            "CLOUDFLARE_API_TOKEN",
+            "provider response exceeded the size limit",
+          );
+        }
+        body += decoder.decode(value, { stream: true });
+      }
+      body += decoder.decode();
+    }
+  } catch {
+    return failed("CLOUDFLARE_API_TOKEN", "could not read Cloudflare response");
+  } finally {
+    reader?.releaseLock();
+  }
+  const json = parseJson(body);
   if (json?.success === true) return { ok: true };
   return failed(
     "CLOUDFLARE_API_TOKEN",
