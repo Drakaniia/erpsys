@@ -3,10 +3,7 @@ import { formEditUrl, listResponses, readForm } from "../lib/google/forms.js";
 import { integrationEnabled } from "../lib/platform/integration-settings.js";
 import { AcademicYearModel } from "../models/AcademicYearModel.js";
 
-import {
-  ContentModel,
-  type SocialLinkRow,
-} from "../models/ContentModel.js";
+import { ContentModel, type SocialLinkRow } from "../models/ContentModel.js";
 import { UserModel } from "../models/UserModel.js";
 
 export const socialLinkView = (
@@ -47,7 +44,17 @@ export async function readProfilingForm() {
   };
 }
 
-export async function profilingAnswers(formId: string, email: string) {
+export type ProfilingResponse = {
+  status: "NOT_SUBMITTED" | "INCOMPLETE" | "COMPLETE" | "UNAVAILABLE";
+  submittedAt: string | null;
+  answers: { label: string; value: string }[];
+  missingRequired: string[];
+};
+
+export async function profilingAnswers(
+  formId: string,
+  email: string,
+): Promise<ProfilingResponse> {
   await assertFormsEnabled(
     "Profiling is temporarily unavailable — try again later or ask the office.",
   );
@@ -61,19 +68,69 @@ export async function profilingAnswers(formId: string, email: string) {
       (b.lastSubmittedTime ?? "").localeCompare(a.lastSubmittedTime ?? ""),
     )[0];
   if (!mine) {
-    throw new ApiError("PRECONDITION_FAILED", {
-      message: `No Google Form response from ${email} yet — submit the form signed in with that account, then try again.`,
-    });
+    return {
+      status: "NOT_SUBMITTED",
+      submittedAt: null,
+      answers: [],
+      missingRequired: [],
+    };
   }
-  const rows: { label: string; value: string }[] = [];
-  for (const item of form.items) {
-    const id = item.questionItem?.question?.questionId;
-    const values = (id ? mine.answers?.[id]?.textAnswers?.answers : [])
-      ?.map((a) => a.value?.trim() ?? "")
-      .filter(Boolean);
-    if (values?.length) {
-      rows.push({ label: item.title ?? "Question", value: values.join(", ") });
+  const answers: ProfilingResponse["answers"] = [];
+  const missingRequired: string[] = [];
+  let destination: string | undefined;
+  const visited = new Set<number>();
+  for (let index = 0; index < form.items.length; index++) {
+    if (visited.has(index)) break;
+    visited.add(index);
+    let item = form.items[index];
+    if (item.pageBreakItem && destination) {
+      if (destination === "SUBMIT_FORM") break;
+      const next = form.items.findIndex(
+        (section) => section.itemId === destination,
+      );
+      destination = undefined;
+      if (next < 0)
+        throw new ApiError("BAD_GATEWAY", {
+          message: "Invalid Google Forms section destination.",
+        });
+      index = next;
+      item = form.items[index];
+    }
+    const questions = item.questionItem?.question
+      ? [item.questionItem.question]
+      : (item.questionGroupItem?.questions ?? []);
+    for (const question of questions) {
+      const answer = question.questionId
+        ? mine.answers?.[question.questionId]
+        : undefined;
+      const values = [
+        ...(answer?.textAnswers?.answers ?? []).map(
+          (a) => a.value?.trim() ?? "",
+        ),
+        ...(answer?.fileUploadAnswers?.answers ?? [])
+          .filter((a) => a.fileId)
+          .map((a) => a.fileName?.trim() || "Uploaded file"),
+      ].filter(Boolean);
+      const option = question.choiceQuestion?.options?.find((option) =>
+        values.includes(option.value ?? ""),
+      );
+      if (option?.goToSectionId) destination = option.goToSectionId;
+      else if (option?.goToAction === "SUBMIT_FORM")
+        destination = "SUBMIT_FORM";
+      const label =
+        [item.title, question.rowQuestion?.title].filter(Boolean).join(" — ") ||
+        "Question";
+      if (question.required && values.length === 0) missingRequired.push(label);
+      answers.push({ label, value: values.join(", ") });
     }
   }
-  return rows;
+  return {
+    status:
+      answers.some((answer) => answer.value) && missingRequired.length === 0
+        ? "COMPLETE"
+        : "INCOMPLETE",
+    submittedAt: mine.lastSubmittedTime ?? null,
+    answers,
+    missingRequired,
+  };
 }

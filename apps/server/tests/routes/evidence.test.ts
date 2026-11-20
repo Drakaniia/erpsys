@@ -14,6 +14,9 @@ const holder = vi.hoisted(() => ({
   r2Client: null as unknown,
   r2Deletes: [] as unknown[],
   responses: [] as unknown[],
+  formUnavailable: false,
+  beforeRead: undefined as (() => void) | undefined,
+  items: [] as unknown[],
 }));
 
 vi.mock("../../src/config/auth.js", () => ({
@@ -35,13 +38,11 @@ vi.mock("../../src/lib/storage/client.js", () => ({
 }));
 
 vi.mock("../../src/lib/google/forms.js", () => ({
-  readForm: async () => ({
-    items: [
-      { title: "Name", questionItem: { question: { questionId: "q1" } } },
-      { title: "Hobbies", questionItem: { question: { questionId: "q2" } } },
-      { title: "Section header" },
-    ],
-  }),
+  readForm: async () => {
+    holder.beforeRead?.();
+    if (holder.formUnavailable) throw new Error("Google Forms offline");
+    return { items: holder.items };
+  },
   listResponses: async () => holder.responses,
 }));
 
@@ -53,7 +54,6 @@ const STUDENT = {
     isOutsideOrg: false,
   },
 };
-
 
 function seed(): Record<string, Row[]> {
   return {
@@ -67,10 +67,19 @@ function seed(): Record<string, Row[]> {
       },
     ],
 
-    [COLLECTIONS.user]: [{
-      _id: "stud1", name: "Ana", email: "12345@student.buksu.edu.ph", role: "STUDENT",
-      studentProfile: { _id: "profile-1", studentNumber: "12345", academicYearId: "ay-1" },
-    }],
+    [COLLECTIONS.user]: [
+      {
+        _id: "stud1",
+        name: "Ana",
+        email: "12345@student.buksu.edu.ph",
+        role: "STUDENT",
+        studentProfile: {
+          _id: "profile-1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
+      },
+    ],
     [COLLECTIONS.stepVerification]: [],
     [COLLECTIONS.upload]: [],
     [COLLECTIONS.notification]: [],
@@ -324,6 +333,16 @@ describe("step submission", () => {
 
     beforeEach(() => {
       holder.responses = [];
+      holder.formUnavailable = false;
+      holder.beforeRead = undefined;
+      holder.items = [
+        {
+          title: "Name",
+          questionItem: { question: { questionId: "q1", required: true } },
+        },
+        { title: "Hobbies", questionItem: { question: { questionId: "q2" } } },
+        { title: "Section header" },
+      ];
       context.store[COLLECTIONS.academicYear][0].profilingForm = {
         formId: "gf-1",
         responderUri: "https://docs.google.com/forms/d/e/gf-1/viewform",
@@ -366,6 +385,280 @@ describe("step submission", () => {
         "No Google Form response",
       );
       expect(context.store[COLLECTIONS.stepVerification]).toHaveLength(0);
+    });
+
+    const read = async () => {
+      const response = await call("/me/student");
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      return {
+        body: body.data,
+        step: body.data.steps.find(
+          (s: { code: string }) => s.code === "PROFILING",
+        ),
+      };
+    };
+
+    it("automatically imports the latest response and previews optional blanks", async () => {
+      holder.responses = [
+        {
+          respondentEmail: STUDENT.user.email.toUpperCase(),
+          lastSubmittedTime: "2025-07-02T00:00:00Z",
+          answers: { q1: text(" Ana ") },
+        },
+        {
+          respondentEmail: "other@student.buksu.edu.ph",
+          lastSubmittedTime: "2025-07-03T00:00:00Z",
+          answers: { q1: text("Other") },
+        },
+      ];
+      const { step } = await read();
+      expect(step.status).toBe("SUBMITTED");
+      expect(step.profilingResponse).toEqual({
+        status: "COMPLETE",
+        submittedAt: "2025-07-02T00:00:00Z",
+        missingRequired: [],
+        answers: [
+          { label: "Name", value: "Ana" },
+          { label: "Hobbies", value: "" },
+        ],
+      });
+      const saved = structuredClone(
+        context.store[COLLECTIONS.stepVerification][0],
+      );
+      await read();
+      expect(context.store[COLLECTIONS.stepVerification]).toHaveLength(1);
+      expect(context.store[COLLECTIONS.stepVerification][0]).toEqual(saved);
+    });
+
+    it("shows not submitted without creating a review submission", async () => {
+      const { step } = await read();
+      expect(step.status).toBe("PENDING");
+      expect(step.profilingResponse.status).toBe("NOT_SUBMITTED");
+      expect(context.store[COLLECTIONS.stepVerification]).toHaveLength(0);
+    });
+
+    it("rejects blank required answers on the legacy submission endpoint too", async () => {
+      holder.responses = [
+        {
+          respondentEmail: STUDENT.user.email,
+          answers: { q1: text("  "), q2: text("Art") },
+        },
+      ];
+      expect((await post()).status).toBe(412);
+      const { step } = await read();
+      expect(step.profilingResponse.status).toBe("INCOMPLETE");
+      expect(step.profilingResponse.missingRequired).toEqual(["Name"]);
+      expect(step.profilingResponse.answers).toContainEqual({
+        label: "Hobbies",
+        value: "Art",
+      });
+      expect(context.store[COLLECTIONS.stepVerification]).toHaveLength(0);
+    });
+
+    it("makes an incomplete verified response pending and removes queue readiness", async () => {
+      for (const code of [
+        "ASSESSMENT",
+        "SOCIAL_MEDIA",
+        "PROFILING",
+        "MUGSHOT",
+        "CONSENT",
+      ]) {
+        context.store[COLLECTIONS.stepVerification].push({
+          _id: `v-${code}`,
+          studentProfileId: "profile-1",
+          stepId: code,
+          academicYearId: "ay-1",
+          status: "VERIFIED",
+          verifiedAt: new Date(),
+          verifiedById: "officer",
+          appliedAt: new Date(),
+        });
+      }
+      holder.responses = [
+        { respondentEmail: STUDENT.user.email, answers: { q2: text("Art") } },
+      ];
+      const { body, step } = await read();
+      expect(step.status).toBe("PENDING");
+      expect(step.stamp).toBeNull();
+      expect(step.appliedAt).toBeNull();
+      expect(body.readyForQueue).toBe(false);
+      const row = context.store[COLLECTIONS.stepVerification].find(
+        (v) => v.stepId === "PROFILING",
+      )!;
+      expect(row.status).toBe("PENDING");
+      expect(row.verifiedAt).toBeNull();
+    });
+
+    it("does not erase a submission when Google is unavailable", async () => {
+      context.store[COLLECTIONS.stepVerification].push({
+        _id: "v-profile",
+        studentProfileId: "profile-1",
+        stepId: "PROFILING",
+        academicYearId: "ay-1",
+        status: "SUBMITTED",
+        answers: [{ label: "Name", value: "Ana" }],
+      });
+      holder.formUnavailable = true;
+      const { step } = await read();
+      expect(step.status).toBe("SUBMITTED");
+      expect(step.profilingResponse.status).toBe("UNAVAILABLE");
+      expect(step.profilingResponse.answers).toEqual([
+        { label: "Name", value: "Ana" },
+      ]);
+      expect(context.store[COLLECTIONS.stepVerification][0].status).toBe(
+        "SUBMITTED",
+      );
+    });
+
+    it("keeps an unchanged returned response returned until it is resubmitted", async () => {
+      const submittedAt = "2025-07-02T00:00:00Z";
+      holder.responses = [
+        {
+          respondentEmail: STUDENT.user.email,
+          lastSubmittedTime: submittedAt,
+          answers: { q1: text("Ana") },
+        },
+      ];
+      await read();
+      context.store[COLLECTIONS.stepVerification][0].status = "RETURNED";
+      expect((await read()).step.status).toBe("RETURNED");
+      holder.responses = [
+        {
+          respondentEmail: STUDENT.user.email,
+          lastSubmittedTime: "2025-07-03T00:00:00Z",
+          answers: { q1: text("Ana") },
+        },
+      ];
+      expect((await read()).step.status).toBe("SUBMITTED");
+    });
+
+    it("does not overwrite an officer decision made while Google is loading", async () => {
+      holder.responses = [
+        {
+          respondentEmail: STUDENT.user.email,
+          lastSubmittedTime: "2025-07-02T00:00:00Z",
+          answers: { q1: text("Ana") },
+        },
+      ];
+      await read();
+      holder.responses = [
+        {
+          respondentEmail: STUDENT.user.email,
+          lastSubmittedTime: "2025-07-03T00:00:00Z",
+          answers: { q1: text("Ana Updated") },
+        },
+      ];
+      holder.beforeRead = () => {
+        Object.assign(context.store[COLLECTIONS.stepVerification][0], {
+          status: "VERIFIED",
+          verifiedAt: new Date(),
+          verifiedById: "officer",
+        });
+      };
+      const { step } = await read();
+      expect(step.status).toBe("VERIFIED");
+      expect(context.store[COLLECTIONS.stepVerification][0].status).toBe(
+        "VERIFIED",
+      );
+    });
+
+    it("imports only one row for simultaneous first reads", async () => {
+      holder.responses = [
+        { respondentEmail: STUDENT.user.email, answers: { q1: text("Ana") } },
+      ];
+      const results = await Promise.all([read(), read()]);
+      expect(results.map(({ step }) => step.status)).toEqual([
+        "SUBMITTED",
+        "SUBMITTED",
+      ]);
+      expect(context.store[COLLECTIONS.stepVerification]).toHaveLength(1);
+    });
+
+    it("does not require questions in skipped Google Form sections", async () => {
+      holder.items = [
+        {
+          title: "Path",
+          questionItem: {
+            question: {
+              questionId: "q1",
+              required: true,
+              choiceQuestion: {
+                options: [{ value: "Continue", goToSectionId: "selected" }],
+              },
+            },
+          },
+        },
+        { itemId: "skipped", pageBreakItem: {} },
+        {
+          title: "Skipped required",
+          questionItem: { question: { questionId: "skip", required: true } },
+        },
+        { itemId: "selected", pageBreakItem: {} },
+        {
+          title: "Name",
+          questionItem: { question: { questionId: "q2", required: true } },
+        },
+      ];
+      holder.responses = [
+        {
+          respondentEmail: STUDENT.user.email,
+          answers: { q1: text("Continue"), q2: text("Ana") },
+        },
+      ];
+      const { step } = await read();
+      expect(step.profilingResponse.status).toBe("COMPLETE");
+      expect(step.profilingResponse.missingRequired).toEqual([]);
+      expect(
+        step.profilingResponse.answers.map((a: { label: string }) => a.label),
+      ).toEqual(["Path", "Name"]);
+    });
+
+    it("checks every required grid row and accepts uploaded file answers", async () => {
+      holder.items = [
+        {
+          title: "Skills",
+          questionGroupItem: {
+            questions: [
+              {
+                questionId: "q1",
+                required: true,
+                rowQuestion: { title: "Writing" },
+              },
+              {
+                questionId: "q2",
+                required: true,
+                rowQuestion: { title: "Reading" },
+              },
+            ],
+          },
+        },
+        {
+          title: "Document",
+          questionItem: { question: { questionId: "q3", required: true } },
+        },
+      ];
+      holder.responses = [
+        {
+          respondentEmail: STUDENT.user.email,
+          answers: {
+            q1: text("Good"),
+            q3: {
+              fileUploadAnswers: {
+                answers: [{ fileId: "file-1", fileName: "document.pdf" }],
+              },
+            },
+          },
+        },
+      ];
+      const { step } = await read();
+      expect(step.profilingResponse.missingRequired).toEqual([
+        "Skills — Reading",
+      ]);
+      expect(step.profilingResponse.answers).toContainEqual({
+        label: "Document",
+        value: "document.pdf",
+      });
     });
 
     it("needs a form to be set up", async () => {

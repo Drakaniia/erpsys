@@ -296,11 +296,24 @@ evidenceRouter.post(
           message: "The profiling form isn't set up yet.",
         });
       }
+      const response = await profilingAnswers(
+        form.formId,
+        sessionUser(req).email,
+      );
+      if (response.status !== "COMPLETE") {
+        throw new ApiError("PRECONDITION_FAILED", {
+          message:
+            response.status === "NOT_SUBMITTED"
+              ? `No Google Form response from ${sessionUser(req).email} yet — submit the form signed in with that account.`
+              : "Your profiling response is incomplete — fill in all required questions.",
+        });
+      }
       await StepVerificationModel.upsertSubmission(
         key,
         [],
         new Date(),
-        await profilingAnswers(form.formId, sessionUser(req).email),
+        response.answers,
+        response.submittedAt,
       );
       return okOne(res, { status: "SUBMITTED", evidence: [] }, 201);
     }

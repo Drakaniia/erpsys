@@ -24,7 +24,11 @@ import { DepartmentModel } from "../models/DepartmentModel.js";
 import { EnrollmentQueueModel } from "../models/EnrollmentQueueModel.js";
 
 import { ContentModel } from "../models/ContentModel.js";
-import { listSteps, listStepCodeMap, type StepDefinition } from "../config/constants.js";
+import {
+  listSteps,
+  listStepCodeMap,
+  type StepDefinition,
+} from "../config/constants.js";
 import {
   StepVerificationModel,
   type StepVerificationRow,
@@ -41,12 +45,14 @@ import {
   type EvidenceWire,
 } from "./evidence.js";
 import { displayName } from "./submissions.js";
+import { profilingAnswers, type ProfilingResponse } from "./content.js";
 
 const KNOWN_CODES = new Set<string>(STEP_CODES);
 
 type StepContext = {
   requirements: { _id: string; label: string }[];
   profilingFormUrl: string | null;
+  profilingResponse: ProfilingResponse | null;
   socialLinks: { _id: string; name: string; url: string }[];
   actors: Map<string, UserRow>;
   evidenceById: Map<string, EvidenceWire>;
@@ -88,8 +94,11 @@ function stepRow(
   const kind = KIND_FOR_STEP[step.code];
   const drafts = [
     ...ctx.draftUploads
-      .filter((u) => kind && u.kind === kind &&
-        (step.code !== "ASSESSMENT" || u.r2Status === "complete"),
+      .filter(
+        (u) =>
+          kind &&
+          u.kind === kind &&
+          (step.code !== "ASSESSMENT" || u.r2Status === "complete"),
       )
       .map((u) => draftEvidence(u, ctx.now)),
     ...ctx.draftUploads
@@ -135,6 +144,7 @@ function stepRow(
         : referenced,
     requirements: requirements.length > 0 ? requirements : null,
     profilingFormUrl: step.code === "PROFILING" ? ctx.profilingFormUrl : null,
+    profilingResponse: step.code === "PROFILING" ? ctx.profilingResponse : null,
     socialMediaLinks: socialMediaLinks.length > 0 ? socialMediaLinks : null,
     reply:
       verification?.status === "RETURNED" &&
@@ -213,15 +223,13 @@ export async function ensureProfileForYear(params: {
   const inUse = () =>
     new ApiError("CONFLICT", { message: STUDENT_NUMBER_IN_USE_MESSAGE });
 
-  const colliding =
-    await UserModel.findProfileByStudentNumber(studentNumber);
+  const colliding = await UserModel.findProfileByStudentNumber(studentNumber);
   if (!colliding) {
     try {
       return await createFresh();
     } catch (error) {
       if ((error as { code?: number }).code !== 11000) throw error;
-      const retry =
-        await UserModel.findProfileByStudentNumber(studentNumber);
+      const retry = await UserModel.findProfileByStudentNumber(studentNumber);
       if (!retry) throw error;
       if (retry.userId === userId) return retry;
       throw inUse();
@@ -244,7 +252,8 @@ export async function ensureProfileForYear(params: {
     });
   }
   throw new ApiError("CONFLICT", {
-    message: "This student number is already claimed — contact the SBO office to resolve ownership.",
+    message:
+      "This student number is already claimed — contact the SBO office to resolve ownership.",
   });
 }
 
@@ -287,9 +296,7 @@ export async function listEnrollments(studentProfileId: string): Promise<
 
 export async function loadStudentSteps(user: SessionUser) {
   const profile = await UserModel.findProfileByUserId(user.id);
-  const steps = (await listSteps()).filter((s) =>
-    KNOWN_CODES.has(s.code),
-  );
+  const steps = (await listSteps()).filter((s) => KNOWN_CODES.has(s.code));
   const year = await AcademicYearModel.findActive();
   const enrollments = await listEnrollments(profile?._id ?? "");
   const identity = {
@@ -303,6 +310,7 @@ export async function loadStudentSteps(user: SessionUser) {
     const empty: StepContext = {
       requirements: [],
       profilingFormUrl: null,
+      profilingResponse: null,
       socialLinks: [],
       actors: new Map(),
       evidenceById: new Map(),
@@ -332,7 +340,7 @@ export async function loadStudentSteps(user: SessionUser) {
     await Promise.all([
       profile
         ? StepVerificationModel.listByProfileYear(profile._id, yearId)
-        : [],
+        : ([] as StepVerificationRow[]),
       ContentModel.listActive(),
       AcademicYearModel.profilingForm(yearId),
       ContentModel.listActiveSocialLinks(),
@@ -340,6 +348,80 @@ export async function loadStudentSteps(user: SessionUser) {
         ? EnrollmentQueueModel.findByProfileYear(profile._id, yearId)
         : null,
     ]);
+  let profilingResponse: ProfilingResponse | null = null;
+  const profilingStep = steps.find((step) => step.code === "PROFILING");
+  if (profile && profilingForm?.formId && profilingStep) {
+    const existing = verifications.find(
+      (v) => v.stepId === String(profilingStep._id),
+    );
+    try {
+      profilingResponse = await profilingAnswers(
+        profilingForm.formId,
+        user.email,
+      );
+    } catch (error) {
+      console.error("[profiling] Could not check Google Form response", error);
+      profilingResponse = {
+        status: "UNAVAILABLE",
+        submittedAt: existing?.profilingSubmittedAt ?? null,
+        answers: existing?.answers ?? [],
+        missingRequired: [],
+      };
+    }
+    if (profilingResponse.status !== "UNAVAILABLE") {
+      const complete = profilingResponse.status === "COMPLETE";
+      const changed =
+        existing?.profilingSubmittedAt !== profilingResponse.submittedAt ||
+        JSON.stringify(existing?.answers ?? []) !==
+          JSON.stringify(profilingResponse.answers);
+      const status = complete
+        ? existing?.status === "VERIFIED" ||
+          (existing?.status === "RETURNED" && !changed)
+          ? existing.status
+          : "SUBMITTED"
+        : "PENDING";
+      if (existing && (changed || existing.status !== status)) {
+        const patch = {
+          status,
+          answers: profilingResponse.answers,
+          profilingSubmittedAt: profilingResponse.submittedAt,
+          appliedAt: complete ? (existing.appliedAt ?? new Date()) : null,
+          ...(status !== "VERIFIED"
+            ? { verifiedAt: null, verifiedById: null }
+            : {}),
+        };
+        const synced = await StepVerificationModel.syncProfiling(
+          existing,
+          patch,
+        );
+        const current =
+          synced ?? (await StepVerificationModel.findById(existing._id));
+        if (current) Object.assign(existing, current);
+      } else if (!existing && complete) {
+        const key = {
+          studentProfileId: profile._id,
+          stepId: String(profilingStep._id),
+          academicYearId: yearId,
+        };
+        try {
+          await StepVerificationModel.insert({
+            ...key,
+            _id: `profiling:${JSON.stringify([profile._id, yearId, key.stepId])}`,
+            status: "SUBMITTED",
+            answers: profilingResponse.answers,
+            profilingSubmittedAt: profilingResponse.submittedAt,
+            evidenceCount: 0,
+            appliedAt: new Date(),
+            createdAt: new Date(),
+          });
+        } catch (error) {
+          if ((error as { code?: number }).code !== 11000) throw error;
+        }
+        const row = await StepVerificationModel.findByStep(key);
+        if (row) verifications.push(row);
+      }
+    }
+  }
   const uploads = await UploadModel.findByIds(
     verifications.flatMap((v) => evidenceUploadIds(v.evidence)),
   );
@@ -373,6 +455,7 @@ export async function loadStudentSteps(user: SessionUser) {
     profilingFormUrl: profilingForm?.formId
       ? (profilingForm.responderUri ?? null)
       : null,
+    profilingResponse,
     socialLinks,
     actors: new Map(actors.map((actor) => [String(actor._id), actor])),
     evidenceById: new Map(
