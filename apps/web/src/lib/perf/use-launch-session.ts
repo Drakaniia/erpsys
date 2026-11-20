@@ -1,22 +1,20 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { authClient } from "$lib/auth-client";
+import { queryClient } from "$lib/api";
+import { clearPersistedCache } from "./persist";
 import {
-  clearSessionSnapshot,
-  readSessionSnapshot,
+  persistedOwnerId,
+  sessionCacheGeneration,
+  subscribeSessionCache,
+  validateSessionOwner,
+  validatedSessionOwner,
   writeSessionSnapshot,
   type CachedSessionUser,
 } from "./session-cache";
 
 type LiveSession = ReturnType<typeof authClient.useSession>;
 
-/**
- * The live Better Auth session, with the persisted snapshot behind it.
- *
- * While the store is pending, a snapshot from the last visit lets the guards
- * render the shell instead of a full-page loader. The moment the live result
- * lands it wins — including a signed-out result, which also removes the
- * snapshot so the next launch starts clean.
- */
+/** Reconcile the cache before exposing a live identity to any consumers. */
 export function useLaunchSession(): {
   data: { user: CachedSessionUser } | undefined;
   user: CachedSessionUser | null;
@@ -25,32 +23,44 @@ export function useLaunchSession(): {
   live: LiveSession;
 } {
   const live = authClient.useSession();
-  const fallback = useRef<CachedSessionUser | null | undefined>(undefined);
+  const generation = useSyncExternalStore(
+    subscribeSessionCache,
+    sessionCacheGeneration,
+    sessionCacheGeneration,
+  );
+  const liveUser = (live.data?.user ?? null) as CachedSessionUser | null;
+  const owner = liveUser?.id ?? null;
 
-  if (fallback.current === undefined) {
-    fallback.current = live.isPending ? readSessionSnapshot() : null;
-  }
+  const ready = !live.isPending && validatedSessionOwner() === owner;
 
   useEffect(() => {
     if (live.isPending) return;
-    if (live.data?.user) {
-      writeSessionSnapshot(live.data.user as Record<string, unknown>);
-      fallback.current = null;
-      return;
+    if (validatedSessionOwner() !== owner) {
+      // Missing/expired ownership is unsafe too: shared query keys can still
+      // hold the previous account's data in memory after the disk cap expires.
+      const previousOwner = validatedSessionOwner();
+      if (
+        owner === null ||
+        (previousOwner !== undefined && previousOwner !== owner) ||
+        persistedOwnerId() !== owner
+      ) {
+        queryClient.clear();
+        clearPersistedCache();
+      }
+      if (liveUser) {
+        writeSessionSnapshot(liveUser as unknown as Record<string, unknown>);
+      }
+      validateSessionOwner(owner);
     }
-    clearSessionSnapshot();
-    fallback.current = null;
-  }, [live.isPending, live.data]);
 
-  const usingFallback = live.isPending && fallback.current != null;
-  const liveUser = (live.data?.user ?? null) as CachedSessionUser | null;
-  const user = liveUser ?? (usingFallback ? fallback.current : null);
+  }, [live.isPending, live.data, owner, generation]);
 
+  const user = ready ? liveUser : null;
   return {
     data: user ? { user } : undefined,
     user,
-    isPending: live.isPending && !usingFallback,
-    usingFallback,
+    isPending: !ready,
+    usingFallback: false,
     live,
   };
 }

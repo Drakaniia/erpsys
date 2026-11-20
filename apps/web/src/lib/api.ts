@@ -13,6 +13,12 @@ import { editLeaseHeader } from "./edit-leases";
 
 export const TS_ABORTED = "TS_ABORTED";
 
+export function shouldRetryQuery(failureCount: number, error: Error): boolean {
+  if (failureCount >= 3 || error.name === "AbortError") return false;
+  if (!(error instanceof ApiClientError)) return true;
+  return error.status === 408 || error.status === 429 || error.status >= 500;
+}
+
 // The server's transaction timestamp for every record id the client has seen;
 // edits send it back so a stale edit is aborted instead of overwriting.
 const tsById = new Map<string, number>();
@@ -65,9 +71,7 @@ export const queryClient = new QueryClient({
       // default — otherwise a quiet query is garbage-collected before it can
       // be written back.
       gcTime: CACHE_MAX_AGE_MS,
-      retry: (failureCount, error) =>
-        failureCount < 3 &&
-        (!(error instanceof ApiClientError) || error.status !== 401),
+      retry: shouldRetryQuery,
     },
   },
 });
@@ -147,9 +151,13 @@ function toSearch(rest: Record<string, unknown>): string {
   return query ? `?${query}` : "";
 }
 
-async function request(route: ClientRoute, input: unknown): Promise<unknown> {
+async function request(
+  route: ClientRoute,
+  input: unknown,
+  signal?: AbortSignal,
+): Promise<unknown> {
   try {
-    return await send(route, input);
+    return await send(route, input, signal);
   } catch (error) {
     if (
       error instanceof ApiClientError &&
@@ -170,11 +178,16 @@ async function request(route: ClientRoute, input: unknown): Promise<unknown> {
       (error.data as { authenticatorReset?: boolean } | undefined)
         ?.authenticatorReset === true,
     );
-    return send(route, input);
+    return send(route, input, signal);
   }
 }
 
-async function send(route: ClientRoute, input: unknown): Promise<unknown> {
+async function send(
+  route: ClientRoute,
+  input: unknown,
+  signal?: AbortSignal,
+): Promise<unknown> {
+  signal?.throwIfAborted();
   const value = (input ?? {}) as Record<string, unknown>;
   const hasId = value.id !== undefined && value.id !== null;
   const def = route.update && hasId ? route.update : route;
@@ -194,6 +207,7 @@ async function send(route: ClientRoute, input: unknown): Promise<unknown> {
   const response = await fetch(url, {
     method: def.method,
     credentials: "include",
+    signal,
     headers:
       def.method === "GET"
         ? undefined
@@ -277,7 +291,8 @@ function makeLeaf(
       return {
         ...rest,
         queryKey: [...base, input],
-        queryFn: () => request(route, input) as Promise<unknown>,
+        queryFn: ({ signal }) =>
+          request(route, input, signal) as Promise<unknown>,
       };
     },
     mutationOptions: (opts) => ({

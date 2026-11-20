@@ -12,8 +12,8 @@
 
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import {
-  persistQueryClient,
-  removeOldestQuery,
+  persistQueryClientRestore,
+  persistQueryClientSave,
   type PersistedClient,
   type Persister,
 } from "@tanstack/react-query-persist-client";
@@ -28,6 +28,7 @@ import {
   byteSize,
   cacheBuster,
   isPersistableQuery,
+  isCacheableQueryKey,
 } from "./cache-policy";
 import { APP_BUILD_ID } from "./launch-metrics";
 import { clearSessionSnapshot } from "./session-cache";
@@ -87,8 +88,7 @@ function cappedPersister(store: Storage): Persister {
   const base = createSyncStoragePersister({
     storage: store,
     key: PERSIST_CACHE_KEY,
-    throttleTime: 1_000,
-    retry: removeOldestQuery,
+    throttleTime: 0,
   });
 
   return {
@@ -111,16 +111,29 @@ function cappedPersister(store: Storage): Persister {
         bytes += size;
         kept.push(query);
       }
-      return base.persistClient({
+      const snapshot = {
         ...client,
         clientState: { ...client.clientState, queries: kept },
-      });
+      };
+      for (;;) {
+        try {
+          store.setItem(PERSIST_CACHE_KEY, JSON.stringify(snapshot));
+          return;
+        } catch (error) {
+          if (!kept.length) {
+            warnOnce("persist failed", error);
+            return;
+          }
+          kept.pop();
+        }
+      }
     },
   };
 }
 
 let restorePromise: Promise<boolean> | null = null;
 let unsubscribe: (() => void) | null = null;
+let cancelPendingSave: (() => void) | null = null;
 
 /**
  * Restore the previous visit's cache. Resolves `true` when at least one query
@@ -134,14 +147,19 @@ export function restorePersistedCache(): Promise<boolean> {
     try {
       pruneStaleKeys(store);
       const persister = cappedPersister(store);
-      const [stop, restored] = persistQueryClient({
+      const options = {
         queryClient,
         persister,
         maxAge: CACHE_MAX_AGE_MS,
         buster: cacheBuster(APP_BUILD_ID),
         dehydrateOptions: {
-          shouldDehydrateQuery: (query) => {
-            if (query.state.data === undefined) return false;
+          shouldDehydrateQuery: (query: {
+            queryKey: readonly unknown[];
+            state: { data: unknown; dataUpdatedAt: number };
+          }) => {
+            if (query.state.data === undefined || !isCacheableQueryKey(query.queryKey)) {
+              return false;
+            }
             try {
               return isPersistableQuery({
                 queryKey: query.queryKey,
@@ -154,12 +172,53 @@ export function restorePersistedCache(): Promise<boolean> {
             }
           },
         },
-      });
-      unsubscribe = stop;
+      };
+      const restored = persistQueryClientRestore(options);
       await Promise.race([
         restored,
         new Promise<void>((resolve) => setTimeout(resolve, RESTORE_TIMEOUT_MS)),
       ]);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let idle: number | undefined;
+      let pending = false;
+      const cancel = () => {
+        clearTimeout(timer);
+        if (idle !== undefined) window.cancelIdleCallback?.(idle);
+        timer = undefined;
+        idle = undefined;
+        pending = false;
+      };
+      const flush = () => {
+        if (!pending) return;
+        cancel();
+        void persistQueryClientSave(options).catch((error) =>
+          warnOnce("persist failed", error),
+        );
+      };
+      const stop = queryClient.getQueryCache().subscribe((event) => {
+        if (!isCacheableQueryKey(event.query.queryKey)) return;
+        if (
+          event.type !== "removed" &&
+          !(event.type === "updated" && event.action.type === "success")
+        ) return;
+        if (pending) return;
+        pending = true;
+        timer = setTimeout(() => {
+          timer = undefined;
+          if (typeof window.requestIdleCallback === "function") {
+            idle = window.requestIdleCallback(flush, { timeout: 1_000 });
+          } else {
+            flush();
+          }
+        }, 1_000);
+      });
+      cancelPendingSave = cancel;
+      window.addEventListener("pagehide", flush);
+      unsubscribe = () => {
+        stop();
+        cancel();
+        window.removeEventListener("pagehide", flush);
+      };
       return queryClient
         .getQueryCache()
         .getAll()
@@ -174,6 +233,7 @@ export function restorePersistedCache(): Promise<boolean> {
 
 /** Remove the persisted snapshot (and the session snapshot) for this origin. */
 export function clearPersistedCache(): void {
+  cancelPendingSave?.();
   clearSessionSnapshot();
   const store = storage();
   if (!store) return;
@@ -227,7 +287,9 @@ export function connectCacheLifecycle(): () => void {
     if (event.storageArea !== window.localStorage) return;
     if (event.key === null) {
       // Another tab called localStorage.clear().
+      clearSessionSnapshot();
       queryClient.clear();
+      cancelPendingSave?.();
       return;
     }
     if (event.key === INTEGRATIONS_BROADCAST_KEY && event.newValue !== null) {
@@ -248,7 +310,9 @@ export function connectCacheLifecycle(): () => void {
       return;
     }
     if (event.key === PERSIST_CACHE_KEY && event.newValue === null) {
+      clearSessionSnapshot();
       queryClient.clear();
+      cancelPendingSave?.();
     }
   };
   window.addEventListener("storage", onStorage);
@@ -259,6 +323,7 @@ export function connectCacheLifecycle(): () => void {
 export function resetPersistForTest(): void {
   unsubscribe?.();
   unsubscribe = null;
+  cancelPendingSave = null;
   restorePromise = null;
   warned.clear();
 }

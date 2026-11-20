@@ -11,13 +11,8 @@ import {
   completionGate,
   isInternalPath,
 } from "$lib/auth/completion-gate";
-import { api, queryClient } from "$lib/api";
+import { api } from "$lib/api";
 import { markLaunch } from "$lib/perf/launch-metrics";
-import { clearPersistedCache } from "$lib/perf/persist";
-import {
-  persistedOwnerId,
-  writeSessionSnapshot,
-} from "$lib/perf/session-cache";
 import { useLaunchSession } from "$lib/perf/use-launch-session";
 import PageLoader from "../components/ui/PageLoader";
 
@@ -41,34 +36,18 @@ export function RootGate() {
   const user = data?.user;
   const role = user?.role;
 
-  // The snapshot may choose what renders; it never decides what is allowed.
-  // A different live account clears the persisted cache before its data paints.
-  useEffect(() => {
-    if (isPending || !user?.id) return;
-    const owner = persistedOwnerId();
-    if (owner && owner !== user.id) {
-      queryClient.clear();
-      clearPersistedCache();
-      // The live account is the one that may be cached next time.
-      writeSessionSnapshot(user as unknown as Record<string, unknown>);
-    }
-  }, [isPending, user?.id]);
-
   const profile = useQuery({
     ...api.student.profileStatus.queryOptions({
       staleTime: 60 * 1000,
       refetchOnWindowFocus: false,
     }),
-    enabled: role === "STUDENT",
+    enabled: !isPending && role === "STUDENT",
   });
   const hasProfile = (profile.data as { hasProfile?: boolean } | undefined)
     ?.hasProfile;
 
-  // First settle wins: if the cached session rendered the shell, the mark
-  // records a warm session even though the live value replaces it later.
   useEffect(() => {
-    if (usingFallback) markLaunch("session", { cached: true });
-    else if (!isPending) markLaunch("session", { cached: false });
+    if (!isPending) markLaunch("session", { cached: usingFallback });
   }, [usingFallback, isPending]);
 
   useEffect(() => {
