@@ -60,6 +60,7 @@ export default function EvidenceSheet({
 
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const queuedUpload = useRef<(() => Promise<void>) | null>(null);
   const [hasQueuedUpload, setHasQueuedUpload] = useState(false);
@@ -114,31 +115,30 @@ export default function EvidenceSheet({
     });
   }
 
-  function remove(uploadId: string) {
-    setRemovedIds((prev) => {
-      const next = new Set(prev);
-      next.add(uploadId);
-      return next;
-    });
-    notify("Attachment removed");
-    const task = (async () => {
-      try {
-        await deleteMutation.mutateAsync({ uploadId });
-        queryClient.invalidateQueries({ queryKey: ["student"] });
-      } catch (e) {
-        setRemovedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(uploadId);
-          return next;
-        });
-        notify(
-          (e as { message?: string })?.message ??
-            "Could not remove the upload.",
-          "error",
-        );
-      }
-    })();
-    void task;
+  async function remove(uploadId: string) {
+    setRemovingIds((prev) => new Set(prev).add(uploadId));
+    try {
+      await deleteMutation.mutateAsync({ uploadId });
+      setRemovedIds((prev) => new Set(prev).add(uploadId));
+      queryClient.invalidateQueries({ queryKey: ["student"] });
+      notify("Attachment removed");
+    } catch (e) {
+      setRemovedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(uploadId);
+        return next;
+      });
+      notify(
+        (e as { message?: string })?.message ?? "Could not remove the upload.",
+        "error",
+      );
+    } finally {
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(uploadId);
+        return next;
+      });
+    }
   }
 
   async function upsertLink(url: string) {
@@ -202,7 +202,7 @@ export default function EvidenceSheet({
                 locked
                 label=""
                 uploading={false}
-                onupload={async () => {}}
+                onupload={null}
                 ondelete={() => {}}
                 onpreview={(i) => setLightboxIndex(i)}
                 stepCode={step.code}
@@ -300,7 +300,10 @@ export default function EvidenceSheet({
             ) : null}
             {bodyNote ? <p className="text-sm text-muted">{bodyNote}</p> : null}
             <EvidenceSlot
-              items={visibleEvidence}
+              items={visibleEvidence.map((item) => ({
+                ...item,
+                deleting: removingIds.has(String(item.id)),
+              }))}
               multiple={multiple}
               locked={locked}
               label={slotLabel}

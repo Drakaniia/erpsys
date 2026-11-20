@@ -318,6 +318,7 @@ export const ROUTES = {
   storage: {
     mintSession: { method: "POST", path: "/api/v1/storage/session" },
     completeUpload: { method: "POST", path: "/api/v1/storage/complete" },
+    deleteUpload: { method: "DELETE", path: "/api/v1/storage/uploads/:id" },
     sessionStatus: { method: "GET", path: "/api/v1/storage/session-status" },
     getContent: { method: "GET", path: "/api/v1/uploads/:id/content" },
     getThumb: { method: "GET", path: "/api/v1/uploads/:id/content?thumb=1" },

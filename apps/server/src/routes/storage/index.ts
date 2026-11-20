@@ -15,6 +15,7 @@ import { okOne, parseBody, parseQuery } from "../../middleware/http.js";
 import {
   completeUpload,
   createSession,
+  deleteUpload,
   openContent,
   quotaBlock,
   uploadStatus,
@@ -97,6 +98,22 @@ storageRouter.post(
   catchAsync(async (req, res) => {
     const input = parseBody(completeBody, req);
     okOne(res, await completeUpload(sessionUser(req), input));
+  }),
+);
+
+/**
+ * `DELETE /api/v1/storage/uploads/:id`
+ * Access: session; upload owner or an authorized staff viewer.
+ * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
+ * Use: delete an attachment's storage object and upload row; verified evidence stays locked.
+ * Returns: `{ data: { deleted: true } }`; `502` leaves the row visible for retry.
+ */
+storageRouter.delete(
+  "/storage/uploads/:id",
+  requireSession,
+  catchAsync(async (req, res) => {
+    const { id } = parseQuery(z.object({ id: z.string().min(1) }), req);
+    okOne(res, await deleteUpload(sessionUser(req), id));
   }),
 );
 

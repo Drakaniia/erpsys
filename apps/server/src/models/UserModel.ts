@@ -37,6 +37,7 @@ export type UserRow = {
   stampName?: string | null;
   stampGraphicUrl?: string | null;
   stampSignatureUrl?: string | null;
+  stampSignatureUploadId?: string | null;
   studentProfile?: StudentProfile | null;
 };
 
@@ -237,6 +238,16 @@ export class UserModel {
       .collection<UserRow>(COLLECTIONS.user)
       .find({ blockedAt: null } as never, { projection: { role: 1 } })
       .toArray();
+  }
+
+  static async listStampUploadIds(): Promise<string[]> {
+    const rows = await getDbSync()
+      .collection<UserRow>(COLLECTIONS.user)
+      .find({ stampSignatureUploadId: { $ne: null } } as never, {
+        projection: { stampSignatureUploadId: 1 },
+      })
+      .toArray();
+    return rows.flatMap((row) => row.stampSignatureUploadId ?? []);
   }
 
   static async patchById(

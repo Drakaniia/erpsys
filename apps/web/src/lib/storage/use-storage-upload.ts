@@ -123,6 +123,21 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   ) as T;
 }
 
+export async function discardUpload(uploadId: string): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(
+      `${apiBase()}${ROUTES.storage.deleteUpload.path.replace(":id", encodeURIComponent(uploadId))}`,
+      { method: "DELETE", credentials: "include" },
+    );
+  } catch {
+    throw new Error("Network error — the stored file will be cleaned up automatically.");
+  }
+  if (!res.ok && res.status !== 404) {
+    throw new Error(await errorMessage(res, "Could not delete the stored file — retry removal."));
+  }
+}
+
 async function getStatus(uploadId: string): Promise<SessionStatus> {
   let res: Response;
   try {
@@ -239,12 +254,17 @@ export function useStorageUpload(route: StorageRoute) {
       };
 
       try {
-        await putBytes(session.uploadUrl, prepared, onProgress);
-        return await finish();
-      } catch (e) {
-        // 503 quota/kill-switch: maintenance copy, no retry.
-        if ((e as Error)?.message === STORAGE_MAINTENANCE_MESSAGE) throw e;
-        return await reconcile(e);
+        try {
+          await putBytes(session.uploadUrl, prepared, onProgress);
+          return await finish();
+        } catch (e) {
+          // 503 quota/kill-switch: maintenance copy, no retry.
+          if ((e as Error)?.message === STORAGE_MAINTENANCE_MESSAGE) throw e;
+          return await reconcile(e);
+        }
+      } catch (error) {
+        await discardUpload(session.uploadId).catch(() => {});
+        throw error;
       }
 
       async function reconcile(cause: unknown): Promise<StorageResult> {
