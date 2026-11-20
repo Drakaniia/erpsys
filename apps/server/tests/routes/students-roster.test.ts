@@ -59,14 +59,22 @@ function seed(): Record<string, Row[]> {
       },
     ],
     [COLLECTIONS.department]: [
-      { _id: "dept-1", name: "College of Technologies", isActive: true,
-        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: [] }] },
+      {
+        _id: "dept-1",
+        name: "College of Technologies",
+        isActive: true,
+        advisers: [{ _id: "link-1", adviserId: "adv1", yearLevels: [] }],
+      },
     ],
 
     [COLLECTIONS.user]: [
       {
         _id: "u-p1",
-        studentProfile: { _id: "p1", studentNumber: "12345", academicYearId: "ay-1" },
+        studentProfile: {
+          _id: "p1",
+          studentNumber: "12345",
+          academicYearId: "ay-1",
+        },
         name: "Ana",
         email: "12345@student.buksu.edu.ph",
         role: "STUDENT",
@@ -74,7 +82,11 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p2",
-        studentProfile: { _id: "p2", studentNumber: "12346", academicYearId: "ay-1" },
+        studentProfile: {
+          _id: "p2",
+          studentNumber: "12346",
+          academicYearId: "ay-1",
+        },
         name: "Ben",
         email: "12346@student.buksu.edu.ph",
         role: "STUDENT",
@@ -82,7 +94,11 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p3",
-        studentProfile: { _id: "p3", studentNumber: "12347", academicYearId: "ay-1" },
+        studentProfile: {
+          _id: "p3",
+          studentNumber: "12347",
+          academicYearId: "ay-1",
+        },
         name: "Cara",
         email: "12347@student.buksu.edu.ph",
         role: "STUDENT",
@@ -90,7 +106,11 @@ function seed(): Record<string, Row[]> {
       },
       {
         _id: "u-p4",
-        studentProfile: { _id: "p4", studentNumber: "12348", academicYearId: "ay-1" },
+        studentProfile: {
+          _id: "p4",
+          studentNumber: "12348",
+          academicYearId: "ay-1",
+        },
         name: "Dan",
         email: "12348@student.buksu.edu.ph",
         role: "STUDENT",
@@ -341,10 +361,37 @@ describe("roster board", () => {
     expect(body.data.stats.year).toMatchObject({ label: "2025-2026" });
   });
 
-  it("refuses a role without the instructor surface", async () => {
-    holder.session = OFFICER;
+  it("lets admins read the board across departments even with scope=mine", async () => {
+    holder.session = {
+      user: { id: "adm1", email: "admin@buksu.edu.ph", role: "ADMIN" },
+    };
+    const response = await fetch(
+      `${server.url}/api/v1/students/board?scope=mine`,
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(
+      body.data.roster.data.map(
+        (row: { studentName: string }) => row.studentName,
+      ),
+    ).toEqual(["Ana", "Ben", "Cara"]);
+    expect(body.data.roster.total).toBe(3);
+    expect(body.data.stats.stats.total).toBe(3);
+  });
+
+  it.each([OFFICER, STUDENT])(
+    "refuses other roles ($user.role)",
+    async (session) => {
+      holder.session = session;
+      const response = await fetch(`${server.url}/api/v1/students/board`);
+      expect(response.status).toBe(403);
+    },
+  );
+
+  it("requires a session", async () => {
+    holder.session = null;
     const response = await fetch(`${server.url}/api/v1/students/board`);
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(401);
   });
 });
 
