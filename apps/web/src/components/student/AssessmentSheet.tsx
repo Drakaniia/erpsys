@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation } from "@tanstack/react-query";
-import { useStorageUpload } from "$lib/storage/use-storage-upload";
+import { discardUpload, useStorageUpload } from "$lib/storage/use-storage-upload";
 import EvidenceLightbox from "./EvidenceLightbox";
 import EvidenceUploadPanel from "./EvidenceUploadPanel";
 import ReplyNotice from "./ReplyNotice";
@@ -45,8 +45,9 @@ export default function AssessmentSheet({
 
   async function removeProof(id: string) {
     try {
-      await removeMutation.mutateAsync({ id });
+      await removeMutation.mutateAsync({ uploadId: id });
       await queryClient.invalidateQueries({ queryKey: ["student"] });
+      notify("Attachment removed");
     } catch (e) {
       notify(
         (e as { message?: string }).message ??
@@ -60,11 +61,21 @@ export default function AssessmentSheet({
     setApplyError(null);
     setApplying(true);
     try {
+      let uploadedId: string | null = null;
       if (proof) {
-        await upload(proof, { stepCode: "ASSESSMENT" });
+        const done = await upload(proof, { stepCode: "ASSESSMENT" });
+        uploadedId = done.uploadId;
         setProof(null);
       }
-      await applyMutation.mutateAsync(proof ? {} : { ts: presence.ts });
+      try {
+        await applyMutation.mutateAsync(proof ? {} : { ts: presence.ts });
+      } catch (error) {
+        const status = (error as { status?: unknown }).status;
+        if (uploadedId && typeof status === "number" && status >= 400 && status < 500) {
+          await discardUpload(uploadedId).catch(() => {});
+        }
+        throw error;
+      }
       setConfirmOpen(false);
       queryClient.invalidateQueries({ queryKey: ["student"] });
       notify("Application received — awaiting officer review");

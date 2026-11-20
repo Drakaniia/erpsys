@@ -6,7 +6,7 @@ import {
   STORAGE_ACCEPT,
   validateStorageFile,
 } from "$lib/storage/use-storage-upload";
-import { useStorageUpload } from "$lib/storage/use-storage-upload";
+import { discardUpload, useStorageUpload } from "$lib/storage/use-storage-upload";
 import { useIntegrations } from "$lib/integrations/use-integrations";
 import { notify } from "$lib/notifications";
 import ActiveEditors, { useEditingLock } from "./ActiveEditors";
@@ -86,6 +86,7 @@ export default function StampPanel({
         name?: string;
         signatureUrl?: string;
         signatureFileKey?: string;
+        signatureUploadId?: string;
       } = {};
       if (stampName.trim()) input.name = stampName.trim();
       if (pendingSignatureFile) {
@@ -93,9 +94,19 @@ export default function StampPanel({
         if (!done) throw new Error("Signature upload failed.");
         input.signatureUrl = done.fileUrl;
         input.signatureFileKey = done.fileKey;
+        input.signatureUploadId = done.uploadId;
       }
-      await updateStamp.mutateAsync({ ...input, ts: presence.ts });
-      await queryClient.invalidateQueries({ queryKey: ["officer"] });
+      let saved;
+      try {
+        saved = await updateStamp.mutateAsync({ ...input, ts: presence.ts });
+      } catch (error) {
+        const status = (error as { status?: unknown }).status;
+        if (input.signatureUploadId && typeof status === "number" && status >= 400 && status < 500) {
+          await discardUpload(input.signatureUploadId).catch(() => {});
+        }
+        throw error;
+      }
+      queryClient.setQueryData(api.officer.getStamp.queryKey(), saved);
       onclose();
       setSuccessOpen(true);
       notify.success("Stamp saved");

@@ -104,11 +104,14 @@ export default function RegisterCard() {
         });
       const parsed = schema.safeParse(value);
       if (!parsed.success) {
+        const invalidFields = new Set<keyof typeof value>();
         for (const issue of parsed.error.issues) {
           const name = issue.path[0] as keyof typeof value;
+          if (invalidFields.has(name)) continue;
+          invalidFields.add(name);
           formApi.setFieldMeta(name, (prev) => ({
             ...prev,
-            errors: [issue.message],
+            errorMap: { ...prev.errorMap, onSubmit: issue.message },
           }));
         }
         return;
@@ -129,24 +132,30 @@ export default function RegisterCard() {
           return;
         }
       }
-      const result = await signUpStudent({
-        name: value.name,
-        studentNumber: value.studentNumber.trim(),
-        academicYearId: value.academicYearId,
-        departmentId: value.departmentId,
-        yearLevel: value.yearLevel as (typeof YEAR_LEVELS)[number],
-        email: value.email,
-        password: value.password,
-        "cf-turnstile-response": token,
-      });
-      resetTurnstile();
-      if (result.error) {
-        setFormError(
-          result.error.message || "Registration failed. Please try again.",
-        );
-        return;
+      try {
+        const result = await signUpStudent({
+          name: value.name,
+          studentNumber: value.studentNumber.trim(),
+          academicYearId: value.academicYearId,
+          departmentId: value.departmentId,
+          yearLevel: value.yearLevel as (typeof YEAR_LEVELS)[number],
+          email: value.email,
+          password: value.password,
+          "cf-turnstile-response": token,
+        });
+
+        if (result.error) {
+          setFormError(
+            result.error.message || "Registration failed. Please try again.",
+          );
+          return;
+        }
+        navigate(`/loading?message=Creating+your+account…`);
+      } catch {
+        setFormError("Registration failed. Please try again.");
+      } finally {
+        resetTurnstile();
       }
-      navigate(`/loading?message=Creating+your+account…`);
     },
   });
 
@@ -240,7 +249,7 @@ export default function RegisterCard() {
                           field.handleChange(yearId);
                           field.setMeta((prev) => ({
                             ...prev,
-                            errors: [],
+                            errorMap: {},
                             isTouched: false,
                           }));
                           setFormError("");
@@ -271,12 +280,12 @@ export default function RegisterCard() {
                             levelField.handleChange(value.yearLevel);
                             courseField.setMeta((prev) => ({
                               ...prev,
-                              errors: [],
+                              errorMap: {},
                               isTouched: false,
                             }));
                             levelField.setMeta((prev) => ({
                               ...prev,
-                              errors: [],
+                              errorMap: {},
                               isTouched: false,
                             }));
                             setFormError("");

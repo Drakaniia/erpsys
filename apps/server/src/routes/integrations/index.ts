@@ -20,6 +20,7 @@ import {
   requireSession,
   requireStepUp,
   requireSurface,
+  sessionId,
   sessionUser,
   type AuthedRequest,
 } from "../../middleware/auth.js";
@@ -95,7 +96,7 @@ integrationsRouter.delete(
   requireSurface("admin"),
   catchAsync(async (req, res, next) => {
     if (String(req.params.userId) === sessionUser(req).id) {
-      await requireAuthenticatorReset(sessionUser(req).id);
+      await requireAuthenticatorReset(sessionUser(req).id, sessionId(req));
       return next();
     }
     return requireStepUp(req, res, next);
@@ -246,7 +247,9 @@ integrationsRouter.put(
  * `DELETE /api/v1/integrations/:key/credentials`
  * Access: session + admin surface + step-up unlock.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
- * Use: reset the group to the `.env` values.
+ * Use: remove database credential overrides only. Resolution then falls back
+ * to `CUSTOM_*` environment values, then the original environment variables.
+ * The integration's enabled/disabled state and environment files are unchanged.
  * Returns: `{ data: row }`; `403` `STEP_UP_REQUIRED` while locked, `409`
  * `INTEGRATION_LOCKED` for `betterAuth`.
  */

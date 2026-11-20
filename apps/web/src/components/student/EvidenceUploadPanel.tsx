@@ -18,6 +18,7 @@ type EvidenceItem = {
   kind: string;
   expiresAt?: string | null;
   expired?: boolean;
+  deleting?: boolean;
 };
 
 /** The upload tab of EvidenceSlot: thumbnails, dropzone, expiry note. */
@@ -44,7 +45,7 @@ export default function EvidenceUploadPanel({
   pending: { id: string; name: string; previewUrl: string | null }[];
   onpick: (file: File) => void;
   onremovepending: (id: string) => void;
-  ondelete: (uploadId: string) => void;
+  ondelete: (uploadId: string) => void | Promise<void>;
   onpreview: (index: number) => void;
   route?: StorageRoute;
 }) {
@@ -139,9 +140,10 @@ export default function EvidenceUploadPanel({
               {!locked ? (
                 <button
                   type="button"
-                  onClick={() => ondelete(item.id)}
-                  aria-label="Remove upload"
-                  className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-surface-raised text-muted shadow hover:text-error"
+                  onClick={() => void ondelete(item.id)}
+                  disabled={item.deleting || uploading}
+                  aria-label={item.deleting ? "Deleting upload" : "Remove upload"}
+                  className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-surface-raised text-muted shadow hover:text-error disabled:opacity-50"
                 >
                   <svg
                     width="12"

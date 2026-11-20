@@ -67,7 +67,11 @@ export default function ChatbotEditor({
       presence.saved(res);
       setSavedContent(draft);
       ontoast(`Saved — version ${res.version}`);
-      queryClient.invalidateQueries({ queryKey: ["admin"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["admin"],
+        predicate: ({ queryKey }) =>
+          queryKey[1] === "getChatbotKnowledge" || queryKey[1] === "listAuditLogs",
+      });
     } catch (e) {
       ontoast(
         e instanceof Error ? e.message : "Could not save the document",

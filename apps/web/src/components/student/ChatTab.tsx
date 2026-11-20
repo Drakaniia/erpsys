@@ -275,7 +275,7 @@ export default function ChatTab({ onback }: { onback: () => void }) {
       </p>
 
       <div
-        className="flex gap-2 overflow-x-auto bg-surface px-4 pb-2 [scrollbar-width:none]"
+        className="flex gap-2 overflow-x-auto bg-surface px-4 pb-2"
         aria-label="Suggested questions"
       >
         {SUGGESTIONS.map((s) => (

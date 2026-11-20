@@ -1,18 +1,22 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { codeFromHash } from "$lib/auth/admin-gate";
+import { copyText } from "$lib/clipboard";
 
-/** `/login/copy-code#123456` — the target of the emailed "Copy code" button. */
+/** `/login/copy-code#123456` — the target of the emailed "Open copy page" button. */
 export function CopyCodePage() {
   const code = codeFromHash(window.location.hash);
-  const [copied, setCopied] = useState(false);
+  const codeInput = useRef<HTMLInputElement>(null);
+  const [copyState, setCopyState] = useState<
+    "idle" | "copied" | "manual"
+  >("idle");
 
   async function copy() {
     if (!code) return;
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-    } catch {
-      setCopied(false);
+    const copied = await copyText(code);
+    setCopyState(copied ? "copied" : "manual");
+    if (!copied) {
+      codeInput.current?.focus();
+      codeInput.current?.select();
     }
   }
 
@@ -24,18 +28,25 @@ export function CopyCodePage() {
         </h1>
         {code ? (
           <>
-            <p className="mt-4 font-mono text-3xl font-bold tracking-[0.4em] text-ink select-all">
-              {code}
-            </p>
+            <input
+              ref={codeInput}
+              aria-label="Confirmation code"
+              readOnly
+              value={code}
+              onFocus={(event) => event.currentTarget.select()}
+              className="mt-4 w-full border-0 bg-transparent text-center font-mono text-3xl font-bold tracking-[0.4em] text-ink outline-none"
+            />
             <button
               type="button"
               onClick={() => void copy()}
               className="auth-btn-primary mt-6 w-full"
             >
-              {copied ? "Copied" : "Copy code"}
+              {copyState === "copied" ? "Copied" : "Copy code"}
             </button>
-            <p className="mt-3 text-sm text-muted">
-              Paste it into the sign-in window.
+            <p className="mt-3 text-sm text-muted" role="status">
+              {copyState === "manual"
+                ? "The code is selected. Copy it with your device’s menu or Ctrl+C, then paste it into the sign-in window."
+                : "Paste it into the sign-in window."}
             </p>
           </>
         ) : (

@@ -2,6 +2,7 @@ import { COLLECTIONS, getDbSync } from "../lib/db/db.js";
 
 export type AdminStepUpRow = {
   _id: string;
+  userId: string;
   pinAt: Date | null;
   passwordAt: Date | null;
   codeHash: string | null;
@@ -16,7 +17,7 @@ export type AdminStepUpRow = {
 };
 
 export type AdminStepUpPatch = Partial<
-  Omit<AdminStepUpRow, "_id" | "expiresAt" | "createdAt" | "updatedAt">
+  Omit<AdminStepUpRow, "_id" | "userId" | "expiresAt" | "createdAt" | "updatedAt">
 >;
 
 function rows() {
@@ -24,19 +25,21 @@ function rows() {
 }
 
 export class AdminStepUpModel {
-  static async find(userId: string): Promise<AdminStepUpRow | null> {
-    return rows().findOne({ _id: userId });
+  static async find(userId: string, sessionId: string): Promise<AdminStepUpRow | null> {
+    return rows().findOne({ _id: sessionId, userId });
   }
 
   static async begin(
     userId: string,
+    sessionId: string,
     now: Date,
     expiresAt: Date,
     passwordAt: Date | null = null,
   ): Promise<void> {
     await rows().replaceOne(
-      { _id: userId },
+      { _id: sessionId, userId },
       {
+        userId,
         pinAt: now,
         passwordAt,
         codeHash: null,
@@ -55,26 +58,23 @@ export class AdminStepUpModel {
 
   static async patch(
     userId: string,
+    sessionId: string,
     fields: AdminStepUpPatch,
     expiresAt: Date,
   ): Promise<void> {
     await rows().updateOne(
-      { _id: userId },
+      { _id: sessionId, userId },
       { $set: { ...fields, expiresAt, updatedAt: new Date() } },
     );
   }
 
   static async takeCodeAttempt(
     userId: string,
+    sessionId: string,
     max: number,
   ): Promise<AdminStepUpRow | null> {
     return rows().findOneAndUpdate(
-      {
-        _id: userId,
-        codeHash: { $ne: null },
-        codeAt: null,
-        attempts: { $lt: max },
-      },
+      { _id: sessionId, userId, codeHash: { $ne: null }, codeAt: null, attempts: { $lt: max } },
       { $inc: { attempts: 1 }, $set: { updatedAt: new Date() } },
       { returnDocument: "after" },
     );
@@ -82,16 +82,21 @@ export class AdminStepUpModel {
 
   static async takeTotpAttempt(
     userId: string,
+    sessionId: string,
     max: number,
   ): Promise<AdminStepUpRow | null> {
     return rows().findOneAndUpdate(
-      { _id: userId, codeAt: { $ne: null }, totpAttempts: { $lt: max } },
+      { _id: sessionId, userId, codeAt: { $ne: null }, totpAttempts: { $lt: max } },
       { $inc: { totpAttempts: 1 }, $set: { updatedAt: new Date() } },
       { returnDocument: "after" },
     );
   }
 
-  static async remove(userId: string): Promise<void> {
-    await rows().deleteOne({ _id: userId });
+  static async remove(userId: string, sessionId: string): Promise<void> {
+    await rows().deleteOne({ _id: sessionId, userId });
+  }
+
+  static async removeForUser(userId: string): Promise<void> {
+    await rows().deleteMany({ $or: [{ userId }, { _id: userId }] });
   }
 }

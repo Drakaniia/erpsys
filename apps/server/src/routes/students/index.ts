@@ -27,11 +27,7 @@ import { StudentEnrollmentModel } from "../../models/StudentEnrollmentModel.js";
 import { UserModel } from "../../models/UserModel.js";
 import { UploadModel } from "../../models/UploadModel.js";
 import { resolveYear } from "../../services/academic-years.js";
-import {
-  listStudents,
-  rosterFilter,
-  rosterStats,
-} from "../../services/roster.js";
+import { listStudents, rosterBoard } from "../../services/roster.js";
 import {
   ensureProfileForYear,
   loadStudentSteps,
@@ -149,33 +145,13 @@ studentsRouter.get(
     const input = parseQuery(boardQuery, req);
     const user = sessionUser(req);
     const scope = user.role === "ADMIN" ? "all" : input.scope;
-    const query = { ...(req.query as Record<string, unknown>), scope };
-    const [roster, stats] = await Promise.all([
-      listStudents(
-        user,
-        {
-          ...input,
-          q: input.q ?? "",
-          page: 1,
-          pageSize: input.limit,
-          role: "ALL",
-          outside: "ALL",
-          scope,
-        },
-        query,
-      ),
-      rosterStats(
-        user.id,
-        rosterFilter({ ...input, scope }, req.query as Record<string, unknown>),
-      ),
-    ]);
+    const { roster, stats } = await rosterBoard(
+      user,
+      input,
+      req.query as Record<string, unknown>,
+    );
     okOne(res, {
-      roster: {
-        data: roster.items,
-        page: 1,
-        pageSize: input.limit,
-        total: roster.total,
-      },
+      roster,
       stats,
     });
   }),

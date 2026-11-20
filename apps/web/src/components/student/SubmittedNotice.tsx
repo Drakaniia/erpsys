@@ -85,7 +85,7 @@ export default function SubmittedNotice({
           locked
           label=""
           uploading={false}
-          onupload={async () => {}}
+          onupload={null}
           ondelete={() => {}}
           onpreview={(i) => setLightboxIndex(i)}
         />

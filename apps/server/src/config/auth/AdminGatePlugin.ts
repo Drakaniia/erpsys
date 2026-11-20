@@ -32,6 +32,10 @@ const CHECK_PATHS = [
 
 type SessionCtx = {
   context: {
+    session?: {
+      user: { id: string };
+      session: { id: string };
+    } | null;
     adapter: {
       findOne: (query: {
         model: string;
@@ -60,7 +64,7 @@ async function adminUser(ctx: unknown) {
   if (!(await isAdminUser(session.user.id))) {
     throw new APIError("FORBIDDEN", { message: "Not available." });
   }
-  return session.user;
+  return { user: session.user, sessionId: session.session.id };
 }
 
 async function enrolled(ctx: SessionCtx, userId: string): Promise<boolean> {
@@ -86,9 +90,9 @@ export function createAdminGatePlugin() {
         "/admin-gate/status",
         { method: "GET" },
         async (ctx) => {
-          const user = await adminUser(ctx);
+          const { user, sessionId } = await adminUser(ctx);
           return ctx.json({
-            ...(await stepUpStatus(user.id)),
+            ...(await stepUpStatus(user.id, sessionId)),
             enrolled: await enrolled(ctx as never, user.id),
           });
         },
@@ -100,8 +104,8 @@ export function createAdminGatePlugin() {
           body: z.object({ pin: z.string().regex(/^\d{6}$/) }),
         },
         async (ctx) => {
-          const user = await adminUser(ctx);
-          await rethrowing(() => submitPin(user.id, ctx.body.pin));
+          const { user, sessionId } = await adminUser(ctx);
+          await rethrowing(() => submitPin(user.id, sessionId, ctx.body.pin));
           return ctx.json({ ok: true });
         },
       ),
@@ -112,10 +116,10 @@ export function createAdminGatePlugin() {
           body: z.object({ password: z.string().min(1).max(128) }),
         },
         async (ctx) => {
-          const user = await adminUser(ctx);
-          await rethrowing(() => beforePassword(user.id));
+          const { user, sessionId } = await adminUser(ctx);
+          await rethrowing(() => beforePassword(user.id, sessionId));
           await ctx.context.password.checkPassword(user.id, ctx);
-          await passwordAccepted(user.id);
+          await passwordAccepted(user.id, sessionId);
           return ctx.json({ ok: true });
         },
       ),
@@ -123,8 +127,8 @@ export function createAdminGatePlugin() {
         "/admin-gate/code/send",
         { method: "POST" },
         async (ctx) => {
-          const user = await adminUser(ctx);
-          await rethrowing(() => sendCode(user));
+          const { user, sessionId } = await adminUser(ctx);
+          await rethrowing(() => sendCode(user, sessionId));
           return ctx.json({ ok: true });
         },
       ),
@@ -135,8 +139,8 @@ export function createAdminGatePlugin() {
           body: z.object({ code: z.string().regex(/^\d{6}$/) }),
         },
         async (ctx) => {
-          const user = await adminUser(ctx);
-          await rethrowing(() => verifyCode(user.id, ctx.body.code));
+          const { user, sessionId } = await adminUser(ctx);
+          await rethrowing(() => verifyCode(user.id, sessionId, ctx.body.code));
           return ctx.json({ ok: true });
         },
       ),
@@ -157,9 +161,9 @@ export function createAdminGatePlugin() {
                 message: "Trusted devices are not allowed.",
               });
             }
-            const user = await adminUser(ctx);
+            const { user, sessionId } = await adminUser(ctx);
             if (ctx.path !== "/two-factor/enable") {
-              return rethrowing(() => beforeAuthenticator(user.id));
+              return rethrowing(() => beforeAuthenticator(user.id, sessionId));
             }
             if (await enrolled(ctx as never, user.id)) {
               throw new APIError("FORBIDDEN", {
@@ -167,7 +171,7 @@ export function createAdminGatePlugin() {
                   "The authenticator is already set up. Ask for a reset if the device is lost.",
               });
             }
-            await rethrowing(() => requireCodeStep(user.id));
+            await rethrowing(() => requireCodeStep(user.id, sessionId));
           }),
         },
       ],
@@ -177,10 +181,20 @@ export function createAdminGatePlugin() {
             CHECK_PATHS.includes(context.path ?? ""),
           handler: createAuthMiddleware(async (ctx) => {
             if (isAPIError(ctx.context.returned)) return;
-            const userId =
-              ctx.context.newSession?.user.id ??
-              (await getSessionFromCtx(ctx as never))?.user.id;
-            if (userId) await unlockStepUp(userId);
+            const session =
+              ctx.context.newSession ?? (await getSessionFromCtx(ctx as never));
+            if (session) {
+              const sourceSessionId = (ctx as SessionCtx).context.session
+                ?.session.id;
+              if (sourceSessionId) {
+                await unlockStepUp(
+                  session.user.id,
+                  session.session.id,
+                  undefined,
+                  sourceSessionId,
+                );
+              }
+            }
           }),
         },
       ],

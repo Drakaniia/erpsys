@@ -1,4 +1,6 @@
-import { COLLECTIONS, getDbSync, idIn } from "../lib/db/db.js";
+import { COLLECTIONS, getDbSync, idIn, refIn } from "../lib/db/db.js";
+import { ApiError } from "../config/errors.js";
+import { atomic, fenceAcademicYears } from "../lib/db/timestamp-ordering.js";
 
 export type ProfilingForm = {
   formId?: string | null;
@@ -110,9 +112,19 @@ export class AcademicYearModel {
   }
 
   static async remove(id: string): Promise<void> {
-    await getDbSync()
-      .collection(COLLECTIONS.academicYear)
-      .deleteOne(idIn([id]) as never);
+    const db = getDbSync();
+    await atomic(db, async () => {
+      await fenceAcademicYears(db);
+      const year = await this.findById(id);
+      if (!year) throw new ApiError("NOT_FOUND", { message: "Academic year not found." });
+      if (year.isActive) throw new ApiError("CONFLICT", { message: "Cannot delete the active academic year." });
+      if (year.profilingForm) throw new ApiError("CONFLICT", { message: "Cannot delete — contains records." });
+      for (const name of [COLLECTIONS.studentEnrollment, COLLECTIONS.stepVerification, COLLECTIONS.enrollmentQueue, COLLECTIONS.adviserSchedule, COLLECTIONS.departmentTransferRequest]) {
+        if (await db.collection(name).findOne({ academicYearId: refIn([id]) } as never)) throw new ApiError("CONFLICT", { message: "Cannot delete — contains retained records." });
+      }
+      if (await db.collection(COLLECTIONS.user).findOne({ "studentProfile.academicYearId": refIn([id]) } as never)) throw new ApiError("CONFLICT", { message: "Cannot delete — contains retained profiles." });
+      await db.collection(COLLECTIONS.academicYear).deleteOne(idIn([id]) as never);
+    });
   }
 
   static async deactivateAllExcept(keepId: string): Promise<void> {
@@ -127,8 +139,12 @@ export class AcademicYearModel {
   }
 
   static async activate(id: string): Promise<void> {
-    await getDbSync()
-      .collection(COLLECTIONS.academicYear)
-      .updateOne(idIn([id]) as never, { $set: { isActive: true } } as never);
+    const db = getDbSync();
+    await atomic(db, async () => {
+      await fenceAcademicYears(db);
+      if (!(await this.findById(id))) throw new ApiError("NOT_FOUND", { message: "Academic year not found." });
+      await this.deactivateAllExcept(id);
+      await db.collection(COLLECTIONS.academicYear).updateOne(idIn([id]) as never, { $set: { isActive: true } } as never);
+    });
   }
 }

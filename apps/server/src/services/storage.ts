@@ -6,6 +6,7 @@ import {
 import { ApiError } from "../config/errors.js";
 import { KIND_FOR_STEP } from "../config/steps.js";
 import { getDbSync } from "../lib/db/db.js";
+import { atomic } from "../lib/db/timestamp-ordering.js";
 import { genId } from "../lib/db/ids.js";
 import { env } from "../lib/platform/env.js";
 import { integrationEnabled } from "../lib/platform/integration-settings.js";
@@ -42,7 +43,7 @@ import {
 } from "../lib/storage/storage.js";
 import { AcademicYearModel } from "../models/AcademicYearModel.js";
 import { DepartmentModel } from "../models/DepartmentModel.js";
-
+import { evidenceUploadIds } from "../config/steps.js";
 import { StepVerificationModel } from "../models/StepVerificationModel.js";
 import { StudentEnrollmentModel } from "../models/StudentEnrollmentModel.js";
 
@@ -50,8 +51,6 @@ import { UploadModel, type UploadRow } from "../models/UploadModel.js";
 import { UserModel } from "../models/UserModel.js";
 import type { SessionUser } from "../middleware/auth.js";
 import { requireStudentContext } from "./students.js";
-
-const STUDENT_DOMAIN = "@student.buksu.edu.ph";
 
 const forbidden = () => new ApiError("FORBIDDEN", { message: "Forbidden." });
 
@@ -126,7 +125,6 @@ async function resolveOwner(
     const email = caller.email.trim().toLowerCase();
     const local = deriveStudentNumberFromEmail(caller.email);
     if (
-      !email.endsWith(STUDENT_DOMAIN) ||
       String(profile.userId) !== caller.id ||
       (local &&
         profile.studentNumber &&
@@ -150,9 +148,9 @@ async function resolveOwner(
   const owner = String(ownerDoc?.email ?? "")
     .trim()
     .toLowerCase();
-  if (!owner.endsWith(STUDENT_DOMAIN)) {
+  if (!owner) {
     throw new ApiError("PRECONDITION_FAILED", {
-      message: "That student has no school email address.",
+      message: "That student has no email address.",
     });
   }
   const year = await AcademicYearModel.findActive();
@@ -250,6 +248,7 @@ export async function createSession(
     expiresAt,
     expiredAt: null,
     filePurgedAt: null,
+    deletionRequestedAt: null,
   });
 
   let uploadUrl: string;
@@ -278,6 +277,9 @@ export async function completeUpload(
   input: { uploadId: string; stepCode?: string },
 ) {
   const row = await loadVisible(input.uploadId, user);
+  if (row.filePurgedAt || row.deletionRequestedAt) {
+    throw new ApiError("CONFLICT", { message: "This upload is being deleted." });
+  }
   if (row.r2Status === "complete") return wire(row);
   if (row.fileKey && !isR2FileKey(row.fileKey)) {
     throw new ApiError("CONFLICT", {
@@ -298,6 +300,7 @@ export async function completeUpload(
   const client = r2Client();
   const meta = await headObjectExists(client, { bucket, key });
   if (!meta) {
+    await abandonUpload(row._id);
     throw new ApiError("NOT_FOUND", { message: "Upload bytes not found yet." });
   }
   const route = (row.r2Route ?? "evidenceImage") as StorageRoute;
@@ -310,7 +313,7 @@ export async function completeUpload(
     sizeBytes > (STORAGE_ROUTE_CAPS[route] ?? 0) ||
     (row.sizeBytes != null && sizeBytes !== row.sizeBytes)
   ) {
-    await deleteR2Object(client, { bucket, key });
+    await abandonUpload(row._id);
     throw new ApiError("UNPROCESSABLE_CONTENT", {
       message: "Stored bytes do not match the validated upload.",
     });
@@ -342,6 +345,127 @@ export async function completeUpload(
   return wire(
     fresh ?? { ...row, ...finalized.update, fileKey: finalized.fileKey },
   );
+}
+
+function storageTarget(row: UploadRow) {
+  const bucket = String(row.r2Bucket ?? "");
+  const key = String(row.r2Key ?? "");
+  if (
+    row.backend !== "r2" ||
+    bucket !== env.R2_BUCKET ||
+    !key.startsWith("erpsys/") ||
+    key.split("/").some((part) => !part || part === "." || part === "..")
+  ) {
+    throw new ApiError("CONFLICT", { message: "Upload has no safe storage target." });
+  }
+  return { bucket, key };
+}
+
+async function deleteStoredUpload(row: UploadRow): Promise<void> {
+  const target = storageTarget(row);
+  await deleteR2Object(r2Client(), target);
+  const now = new Date();
+  await atomic(getDbSync(), async () => {
+    if (row.r2Status === "complete" && row.sizeBytes) {
+      await addStoredBytes(getDbSync(), monthKey(), -row.sizeBytes);
+    }
+    if (row.deletionRequestedAt) {
+      await UploadModel.deleteById(row._id);
+      return;
+    }
+    await UploadModel.updateById(row._id, {
+      r2Status: "abandoned",
+      filePurgedAt: now,
+      expiredAt: now,
+    });
+  });
+}
+
+export async function abandonUpload(uploadId: string): Promise<void> {
+  const row = await UploadModel.findById(uploadId);
+  if (!row || row.filePurgedAt || row.backend !== "r2") return;
+  await UploadModel.updateById(uploadId, {
+    r2Status: "abandoned",
+    deletionRequestedAt: new Date(),
+  });
+  await deleteStoredUpload({ ...row, r2Status: "abandoned", deletionRequestedAt: new Date() });
+}
+
+export async function attachStamp(user: SessionUser, uploadId: string) {
+  const row = await loadVisible(uploadId, user);
+  if (row.uploadedById !== user.id) throw forbidden();
+  if (row.kind !== "STAMP" || row.r2Status !== "complete" || row.filePurgedAt) {
+    throw new ApiError("CONFLICT", { message: "Stamp upload is not ready." });
+  }
+  await UploadModel.updateById(uploadId, {
+    expiresAt: null,
+    expiredAt: null,
+    deletionRequestedAt: null,
+  });
+}
+
+export async function deleteUpload(user: SessionUser, uploadId: string) {
+  const row = await UploadModel.findById(uploadId);
+  if (!row) throw new ApiError("NOT_FOUND", { message: "Upload not found." });
+  if (row.filePurgedAt) {
+    await UploadModel.deleteById(uploadId);
+    return { deleted: true };
+  }
+  await assertCanView(row, user);
+  if (row.kind === "STAMP") {
+    const owner = await UserModel.findByIds([String(row.uploadedById ?? "")]);
+    if (owner.some((entry) => entry.stampSignatureUploadId === uploadId)) {
+      throw new ApiError("CONFLICT", { message: "The saved stamp cannot be deleted." });
+    }
+  } else if (row.r2Status === "complete") {
+    const verifications = await StepVerificationModel.listEvidenceByProfile(
+      String(row.studentProfileId ?? ""),
+    );
+    const referenced = verifications.some((verification) =>
+      evidenceUploadIds(verification.evidence).includes(uploadId),
+    );
+    if (referenced) {
+      throw new ApiError("CONFLICT", {
+        message: "This attachment belongs to a submission and cannot be deleted here.",
+      });
+    }
+  }
+  if (row.backend !== "r2") {
+    await UploadModel.deleteById(uploadId);
+    return { deleted: true };
+  }
+  await UploadModel.updateById(uploadId, { deletionRequestedAt: new Date() });
+  try {
+    await deleteStoredUpload({ ...row, deletionRequestedAt: new Date() });
+  } catch (error) {
+    throw new ApiError("BAD_GATEWAY", {
+      message: "Could not finish deleting the stored file. Retry removal if it is still listed.",
+      cause: error,
+    });
+  }
+  return { deleted: true };
+}
+
+export async function sweepOrphanedUploads(): Promise<void> {
+  const now = new Date();
+  await UploadModel.updateExpiredSessions(now);
+  const referenced = new Set<string>();
+  for (const verification of await StepVerificationModel.listAllEvidence()) {
+    for (const id of evidenceUploadIds(verification.evidence)) referenced.add(id);
+  }
+  const stamps = await UserModel.listStampUploadIds();
+  for (const id of stamps) referenced.add(id);
+  for (const row of await UploadModel.listPendingDeletion()) {
+    try {
+      if (referenced.has(row._id)) {
+        await UploadModel.updateById(row._id, { expiresAt: null, expiredAt: null });
+        continue;
+      }
+      await deleteStoredUpload(row);
+    } catch (error) {
+      console.error(`[storage] delete retry failed for upload ${row._id}`, error);
+    }
+  }
 }
 
 export async function uploadStatus(user: SessionUser, uploadId: string) {

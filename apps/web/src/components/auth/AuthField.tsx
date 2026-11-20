@@ -52,7 +52,7 @@ export default function AuthField({
   function handleInput(value: string) {
     field.handleChange(value);
     if (clearOnEdit) {
-      field.setMeta((prev) => ({ ...prev, errors: [], isTouched: false }));
+      field.setMeta((prev) => ({ ...prev, errorMap: {}, isTouched: false }));
     }
     onedit?.();
   }

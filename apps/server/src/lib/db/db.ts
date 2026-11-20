@@ -52,6 +52,9 @@ export function getDbSync(): Db {
     minPoolSize: 0,
     maxIdleTimeMS: 60_000,
     serverSelectionTimeoutMS: 10_000,
+    waitQueueTimeoutMS: 5_000,
+    socketTimeoutMS: 15_000,
+    timeoutMS: 20_000,
   });
   db = guardDb(client.db());
   return db;

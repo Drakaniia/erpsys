@@ -8,6 +8,9 @@ const POOL_EXHAUSTED_CODE = 43;
 const POOL_EXHAUSTED_NAMES = new Set([
   "MongoPoolClearedError",
   "MongoWaitQueueTimeoutError",
+  "MongoOperationTimeoutError",
+  "MongoNetworkTimeoutError",
+  "MongoServerSelectionError",
 ]);
 
 function numericCode(value: unknown): number | null {

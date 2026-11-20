@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useIntegrations } from "$lib/integrations/use-integrations";
 import { validateStorageFile } from "$lib/storage/use-storage-upload";
-import { useStorageUpload } from "$lib/storage/use-storage-upload";
+import { discardUpload, useStorageUpload } from "$lib/storage/use-storage-upload";
 import CameraCapture from "./CameraCapture";
 import EvidenceUploadPanel from "./EvidenceUploadPanel";
 import LinkManager from "./LinkManager";
@@ -59,8 +59,8 @@ export default function EvidenceSlot({
   label: string;
   hint?: string;
   uploading: boolean;
-  onupload: (fileKey: string, fileUrl: string) => Promise<void>;
-  ondelete: (uploadId: string) => void;
+  onupload: ((fileKey: string, fileUrl: string) => Promise<void>) | null;
+  ondelete: (uploadId: string) => void | Promise<void>;
   onpreview: (index: number) => void;
   onqueue?: (run: (() => Promise<void>) | null) => void;
   stepCode?: string;
@@ -113,6 +113,10 @@ export default function EvidenceSlot({
   flushRef.current = async () => {
     for (const entry of pendingRef.current) {
       const done = await upload(entry.file, { stepCode });
+      if (!onupload) {
+        await discardUpload(done.uploadId).catch(() => {});
+        continue;
+      }
       await onupload(done.fileKey, done.fileUrl);
       revokePreview(entry);
       setPending((prev) => prev.filter((p) => p.id !== entry.id));

@@ -125,7 +125,10 @@ export default function StepUpDialog({
     try {
       if (step === "pin") {
         const failure = await submitPin(value);
-        if (failure) return setError(gateMessage(failure, "Incorrect PIN."));
+        if (failure)
+          return setError(
+            gateMessage(failure, "Could not verify the PIN. Please try again."),
+          );
         const status = await fetchGateStatus();
         return go(status?.next === "code" ? "code" : "password");
       }

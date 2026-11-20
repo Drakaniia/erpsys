@@ -174,16 +174,20 @@ node --version    # v24.x — check this before anything else
 ### One egress address?
 
 Before enrollment day, find out whether the campus is behind a single NAT
-egress. `deploy/nginx/erpsys.conf` keys both rate-limit zones on
-`$binary_remote_addr`, and if every student shares one public address then
-those zones are per-campus limits, not per-student ones. The shipped rates are
-sized for that case (§6) — and they are currently the _only_ rate limiting in
-front of the app, because the two application limiters in `lib/rate-limit/rate-limit.ts`
-are not mounted yet (§3). Confirm before opening enrollment, not during.
+egress. The Nginx budgets are per public address, not per student.
+`/api/auth/get-session` has its own 120 requests/second budget and a 1200-request
+burst allowance so a 1000-student startup wave does not consume the credential
+budget. Other auth requests retain 20 requests/minute with burst 10; credential
+paths also have the application's scoped limiter. Confirm campus topology and
+test both session reads and sign-ins through Nginx before opening enrollment.
 
 ---
 
 ## 3. Environment variables
+
+Set `LOCAL_ONLY=false` alongside `NODE_ENV=production`. Production startup
+refuses the default local-only mode rather than silently using localhost origins,
+development validation, and disabled external integrations.
 
 **34 variables**, derived from `apps/server/src/lib/platform/env.ts` as it stands: 33
 read through the `env` object, plus

@@ -1,8 +1,8 @@
 /**
  * Seed the surface query keys from `GET /api/v1/me/launch`.
  *
- * The endpoint only needs the cookie, so it is issued at boot alongside the
- * session revalidation instead of after it. Every key seeded here is the key
+ * The boot prefetch waits for live session ownership before requesting data.
+ * Every key seeded here is the key
  * the surface's own `useQuery` will read, and each of those queries carries
  * `staleTime: LAUNCH_STALE_MS` so the seed is not immediately refetched.
  */
@@ -11,6 +11,11 @@ import type { SurfaceId } from "$lib/domain/roles";
 import { ApiClientError, api, queryClient } from "$lib/api";
 import { markLaunch } from "./launch-metrics";
 import { preloadSurface } from "./preload-surface";
+import {
+  sessionCacheGeneration,
+  validatedSessionOwner,
+  waitForValidatedSession,
+} from "./session-cache";
 
 type LaunchPayload = {
   surface: SurfaceId;
@@ -107,11 +112,22 @@ export function applyLaunchSeed(payload: LaunchPayload): void {
 export async function prefetchLaunch(): Promise<void> {
   if (typeof window === "undefined") return;
   if (!isAppPath(window.location.pathname)) return;
+  // Do not issue an unowned request: the launch payload has no account id.
+  // Warm persisted queries remain available once the live owner is confirmed.
+  const owner = await waitForValidatedSession();
+  if (!owner) return;
+  const generation = sessionCacheGeneration();
   try {
     const payload = (await api.me.getLaunch.call()) as LaunchPayload;
-    if (!payload?.surface) return;
+    if (
+      !payload?.surface ||
+      generation !== sessionCacheGeneration() ||
+      validatedSessionOwner() !== owner
+    ) {
+      return;
+    }
     applyLaunchSeed(payload);
-    // The route chunk downloads while the session request is still in flight.
+    // The boot path also preloads the route chunk independently.
     preloadSurface(payload.surface);
   } catch (error) {
     if (error instanceof ApiClientError && [401, 403].includes(error.status)) {

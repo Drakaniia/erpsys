@@ -3,9 +3,11 @@ import { api } from "$lib/api";
 import { LAUNCH_STALE_MS } from "$lib/perf/cache-policy";
 import { intervalWhileVisible } from "$lib/polling";
 import type { StepCode } from "$lib/officer/types";
+import type { OfficerTab } from "$lib/officer/tabs";
 
 export interface OfficerQueryParams {
   authenticated: boolean;
+  activeTab: OfficerTab;
   activeStep: StepCode | null;
   pageNum: number;
   pageSize: number;
@@ -62,19 +64,24 @@ export function useOfficerQueries(p: OfficerQueryParams) {
     }),
   );
 
+  const configurationVisible = (tab: OfficerTab) => ({
+    enabled: p.authenticated && p.activeTab === tab,
+    refetchOnMount: "always" as const,
+    refetchInterval:
+      p.activeTab === tab ? intervalWhileVisible(20_000) : intervalWhileVisible(0),
+  });
+
   const profilingQuery = useQuery(
     api.officer.getProfilingForm.queryOptions({
       staleTime: LAUNCH_STALE_MS,
-      enabled: p.authenticated,
-      refetchInterval: intervalWhileVisible(20_000),
+      ...configurationVisible("profiling-form"),
     }),
   );
 
   const linksQuery = useQuery(
     api.officer.listSocialMediaLinks.queryOptions({
       staleTime: LAUNCH_STALE_MS,
-      enabled: p.authenticated,
-      refetchInterval: intervalWhileVisible(20_000),
+      ...configurationVisible("social-media-links"),
     }),
   );
 

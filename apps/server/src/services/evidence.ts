@@ -7,6 +7,7 @@ import {
 } from "../config/evidence.js";
 import { KIND_FOR_STEP, evidenceUploadIds } from "../config/steps.js";
 import { getDbSync } from "../lib/db/db.js";
+import { env } from "../lib/platform/env.js";
 import { deleteR2Object } from "../lib/storage/client.js";
 import { configuredR2Client } from "../lib/storage/configured-client.js";
 import { addStoredBytes, monthKey } from "../lib/storage/quota.js";
@@ -40,6 +41,29 @@ export const draftEvidence = (u: UploadRow, now: number): EvidenceWire => ({
   expired: isDraftExpired(u, now),
 });
 
+export function trustedR2Target(
+  row: Pick<UploadRow, "backend" | "r2Status" | "r2Bucket" | "r2Key" | "fileKey">,
+): { bucket: string; key: string } | null {
+  if (row.backend !== "r2" || row.r2Status !== "complete") return null;
+  const bucket = row.r2Bucket;
+  const key = row.r2Key;
+  const parsed = parseR2FileKey(row.fileKey);
+  if (
+    !bucket ||
+    bucket !== env.R2_BUCKET ||
+    !key ||
+    !key.startsWith("erpsys/") ||
+    key.split("/").some(
+      (segment) => !segment || segment === "." || segment === "..",
+    ) ||
+    parsed?.bucket !== bucket ||
+    parsed.key !== key
+  ) {
+    return null;
+  }
+  return { bucket, key };
+}
+
 async function purgeFiles(rows: DraftUploadRow[]): Promise<Set<string>> {
   const isR2 = (row: DraftUploadRow) =>
     Boolean(row.fileKey) && isR2FileKey(row.fileKey);
@@ -58,12 +82,10 @@ async function purgeFiles(rows: DraftUploadRow[]): Promise<Set<string>> {
   }
   const month = monthKey();
   for (const row of r2Rows) {
-    const parsed = parseR2FileKey(row.fileKey);
-    const bucket = row.r2Bucket ?? parsed?.bucket;
-    const key = row.r2Key ?? parsed?.key;
-    if (!bucket || !key) continue;
+    const target = trustedR2Target(row);
+    if (!target) continue;
     try {
-      await deleteR2Object(client, { bucket, key });
+      await deleteR2Object(client, target);
       purged.add(String(row._id));
       await addStoredBytes(getDbSync(), month, -(row.sizeBytes ?? 0));
     } catch (error) {

@@ -5,9 +5,9 @@
  * is no library query key to pin and persist. The spec's documented fallback is
  * to keep the launch useful without it, but a warm launch cannot render the
  * gate before `get-session` resolves unless the last session result is kept.
- * So we persist a minimal, 24h-capped snapshot and put it *behind* the live
- * session: it only chooses what to render, never what is authorized, and every
- * mutation and non-GET still reaches the server.
+ * We persist a minimal, 24h-capped snapshot with the cache owner. Account data
+ * remains gated until the live session validates that owner; a same-owner
+ * launch can then reuse warm queries without discarding them.
  *
  * The snapshot is cleared on sign-out, account switch, cross-tab sign-out, and
  * a live "signed out" result.
@@ -36,6 +36,44 @@ type SessionSnapshot = {
 };
 
 let memo: SessionSnapshot | null | undefined;
+let generation = 0;
+let validatedOwner: string | null | undefined;
+const validationWaiters = new Set<(owner: string | null) => void>();
+const listeners = new Set<() => void>();
+
+export function subscribeSessionCache(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+function notifySessionCache(): void {
+  generation += 1;
+  for (const listener of listeners) listener();
+}
+
+export function waitForValidatedSession(): Promise<string | null> {
+  if (validatedOwner !== undefined) return Promise.resolve(validatedOwner);
+  return new Promise((resolve) => validationWaiters.add(resolve));
+}
+
+function settleValidation(owner: string | null): void {
+  for (const resolve of validationWaiters) resolve(owner);
+  validationWaiters.clear();
+}
+
+export function sessionCacheGeneration(): number {
+  return generation;
+}
+
+export function validatedSessionOwner(): string | null | undefined {
+  return validatedOwner;
+}
+
+export function validateSessionOwner(owner: string | null): void {
+  validatedOwner = owner;
+  notifySessionCache();
+  settleValidation(owner);
+}
 
 function storage(): Storage | null {
   if (typeof window === "undefined") return null;
@@ -91,7 +129,7 @@ export function readSessionSnapshot(
   }
 }
 
-/** Record the live session and its owner id for the mismatch check. */
+/** Record a reconciled live session; callers must clear mismatched data first. */
 export function writeSessionSnapshot(
   user: Record<string, unknown>,
   now = Date.now(),
@@ -127,7 +165,10 @@ export function writeSessionSnapshot(
 }
 
 export function clearSessionSnapshot(): void {
+  settleValidation(null);
+  validatedOwner = undefined;
   memo = null;
+  notifySessionCache();
   const store = storage();
   if (!store) return;
   try {
@@ -163,4 +204,7 @@ export function persistedOwnerId(now = Date.now()): string | null {
 /** Test-only: drop the in-memory memo. */
 export function resetSessionCacheForTest(): void {
   memo = undefined;
+  generation = 0;
+  settleValidation(null);
+  validatedOwner = undefined;
 }

@@ -11,11 +11,11 @@ Replace `<domain>` below with the real site address, for example
 
 ## 1. Where production reads its variables
 
-| Thing                 | Local                   | Production                                                                                               |
-| --------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------- |
-| Runtime config        | `.env` in the repo root | `/etc/erpsys.env` (`root:erpsys`, mode `0640`), loaded by systemd `EnvironmentFile`                      |
-| `VITE_*` values       | `.env`                  | The **build host's** environment when you run `pnpm build`. Changing one needs a rebuild, not a restart. |
-| Integration overrides | n/a                     | Admin → Integrations stores them encrypted in MongoDB. They override the file **after a restart**.       |
+| Thing                 | Local                         | Production                                                                                                                                     |
+| --------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime config        | `.env` in the repo root       | `/etc/erpsys.env` (`root:erpsys`, mode `0640`), loaded by systemd `EnvironmentFile`                                                            |
+| `VITE_*` values       | `.env`                        | The **build host's** environment when you run `pnpm build`. Changing one needs a rebuild, not a restart.                                       |
+| Integration overrides | Optional `CUSTOM_*` variables | Admin → Integrations stores database overrides encrypted in MongoDB. Resolution is database → `CUSTOM_*` → original variable, after a restart. |
 
 Rules:
 
@@ -23,12 +23,16 @@ Rules:
 - File format is `KEY=value`: no `export`, no line continuations. Quote values with spaces or `#`.
 - Never commit `.env`, `.env.*`, or `erpsys-*.json`. All three are git-ignored.
 - After every edit: `sudo systemctl restart erpsys`, then `journalctl -u erpsys -n 50`.
+- Every credential field supports an optional `CUSTOM_` prefix. For example, set `CUSTOM_GOOGLE_CLIENT_ID` and `CUSTOM_GOOGLE_CLIENT_SECRET` without changing the original Google variables. Empty custom values are ignored.
+- **Reset to default** deletes only database credential overrides. It preserves the integration switch and never edits the environment file; a configured `CUSTOM_*` value still applies before the original variable.
+- `INTEGRATION_CREDENTIAL_KEY` is the dedicated key for encrypting reusable integration credentials. Generate it with `openssl rand -hex 32` and store it outside MongoDB. Existing installations that leave it empty continue to use the legacy key derived from `BETTER_AUTH_SECRET`; set the dedicated key only with a planned re-entry/reset of stored integration credentials.
 
 ## 2. Change these (they are wrong in production if copied from local)
 
 | Variable             | Local value             | Production value                                                                                                                             |
 | -------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `NODE_ENV`           | unset (`development`)   | `production`. Required, or the server serves stack traces.                                                                                   |
+| `LOCAL_ONLY`         | `true`                  | `false`. Production refuses startup otherwise; local-only disables external integrations and uses localhost origins.                         |
 | `PORT`               | `3001`                  | `3001`, matching the `upstream` in `deploy/nginx/erpsys.conf`                                                                                |
 | `DATABASE_URL`       | local or dev Mongo      | The MongoDB Atlas connection string (M10 or higher), database name in the path. Add the server's public egress IP to Atlas → Network Access. |
 | `BETTER_AUTH_SECRET` | dev secret              | A **new** secret, at least 32 characters: `openssl rand -hex 32`. Do not reuse the local one.                                                |
@@ -90,12 +94,11 @@ Without it the schedule still works and students still see it.
 
 ## 5. Remove these (not used in production)
 
-| Variable                                                 | Why                                                                                                                                                                           |
-| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SEED_PASSWORD`                                          | Read by nothing in the repo.                                                                                                                                                  |
-| `UPLOADTHING_TOKEN`                                      | No code references it.                                                                                                                                                        |
-| `CUSTOM_GOOGLE_CLIENT_ID`, `CUSTOM_GOOGLE_CLIENT_SECRET` | No code references them.                                                                                                                                                      |
-| `GOOGLE_FORMS_SA_EMAIL`, `GOOGLE_FORMS_SA_PRIVATE_KEY`   | Service accounts cannot create forms (`forms.create` returns HTTP 500). Also delete the `erpsys-*.json` key file and revoke the key in IAM & Admin → Service Accounts → Keys. |
+| Variable                                               | Why                                                                                                                                                                           |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SEED_PASSWORD`                                        | Read by nothing in the repo.                                                                                                                                                  |
+| `UPLOADTHING_TOKEN`                                    | No code references it.                                                                                                                                                        |
+| `GOOGLE_FORMS_SA_EMAIL`, `GOOGLE_FORMS_SA_PRIVATE_KEY` | Service accounts cannot create forms (`forms.create` returns HTTP 500). Also delete the `erpsys-*.json` key file and revoke the key in IAM & Admin → Service Accounts → Keys. |
 
 ## 6. Keep as defaults unless you have a reason
 

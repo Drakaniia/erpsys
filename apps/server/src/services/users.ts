@@ -67,9 +67,10 @@ async function loadItems(
     profiles.map((profile) => [String(profile._id), String(profile.userId)]),
   );
   const studentNumbers = new Map(
-    (await UserModel.findProfilesByIds([...userByProfile.keys()])).map(
-      (profile) => [String(profile.userId), profile.studentNumber ?? null],
-    ),
+    profiles.map((profile) => [
+      String(profile.userId),
+      profile.studentNumber ?? null,
+    ]),
   );
 
   const placement = new Map<

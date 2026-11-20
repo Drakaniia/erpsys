@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { shortcutBlocked } from "$lib/ui/shortcut-guard";
 import { useNavigate } from "react-router";
 
 import OfficerBell from "../components/officer/OfficerBell";
 import OfficerReportsTab from "../components/officer/OfficerReportsTab";
 import OfficerTabBar from "../components/officer/OfficerTabBar";
-import ProfilingFormPanel from "../components/officer/ProfilingFormPanel";
+const ProfilingFormPanel = lazy(
+  () => import("../components/officer/ProfilingFormPanel"),
+);
 import ShortcutsPopover from "../components/ui/ShortcutsPopover";
 import SimsPanel from "../components/officer/SimsPanel";
 import SocialMediaLinksPanel from "../components/officer/SocialMediaLinksPanel";
@@ -204,6 +206,7 @@ export function OfficerPage() {
             : ""
         }`}
       >
+        {simsMounted ? <SimsPanel hidden={!withSims} /> : null}
         {s.activeTab === "overview" ? (
           <StepOverview
             data={s.overviewQuery.data}
@@ -211,16 +214,18 @@ export function OfficerPage() {
             onopenstep={s.selectTab}
           />
         ) : s.activeTab === "profiling-form" ? (
-          <ProfilingFormPanel
-            data={s.profilingQuery.data}
-            isLoading={s.profilingQuery.isPending && !s.profilingQuery.data}
-            hasActiveYear={s.hasActiveYear}
-            onsave={s.handleSaveForm}
-            onremove={s.handleRemoveForm}
-            busy={
-              s.saveFormMutation.isPending || s.removeFormMutation.isPending
-            }
-          />
+          <Suspense fallback={<PageLoader label="Loading the profiling form" />}>
+            <ProfilingFormPanel
+              data={s.profilingQuery.data}
+              isLoading={s.profilingQuery.isPending && !s.profilingQuery.data}
+              hasActiveYear={s.hasActiveYear}
+              onsave={s.handleSaveForm}
+              onremove={s.handleRemoveForm}
+              busy={
+                s.saveFormMutation.isPending || s.removeFormMutation.isPending
+              }
+            />
+          </Suspense>
         ) : s.activeTab === "social-media-links" ? (
           <SocialMediaLinksPanel
             data={s.linksQuery.data?.data}
@@ -305,7 +310,6 @@ export function OfficerPage() {
             }}
           />
         ) : null}
-        {simsMounted ? <SimsPanel hidden={!withSims} /> : null}
       </main>
 
       <DetailSheet

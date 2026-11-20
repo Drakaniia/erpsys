@@ -14,6 +14,7 @@ export type UploadRow = {
   expiresAt?: Date | null;
   expiredAt?: Date | null;
   filePurgedAt?: Date | null;
+  deletionRequestedAt?: Date | null;
   backend?: string | null;
   r2Status?: string | null;
   r2Bucket?: string | null;
@@ -166,6 +167,36 @@ export class UploadModel {
         kind: { $in: [...kinds] },
         $or: [{ expiredAt: null }, { filePurgedAt: null }],
       } as never)
+      .toArray();
+  }
+
+  static async updateExpiredSessions(now: Date): Promise<void> {
+    await getDbSync()
+      .collection(COLLECTIONS.upload)
+      .updateMany(
+        {
+          backend: "r2",
+          r2Status: "pending",
+          sessionExpiresAt: { $lte: now },
+        } as never,
+        { $set: { r2Status: "abandoned", deletionRequestedAt: now } } as never,
+      );
+  }
+
+  static async listPendingDeletion(limit = 100): Promise<UploadRow[]> {
+    const expiry = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    return getDbSync()
+      .collection<UploadRow>(COLLECTIONS.upload)
+      .find({
+        backend: "r2",
+        filePurgedAt: null,
+        $or: [
+          { deletionRequestedAt: { $ne: null } },
+          { r2Status: "complete", expiresAt: { $lte: expiry } },
+        ],
+      } as never)
+      .sort({ deletionRequestedAt: 1 })
+      .limit(limit)
       .toArray();
   }
 

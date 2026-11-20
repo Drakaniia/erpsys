@@ -2,13 +2,20 @@ import ReplyNotice from "./ReplyNotice";
 import StampDisplay from "./StampDisplay";
 import { useIntegrations } from "$lib/integrations/use-integrations";
 import { absoluteTime } from "$lib/officer/format";
+import { profilingFormUrl } from "$lib/student/profiling";
 import type { StepRow } from "$lib/student/types";
 
 export default function ProfilingSheet({
   step,
+  email,
+  oncheck,
+  checking = false,
 }: {
   step: StepRow;
+  email: string;
   notify?: (message: string, kind?: "success" | "error") => void;
+  oncheck: () => Promise<unknown>;
+  checking?: boolean;
 }) {
   const { flags } = useIntegrations();
   const response:
@@ -60,7 +67,9 @@ export default function ProfilingSheet({
                   ? step.status === "RETURNED"
                     ? "Response submitted — changes are needed before officer review. See the officer's feedback above and update your Google Form response."
                     : "Submitted — awaiting officer review."
-                  : "Submission status is temporarily unavailable — check back later or see the SBO office. This does not mean your response is missing."}
+                  : checking
+                    ? "Checking for your latest response…"
+                    : "Submission status is temporarily unavailable — check back later or see the SBO office. This does not mean your response is missing."}
           </p>
           {response?.status === "INCOMPLETE" &&
           response.missingRequired.length > 0 ? (
@@ -80,13 +89,21 @@ export default function ProfilingSheet({
           </p>
           <div className="flex flex-wrap gap-2">
             <a
-              href={step.profilingFormUrl}
+              href={profilingFormUrl(step.profilingFormUrl, email)}
               target="_blank"
               rel="noreferrer"
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white"
             >
               Open the form
             </a>
+            <button
+              type="button"
+              onClick={() => void oncheck()}
+              disabled={checking}
+              className="rounded-lg border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-ink disabled:opacity-60"
+            >
+              {checking ? "Checking…" : "Check submission"}
+            </button>
           </div>
         </div>
       ) : (

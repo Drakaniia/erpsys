@@ -6,7 +6,6 @@ import {
   YEAR_LEVELS,
   YEAR_LEVEL_LABELS,
   departmentAcceptsLevel,
-  deriveStudentNumberFromEmail,
   type YearLevel,
 } from "../constants.js";
 import { ApiError } from "../errors.js";
@@ -115,7 +114,6 @@ export function createStudentSignUpPlugin() {
         async (ctx) => {
           const input = ctx.body;
           const adapter = ctx.context.internalAdapter;
-          const db = getDbSync();
           const email = input.email.toLowerCase();
 
           if (email.endsWith("@student.buksu.edu.ph")) {
@@ -126,38 +124,19 @@ export function createStudentSignUpPlugin() {
 
           const existingUser = await adapter.findUserByEmail(email);
           if (existingUser?.user) {
-            const blocked = await UserModel.findById(existingUser.user.id);
-            if (!blocked?.blockedAt) {
-              throw new APIError("BAD_REQUEST", {
-                message:
-                  "An account with this email already exists — sign in instead.",
-              });
-            }
-            await purgeUserById(db, blocked._id);
+            throw new APIError("BAD_REQUEST", {
+              message:
+                "An account with this email already exists — sign in instead.",
+            });
           }
 
           const existingProfile = await UserModel.findProfileByStudentNumber(
             input.studentNumber,
           );
-          if (existingProfile && existingProfile.userId !== "") {
-            const owner = await UserModel.findById(existingProfile.userId);
-            if (owner?.blockedAt) {
-              await purgeUserById(db, String(owner._id));
-            } else if (
-              deriveStudentNumberFromEmail(email) !== input.studentNumber ||
-              !owner?.email
-            ) {
-              throw new APIError("BAD_REQUEST", {
-                message: STUDENT_NUMBER_IN_USE_MESSAGE,
-              });
-            } else if (
-              deriveStudentNumberFromEmail(owner.email) === input.studentNumber
-            ) {
-              throw new APIError("BAD_REQUEST", {
-                message:
-                  "This student number is already claimed — contact the SBO office.",
-              });
-            }
+          if (existingProfile) {
+            throw new APIError("BAD_REQUEST", {
+              message: STUDENT_NUMBER_IN_USE_MESSAGE,
+            });
           }
 
           const result = await signUpEmail()({

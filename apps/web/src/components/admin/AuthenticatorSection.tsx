@@ -6,6 +6,7 @@ import {
   useResetAuthenticator,
   type AdminAuthenticator,
 } from "$lib/integrations/use-integrations";
+import { notify } from "$lib/notifications";
 
 const SECONDARY_BUTTON =
   "inline-flex min-h-9 items-center rounded-lg border border-border px-3 text-sm text-ink transition-[transform,background-color] duration-100 ease-out hover:bg-surface active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60";
@@ -32,7 +33,10 @@ export default function AuthenticatorSection() {
   function confirmReset() {
     if (!resetTarget || reset.isPending) return;
     reset.mutate(resetTarget.userId, {
-      onSuccess: () => setResetTarget(null),
+      onSuccess: () => {
+        notify.success("Integration settings saved.");
+        setResetTarget(null);
+      },
     });
   }
 

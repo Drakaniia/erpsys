@@ -125,6 +125,10 @@ export class StudentEnrollmentModel {
   static async insert(row: StudentEnrollmentRow): Promise<void> {
     await getDbSync()
       .collection(COLLECTIONS.studentEnrollment)
-      .insertOne(row as never);
+      .updateOne(
+        { studentProfileId: row.studentProfileId, academicYearId: row.academicYearId } as never,
+        { $setOnInsert: row } as never,
+        { upsert: true },
+      );
   }
 }

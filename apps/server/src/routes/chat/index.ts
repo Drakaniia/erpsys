@@ -37,6 +37,7 @@ import {
 } from "../../lib/chat/knowledge.js";
 import {
   acquireProviderSlot,
+  ProviderBusyError,
   configurePacer,
   orderModels,
   parseRetryAfterSeconds,
@@ -285,7 +286,7 @@ async function streamChat(req: Request, res: ExpressResponse): Promise<void> {
 
         let response: Response | undefined;
         try {
-          await acquireProviderSlot();
+          await acquireProviderSlot(undefined, upstreamAbort.signal, deadlineAt);
           response = await fetch(cloudflareChatUrl(env.CLOUDFLARE_ACCOUNT_ID), {
             method: "POST",
             headers: {
@@ -299,6 +300,10 @@ async function streamChat(req: Request, res: ExpressResponse): Promise<void> {
           });
         } catch (error) {
           if (clientGone()) return;
+          if (error instanceof ProviderBusyError || upstreamAbort.signal.aborted) {
+            fail(deadlineExpired ? CHAT_INTERRUPTED_MESSAGE : CHAT_GENERIC_ERROR_MESSAGE);
+            return;
+          }
           console.warn(
             `[chat] ${model} attempt ${attempt} could not be reached: ${describeError(error)}${deadlineExpired ? " (deadline)" : ""}`,
           );

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import AdminTabBar from "../components/admin/AdminTabBar";
 import AdminReportsTab from "../components/admin/AdminReportsTab";
 import AuditLogTable from "../components/admin/AuditLogTable";
@@ -15,7 +16,9 @@ import ChatbotEditor from "../components/admin/ChatbotEditor";
 import IntegrationsPanel from "../components/admin/IntegrationsPanel";
 import StepUpHost from "../components/admin/StepUpHost";
 import ShortcutsPopover from "../components/ui/ShortcutsPopover";
-import ProfilingFormPanel from "../components/officer/ProfilingFormPanel";
+const ProfilingFormPanel = lazy(
+  () => import("../components/officer/ProfilingFormPanel"),
+);
 import StudentsTab from "../components/instructor/StudentsTab";
 import { useNavigate } from "react-router";
 import { notify } from "$lib/notifications";
@@ -206,13 +209,17 @@ export function AdminPage() {
             registerrefresh={(fn) => registerRefresh("requirements", fn)}
           />
         ) : activeTab === "profiling-form" ? (
-          <ProfilingFormPanel
-            data={profilingQuery.data}
-            hasActiveYear={hasActiveYear}
-            onsave={handleSaveForm}
-            onremove={handleRemoveForm}
-            busy={saveFormMutation.isPending || removeFormMutation.isPending}
-          />
+          <Suspense
+            fallback={<PageLoader label="Loading the profiling form" />}
+          >
+            <ProfilingFormPanel
+              data={profilingQuery.data}
+              hasActiveYear={hasActiveYear}
+              onsave={handleSaveForm}
+              onremove={handleRemoveForm}
+              busy={saveFormMutation.isPending || removeFormMutation.isPending}
+            />
+          </Suspense>
         ) : activeTab === "chatbot" ? (
           <ChatbotEditor
             ontoast={toast}

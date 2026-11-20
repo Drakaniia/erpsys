@@ -119,8 +119,10 @@ export function useAdminConsole() {
   const profilingQuery = useQuery(
     api.admin.getProfilingForm.queryOptions({
       staleTime: LAUNCH_STALE_MS,
-      enabled: Boolean(user?.id),
-      refetchInterval: intervalWhileVisible(30_000),
+      enabled: Boolean(user?.id) && activeTab === "profiling-form",
+      refetchOnMount: "always",
+      refetchInterval:
+        activeTab === "profiling-form" ? intervalWhileVisible(30_000) : false,
     }),
   );
 

@@ -14,8 +14,9 @@ import {
 } from "$lib/integrations/use-integrations";
 
 function sourceLabel(source: CredentialFieldView["source"]): string {
-  if (source === "stored") return "Stored";
-  if (source === "env") return ".env";
+  if (source === "stored") return "Database override";
+  if (source === "customEnv") return "Custom .env";
+  if (source === "env") return "Default .env";
   return "Missing";
 }
 
@@ -131,6 +132,7 @@ export default function IntegrationCredentialsEditor({
     setSent(payload);
     save.mutate(payload, {
       onSuccess: (result) => {
+        notify.success("Integration settings saved.");
         setSaved({
           version: result.version,
           pendingRestart: result.pendingRestart,
@@ -140,10 +142,16 @@ export default function IntegrationCredentialsEditor({
     });
   }
 
-  function resetToEnv() {
-    if (!window.confirm("Reset these credentials to the .env values?")) return;
+  function resetToDefault() {
+    if (
+      !window.confirm(
+        "Remove these database credential overrides? Custom .env values still apply, then the original defaults. The integration switch will not change.",
+      )
+    )
+      return;
     reset.mutate(row.key, {
       onSuccess: () => {
+        notify.success("Integration settings saved.");
         setSent(null);
         cancel();
       },
@@ -168,6 +176,11 @@ export default function IntegrationCredentialsEditor({
 
   return (
     <div className="flex flex-col gap-4 pt-3">
+      <p className="text-xs leading-relaxed text-muted">
+        Database overrides are encrypted and take priority over{" "}
+        <code>CUSTOM_*</code> environment values, then the original variables.
+        Reset removes only the database overrides.
+      </p>
       <ActiveEditors
         resource="integration"
         scope={row.key}
@@ -260,7 +273,8 @@ export default function IntegrationCredentialsEditor({
                 ) : null}
 
                 <p className="text-[11px] leading-relaxed text-muted">
-                  {field.hint}
+                  {field.hint} Optional environment override:{" "}
+                  <code>{field.customEnvKey}</code>.
                   {field.helpUrl ? (
                     <>
                       {" "}
@@ -350,11 +364,11 @@ export default function IntegrationCredentialsEditor({
         </button>
         <button
           type="button"
-          onClick={resetToEnv}
+          onClick={resetToDefault}
           disabled={lock.blocked || reset.isPending}
           className={SECONDARY}
         >
-          Reset to .env
+          Reset to default
         </button>
 
         {status === 422 || (error && status !== 409 && status !== 429) ? (

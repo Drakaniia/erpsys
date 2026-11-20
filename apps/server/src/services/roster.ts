@@ -482,6 +482,56 @@ type StudentListQuery = {
   stepState?: string;
 };
 
+export async function rosterBoard(
+  user: SessionUser,
+  input: {
+    academicYearId?: string;
+    scope: "mine" | "all";
+    sort: string;
+    dir: "asc" | "desc";
+    q?: string;
+    stepState?: string;
+    enrolled?: string;
+    unassigned?: string;
+    cursor?: string;
+    limit: number;
+  },
+  query: Record<string, unknown>,
+) {
+  const scope = user.role === "ADMIN" ? "all" : input.scope;
+  const filter = rosterFilter({ ...input, scope }, query);
+  const { year, rows, unassignedTotal } = await loadRoster(
+    { ...filter, buckets: undefined },
+    user.id,
+  );
+  const stats = {
+    year: year ? yearLabel(year) : null,
+    stats: summarizeRoster(rows, unassignedTotal),
+  };
+  const sorted = sortRoster(
+    filter.buckets?.length
+      ? rows.filter((row) => filter.buckets!.includes(row.bucket))
+      : rows,
+    (ROSTER_SORTS as readonly string[]).includes(input.sort)
+      ? (input.sort as RosterSort)
+      : "name",
+    input.dir,
+  );
+  const start =
+    (input.cursor
+      ? sorted.findIndex((row) => row.studentProfileId === input.cursor)
+      : -1) + 1;
+  return {
+    roster: {
+      data: sorted.slice(start, start + input.limit),
+      page: 1,
+      pageSize: input.limit,
+      total: sorted.length,
+    },
+    stats,
+  };
+}
+
 export async function listStudents(
   user: SessionUser,
   input: StudentListQuery,

@@ -1,4 +1,12 @@
 import { queryClient } from "$lib/api";
+import { discardUpload } from "$lib/storage/use-storage-upload";
+
+export function refreshOfficerSubmissions(): void {
+  for (const key of ["getOverview", "getBell", "listByStep", "getStepDetail"]) {
+    void queryClient.invalidateQueries({ queryKey: ["officer", key] });
+  }
+  void queryClient.invalidateQueries({ queryKey: ["student", "getMySteps"] });
+}
 
 type VerifyMutation = {
   mutateAsync: (p: { verificationId: string }) => Promise<unknown>;
@@ -55,7 +63,7 @@ export async function doVerify(
     });
     setStampOpen(false);
     setAnnouncement("Verified");
-    queryClient.invalidateQueries({ queryKey: ["officer"] });
+    refreshOfficerSubmissions();
     setJustVerified(true);
   } catch {
     setAnnouncement("Could not verify — please try again.");
@@ -90,7 +98,7 @@ export async function doReply(
     });
     setReplyOpen(false);
     setAnnouncement("Submission returned to the student");
-    queryClient.invalidateQueries({ queryKey: ["officer"] });
+    refreshOfficerSubmissions();
   } catch {
     setAnnouncement("Could not send the reply — please try again.");
   }
@@ -116,7 +124,7 @@ export async function doRevoke(
     });
     setRevokeOpen(false);
     setAnnouncement("Stamp revoked");
-    queryClient.invalidateQueries({ queryKey: ["officer"] });
+    refreshOfficerSubmissions();
   } catch {
     setAnnouncement("Could not revoke the stamp — please try again.");
   }
@@ -127,7 +135,9 @@ export async function doCapture(
   verificationId: string | null,
   captureMutation: CaptureMutation,
   captureUpload: {
-    uploadFile: (file: File) => Promise<{ key: string; url: string }>;
+    uploadFile: (
+      file: File,
+    ) => Promise<{ key: string; url: string; uploadId: string }>;
   },
   stampData: StampData,
   setVerified: (patch: Record<string, unknown>) => void,
@@ -140,11 +150,19 @@ export async function doCapture(
     const file = new File([blob], "mugshot.jpg", { type: "image/jpeg" });
     const uploaded = await captureUpload.uploadFile(file);
     if (!uploaded) throw new Error("Mugshot upload failed.");
-    await captureMutation.mutateAsync({
-      verificationId,
-      fileKey: uploaded.key,
-      fileUrl: uploaded.url,
-    });
+    try {
+      await captureMutation.mutateAsync({
+        verificationId,
+        fileKey: uploaded.key,
+        fileUrl: uploaded.url,
+      });
+    } catch (error) {
+      const status = (error as { status?: unknown }).status;
+      if (typeof status === "number" && status >= 400 && status < 500) {
+        await discardUpload(uploaded.uploadId).catch(() => {});
+      }
+      throw error;
+    }
     setVerified({
       localStatus: "VERIFIED",
       localStampName: stampData?.name ?? null,
@@ -153,7 +171,7 @@ export async function doCapture(
       localStampAt: new Date().toISOString(),
     });
     setAnnouncement("Verified");
-    queryClient.invalidateQueries({ queryKey: ["officer"] });
+    refreshOfficerSubmissions();
     setJustVerified(true);
   } catch {
     setAnnouncement("Could not save the photo — please try again.");

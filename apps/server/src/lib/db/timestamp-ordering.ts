@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { Collection, Db, Document } from "mongodb";
+import type { ClientSession, Collection, Db, Document } from "mongodb";
 import { ApiError } from "../../config/errors.js";
 
 export const TS_ABORTED = "TS_ABORTED";
@@ -38,6 +38,51 @@ const FILTER_WRITES = new Set([
 
 const store = new AsyncLocalStorage<Transaction>();
 const unguarded = new WeakMap<Db, Db>();
+const sessionStore = new AsyncLocalStorage<{ db: Db; session: ClientSession; fenced: boolean }>();
+
+/**
+ * Concurrency: timestamp ordering — atomic business transaction.
+ * Rule: guarded operations inherit one Mongo session; failed business writes roll back together.
+ * Abort: restore the write marker after rollback to permit server-anchored restarts.
+ */
+export async function atomic<T>(db: Db, work: () => Promise<T>): Promise<T> {
+  const raw = unguardDb(db);
+  const active = sessionStore.getStore();
+  if (active) {
+    if (active.db !== raw) throw new Error("Cannot nest transactions across databases.");
+    return work();
+  }
+  const session = raw.client.startSession();
+  const tx = store.getStore();
+  const wrote = tx?.wrote ?? false;
+  try {
+    return await session.withTransaction(() => {
+      if (tx) tx.wrote = wrote;
+      return sessionStore.run({ db: raw, session, fenced: false }, work);
+    }, { readConcern: { level: "snapshot" }, writeConcern: { w: "majority" }, timeoutMS: 20_000, maxCommitTimeMS: 10_000 }) as T;
+  } catch (error) {
+    if (tx) tx.wrote = wrote;
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+}
+
+/**
+ * Concurrency: timestamp ordering — academic-year reference fence.
+ * Rule: lifecycle changes and reference writers serialize before reading their snapshot.
+ */
+export async function fenceAcademicYears(db: Db): Promise<void> {
+  const active = sessionStore.getStore();
+  if (!active || active.db !== unguardDb(db)) throw new Error("Year fence requires a transaction.");
+  if (active.fenced) return;
+  await active.db.collection("platform_state").updateOne(
+    { _id: "academic-year-integrity" } as never,
+    { $inc: { version: 1 } },
+    { upsert: true, session: active.session },
+  );
+  active.fenced = true;
+}
 
 export function unguardDb(db: Db): Db {
   return unguarded.get(db) ?? db;
@@ -264,7 +309,8 @@ async function readRule(
 /**
  * Concurrency: timestamp ordering — write rule.
  * Rule: abort when TS(T) < readTs(X) or TS(T) < writeTs(X) for any X the filter matches.
- * Pass: writeTs(X) = TS(T). Non-upserts recheck the rule in the write filter.
+ * Pass: writeTs(X) = TS(T); existing upserts become guarded non-upserts.
+ * Rule: absent upserts retain their logical filter inside a Mongo transaction.
  * Abort: `TS_ABORTED`, restarted or `409` per `restartAborted`.
  */
 function writeRule(
@@ -299,7 +345,9 @@ function writeRule(
       }
     }
     const options = rest[isDelete ? 0 : 1] as { upsert?: boolean } | undefined;
-    const scoped = options?.upsert ? filter : { $and: [filter, fresh(tx.ts)] };
+    const existing = options?.upsert ? await raw.findOne(filter as never, { projection: { _id: 1 } }) : null;
+    const scoped = options?.upsert && !existing ? filter : { $and: [filter, fresh(tx.ts)] };
+    if (options?.upsert && existing) rest[isDelete ? 0 : 1] = { ...options, upsert: false };
     const result = await op(scoped, ...rest);
     const count = result as {
       matchedCount?: number;
@@ -499,6 +547,67 @@ function businessCollection(raw: Collection<Document>): Collection<Document> {
  * insert rules while a request transaction is running; the collections in
  * `EXEMPT` (Better Auth state, logs, usage counters) are never guarded.
  */
+function sessionCollection(raw: Collection<Document>): Collection<Document> {
+  return new Proxy(raw, {
+    get(target, prop) {
+      const value = Reflect.get(target, prop, target);
+      if (typeof value !== "function") return value;
+      return (...args: unknown[]) => {
+        const active = sessionStore.getStore();
+        if (active && typeof prop === "string") {
+          const index = prop === "distinct" ? 2 : FILTER_WRITES.has(prop) && !prop.toLowerCase().includes("delete") ? 2 : 1;
+          args[index] = { ...(args[index] as Row | undefined), session: active.session };
+        }
+        return value.apply(target, args);
+      };
+    },
+  });
+}
+
+const YEAR_REFERENCES = new Set(["student_enrollment", "step_verification", "enrollment_queue", "adviser_schedule", "department_transfer_request", "user"]);
+
+/**
+ * Concurrency: timestamp ordering — retained academic-year reference writes.
+ * Rule: reference writes and lifecycle changes share a transaction fence to prevent snapshot write skew.
+ */
+function integrityCollection(collection: Collection<Document>, name: string, db: Db): Collection<Document> {
+  return new Proxy(collection, {
+    get(target, prop) {
+      const value = Reflect.get(target, prop, target);
+      if (typeof value !== "function" || typeof prop !== "string") return value;
+      const op = value.bind(target);
+      const writes = FILTER_WRITES.has(prop) || prop === "insertOne" || prop === "insertMany";
+      if (!writes) return op;
+      return (...args: unknown[]) => {
+        const options = args[2] as Row | undefined;
+        const referenceInput = args[0] as Row;
+        const referenceChange = args[1] as Row | undefined;
+        const namesYear = (row: Row | undefined) => Boolean(row && (row.academicYearId || row.studentProfile || row["studentProfile.academicYearId"]));
+        const needsFence = YEAR_REFERENCES.has(name) && (name !== "user" || namesYear(referenceInput) || namesYear(referenceChange?.$set as Row));
+        if (!needsFence && !options?.upsert) return op(...args);
+        return atomic(db, async () => {
+          if (needsFence) {
+            await fenceAcademicYears(db);
+            const input = args[0] as Row | Row[];
+            const change = args[1] as Row | undefined;
+            const rows: Row[] = prop.startsWith("insert") ? (Array.isArray(input) ? input : [input]) : [input as Row, change?.$set as Row, change?.$setOnInsert as Row];
+            const ids = new Set(rows.flatMap((row) => {
+              if (!row) return [];
+              const id = row.academicYearId ?? (row.studentProfile as Row | undefined)?.academicYearId ?? row["studentProfile.academicYearId"];
+              return typeof id === "string" ? [id] : [];
+            }));
+            for (const id of ids) {
+              const year = await unguardDb(db).collection("academic_year").findOne({ _id: id } as never, { session: sessionStore.getStore()!.session });
+              if (!year) throw new ApiError("CONFLICT", { message: "Academic year no longer exists. Reload and try again." });
+            }
+          }
+          return op(...args);
+        });
+      };
+    },
+  });
+}
+
 export function guardDb(db: Db): Db {
   const guarded = new Proxy(db, {
     get(target, prop) {
@@ -508,9 +617,9 @@ export function guardDb(db: Db): Db {
       }
       return (name: string, ...rest: unknown[]) => {
         const raw = businessCollection(
-          target.collection(name, ...(rest as [])),
+          sessionCollection(target.collection(name, ...(rest as []))),
         );
-        return EXEMPT.has(name) ? raw : guardCollection(raw, name);
+        return integrityCollection(EXEMPT.has(name) ? raw : guardCollection(raw, name), name, guarded);
       };
     },
   });

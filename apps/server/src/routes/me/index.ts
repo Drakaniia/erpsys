@@ -11,6 +11,7 @@ import { catchAsync } from "../../middleware/catchAsync.js";
 import { okList, okOne, parseBody } from "../../middleware/http.js";
 
 import { UserModel } from "../../models/UserModel.js";
+import { attachStamp } from "../../services/storage.js";
 import {
   launch,
   listNotifications,
@@ -30,6 +31,7 @@ const stampBody = z.object({
   name: z.string().max(80).optional(),
   graphicUrl: z.string().url().max(1000).nullable().optional(),
   signatureUrl: z.string().url().max(1000).nullable().optional(),
+  signatureUploadId: z.string().min(1).optional(),
 });
 
 /**
@@ -81,7 +83,7 @@ meRouter.get(
  * `PATCH /api/v1/me/stamp`
  * Access: session + officer surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
- * Use: save it — body `{ name?, graphicUrl?, signatureUrl? }`.
+ * Use: save it — body `{ name?, graphicUrl?, signatureUrl?, signatureUploadId? }`.
  * Returns: `{ data: stamp }`.
  */
 meRouter.patch(
@@ -90,6 +92,9 @@ meRouter.patch(
   catchAsync(async (req, res) => {
     const userId = sessionUser(req).id;
     const input = parseBody(stampBody, req);
+    if (input.signatureUploadId) {
+      await attachStamp(sessionUser(req), input.signatureUploadId);
+    }
     const patch: Record<string, string | null> = {};
     if (input.name !== undefined) patch["stampName"] = input.name;
     if (input.graphicUrl !== undefined) {
@@ -97,6 +102,9 @@ meRouter.patch(
     }
     if (input.signatureUrl !== undefined) {
       patch["stampSignatureUrl"] = input.signatureUrl;
+    }
+    if (input.signatureUploadId) {
+      patch["stampSignatureUploadId"] = input.signatureUploadId;
     }
     if (
       Object.keys(patch).length > 0 &&

@@ -10,6 +10,31 @@ const ix = (
 
 const INDEXES: [CollectionName, IndexDescription[]][] = [
   [
+    COLLECTIONS.studentEnrollment,
+    [
+      ix(
+        "uq_student_enrollment_profile_year",
+        { studentProfileId: 1, academicYearId: 1 },
+        { unique: true },
+      ),
+      ix("idx_student_enrollment_year_department_level", {
+        academicYearId: 1,
+        departmentId: 1,
+        yearLevel: 1,
+      }),
+    ],
+  ],
+  [
+    COLLECTIONS.academicYear,
+    [
+      ix(
+        "uq_academic_year_active",
+        { isActive: 1 },
+        { unique: true, partialFilterExpression: { isActive: true } },
+      ),
+    ],
+  ],
+  [
     COLLECTIONS.enrollmentQueue,
     [
       ix(
@@ -34,6 +59,13 @@ const INDEXES: [CollectionName, IndexDescription[]][] = [
         joinedAt: 1,
       }),
       ix("idx_enrollment_queue_served_by_status", { servedById: 1, status: 1 }),
+      ix("idx_enrollment_queue_completed_cursor", {
+        departmentId: 1,
+        academicYearId: 1,
+        status: 1,
+        completedAt: -1,
+        _id: 1,
+      }),
     ],
   ],
   [
@@ -123,6 +155,22 @@ const INDEXES: [CollectionName, IndexDescription[]][] = [
   [
     COLLECTIONS.stepVerification,
     [
+      ix(
+        "uq_step_verification_profile_year_step",
+        { studentProfileId: 1, academicYearId: 1, stepId: 1 },
+        { unique: true },
+      ),
+
+      ix("idx_step_verification_year_status_verified", {
+        academicYearId: 1,
+        status: 1,
+        verifiedAt: -1,
+      }),
+      ix("idx_step_verification_year_status_responded", {
+        academicYearId: 1,
+        status: 1,
+        respondedAt: -1,
+      }),
       ix("idx_step_verification_student_year", {
         studentProfileId: 1,
         academicYearId: 1,
@@ -165,6 +213,10 @@ const INDEXES: [CollectionName, IndexDescription[]][] = [
         { r2Status: 1, sessionExpiresAt: 1 },
         { partialFilterExpression: { r2Status: { $exists: true } } },
       ),
+      ix("idx_upload_pending_deletion", {
+        filePurgedAt: 1,
+        deletionRequestedAt: 1,
+      }),
     ],
   ],
   [
@@ -249,8 +301,14 @@ export async function ensureIndexes(): Promise<void> {
         }),
       );
     } catch (error) {
-      console.error(`[indexes] ${name}: ${(error as Error).message}`);
+      console.error(
+        `[indexes] ${name}: ${(error as Error).message}. Required unique keys must be installed before serving requests; inspect duplicate logical keys and resolve manually without deleting retained data.`,
+      );
       if (
+        name === COLLECTIONS.academicYear ||
+        name === COLLECTIONS.studentEnrollment ||
+        name === COLLECTIONS.stepVerification ||
+        name === COLLECTIONS.enrollmentQueue ||
         name === COLLECTIONS.user ||
         name === COLLECTIONS.department ||
         name === COLLECTIONS.content ||
