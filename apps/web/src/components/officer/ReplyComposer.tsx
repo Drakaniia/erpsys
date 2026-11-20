@@ -5,12 +5,14 @@ export default function ReplyComposer({
   open,
   chips,
   busy,
+  editingBlocked = false,
   onsend,
   oncancel,
 }: {
   open: boolean;
   chips: string[];
   busy: boolean;
+  editingBlocked?: boolean;
   onsend: (chips: string[], note: string) => void;
   oncancel: () => void;
 }) {
@@ -53,6 +55,7 @@ export default function ReplyComposer({
                   : "border-border text-muted hover:text-ink"
               }`}
               onClick={() => toggle(chip)}
+              disabled={editingBlocked}
             >
               {chip}
             </button>
@@ -64,6 +67,7 @@ export default function ReplyComposer({
       </label>
       <textarea
         id="reply-note"
+        disabled={editingBlocked}
         value={note}
         onChange={(e) => setNote(e.currentTarget.value)}
         rows={3}
@@ -84,7 +88,7 @@ export default function ReplyComposer({
           type="button"
           className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => onsend(selected, note.trim())}
-          disabled={busy || !canSend}
+          disabled={busy || editingBlocked || !canSend}
         >
           {busy ? "Sending…" : "Send"}
         </button>

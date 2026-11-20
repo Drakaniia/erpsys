@@ -10,6 +10,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { api, queryClient } from "$lib/api";
 import DepartmentManager from "./DepartmentManager";
+
 vi.mock("$lib/auth-client", () => ({
   authClient: {
     useSession: () => ({
@@ -21,6 +22,8 @@ let writes: { url: string; body: Record<string, unknown> }[];
 beforeEach(() => {
   writes = [];
   queryClient.clear();
+  vi.spyOn(api.presence.touch, "call").mockResolvedValue([]);
+  vi.spyOn(api.presence.leave, "call").mockResolvedValue({});
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: unknown, init?: RequestInit) => {
@@ -121,6 +124,7 @@ it.each([true, false])(
     await screen.findByRole("button", { name: "Unassign" });
     if (assigned) {
       fireEvent.click(screen.getByRole("button", { name: "Assign" }));
+      await waitFor(() => expect(screen.getByRole("checkbox", { name: "1st Year" })).toBeEnabled());
       fireEvent.click(screen.getByRole("checkbox", { name: "1st Year" }));
       fireEvent.click(
         within(screen.getByRole("dialog")).getByRole("button", {
@@ -239,6 +243,7 @@ it("lets an instructor request held levels without exposing another department's
   fireEvent.click(
     await screen.findByRole("button", { name: "Request transfer" }),
   );
+  await waitFor(() => expect(screen.getByRole("checkbox", { name: "1st Year" })).toBeEnabled());
   fireEvent.click(screen.getByRole("checkbox", { name: "1st Year" }));
   fireEvent.click(
     within(screen.getByRole("dialog")).getByRole("button", {

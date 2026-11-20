@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 
 import { queryClient } from "$lib/api";
 import { notify } from "$lib/notifications";
@@ -45,6 +46,7 @@ export default function IntegrationCredentialsEditor({
   const reset = useResetCredentials();
   const validate = useValidateCredentials();
   const errorId = useId();
+  const lock = useEditingLock(row.key);
 
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState<{
@@ -166,6 +168,7 @@ export default function IntegrationCredentialsEditor({
 
   return (
     <div className="flex flex-col gap-4 pt-3">
+      <ActiveEditors resource="integration" scope={row.key} onBlockedChange={lock.onBlockedChange}>
       {unreadable && (
         <p
           role="status"
@@ -314,11 +317,12 @@ export default function IntegrationCredentialsEditor({
         </p>
       ) : null}
 
+      </ActiveEditors>
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={runValidation}
-          disabled={!dirty || validate.isPending}
+          disabled={lock.blocked || !dirty || validate.isPending}
           aria-busy={validate.isPending ? "true" : undefined}
           className={SECONDARY}
         >
@@ -327,7 +331,7 @@ export default function IntegrationCredentialsEditor({
         <button
           type="button"
           onClick={submit}
-          disabled={!dirty || !validated || save.isPending}
+          disabled={lock.blocked || !dirty || !validated || save.isPending}
           aria-busy={save.isPending ? "true" : undefined}
           className={PRIMARY}
         >
@@ -344,7 +348,7 @@ export default function IntegrationCredentialsEditor({
         <button
           type="button"
           onClick={resetToEnv}
-          disabled={reset.isPending}
+          disabled={lock.blocked || reset.isPending}
           className={SECONDARY}
         >
           Reset to .env
@@ -353,6 +357,7 @@ export default function IntegrationCredentialsEditor({
         {status === 422 || (error && status !== 409 && status !== 429) ? (
           <button
             type="button"
+            disabled={lock.blocked}
             onClick={() => save.mutate(sent ?? payload)}
             className={SECONDARY}
           >

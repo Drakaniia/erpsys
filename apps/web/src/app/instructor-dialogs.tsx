@@ -74,6 +74,9 @@ export default function InstructorDialogs({
       />
       <RevertConfirmDialog
         open={s.enrolled.revertEntry !== null}
+        enrollmentIds={
+          s.enrolled.revertEntry ? [s.enrolled.revertEntry.enrollmentId] : []
+        }
         student={
           s.enrolled.revertEntry
             ? {
@@ -91,6 +94,7 @@ export default function InstructorDialogs({
       />
       <RevertConfirmDialog
         open={s.enrolled.bulkConfirmOpen}
+        enrollmentIds={[...s.enrolled.selectedIds]}
         count={s.enrolled.selectedCount}
         departmentName={s.queue.activeDept?.name ?? ""}
         busy={s.enrolled.bulkRevertMutation.isPending}
@@ -99,6 +103,7 @@ export default function InstructorDialogs({
       />
       <TransferRequestDialog
         open={incomingTransferRequest !== null}
+        requestId={incomingTransferRequest?.id}
         requesterName={incomingTransferRequest?.requesterName ?? ""}
         departmentCode={incomingTransferRequest?.departmentCode ?? ""}
         departmentName={incomingTransferRequest?.departmentName ?? ""}

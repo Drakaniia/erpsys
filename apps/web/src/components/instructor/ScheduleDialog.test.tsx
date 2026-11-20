@@ -9,6 +9,11 @@ import {
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "$lib/api";
 import ScheduleDialog from "./ScheduleDialog";
+const activeEditors = vi.hoisted(() => vi.fn(({ children }: { children?: import("react").ReactNode }) => children ?? null));
+vi.mock("../ActiveEditors", () => ({
+  default: activeEditors,
+  useEditingLock: () => ({ blocked: false, onBlockedChange: () => {} }),
+}));
 
 const DEPARTMENT = { id: "dept-1", name: "College of Technologies" };
 const WEEKLY = { kind: "WEEKLY", weekday: 1, startMinute: 540, endMinute: 720 };
@@ -93,6 +98,12 @@ function open(onclose = vi.fn()) {
 describe("ScheduleDialog", () => {
   it("loads the posted hours into editable rows", async () => {
     open();
+    expect(activeEditors.mock.lastCall?.[0]).toMatchObject({
+      resource: "schedule",
+      scope: "dept-1",
+      enabled: true,
+    });
+    expect(activeEditors.mock.lastCall?.[0]).not.toHaveProperty("id");
     await waitFor(() =>
       expect((screen.getByLabelText("Start") as HTMLInputElement).value).toBe(
         "09:00",

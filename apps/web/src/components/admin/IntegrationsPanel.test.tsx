@@ -7,6 +7,11 @@ import { Toaster, toast } from "sonner";
 import { queryClient } from "$lib/api";
 import IntegrationsPanel from "./IntegrationsPanel";
 
+vi.mock("../ActiveEditors", () => ({
+  default: ({ children }: { children?: import("react").ReactNode }) => children ?? null,
+  useEditingLock: () => ({ blocked: false, onBlockedChange: () => {} }),
+}));
+
 /**
  * The master list, the detail pane, the optimistic flip, the 5-second undo and
  * the Turnstile warning. `fetch` answers the one GET and every PATCH; the

@@ -7,6 +7,11 @@ import IntegrationCredentialsEditor from "./IntegrationCredentialsEditor";
 import type { AdminIntegrationRow } from "$lib/integrations/use-integrations";
 import { notify } from "$lib/notifications";
 
+vi.mock("../ActiveEditors", () => ({
+  default: ({ children }: { children?: import("react").ReactNode }) => children ?? null,
+  useEditingLock: () => ({ blocked: false, onBlockedChange: () => {} }),
+}));
+
 vi.mock("$lib/notifications", () => ({
   notify: { success: vi.fn(), error: vi.fn() },
 }));

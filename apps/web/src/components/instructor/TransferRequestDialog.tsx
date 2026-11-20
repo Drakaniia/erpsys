@@ -5,9 +5,11 @@ import {
 } from "$lib/domain/constants";
 import { dialogTrap } from "$lib/ui/dialog-trap";
 import { usePresence } from "$lib/ui/use-presence";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 
 export default function TransferRequestDialog({
   open,
+  requestId,
   requesterName,
   departmentCode,
   departmentName,
@@ -18,6 +20,7 @@ export default function TransferRequestDialog({
   ondecline,
 }: {
   open: boolean;
+  requestId?: string;
   requesterName: string;
   departmentCode: string;
   departmentName: string;
@@ -27,6 +30,7 @@ export default function TransferRequestDialog({
   onaccept: () => void;
   ondecline: () => void;
 }) {
+  const lock = useEditingLock(open ? requestId : null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const presence = usePresence(open, {
     fade: true,
@@ -76,6 +80,13 @@ export default function TransferRequestDialog({
         >
           Transfer request
         </h2>
+        <ActiveEditors
+          resource="transfer"
+          id={requestId}
+          enabled={open && Boolean(requestId)}
+          onBlockedChange={lock.onBlockedChange}
+          className="mt-3"
+        />
         <p className="mt-1 text-sm text-muted">
           <span className="font-medium text-ink">{requesterName}</span> wants to
           take over <span className="font-medium text-ink">{scopeLabel}</span>{" "}
@@ -97,7 +108,7 @@ export default function TransferRequestDialog({
           <button
             type="button"
             onClick={ondecline}
-            disabled={busy}
+            disabled={lock.blocked || busy}
             className="rounded-lg px-3 py-1.5 text-sm text-muted transition-[transform,background-color] duration-100 ease-out hover:text-ink active:scale-[0.97] disabled:opacity-50"
           >
             Decline
@@ -105,7 +116,7 @@ export default function TransferRequestDialog({
           <button
             type="button"
             onClick={onaccept}
-            disabled={busy}
+            disabled={lock.blocked || busy}
             className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
           >
             {busy ? "Working…" : "Accept transfer"}

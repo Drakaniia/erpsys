@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ConfirmDialog from "../ConfirmDialog";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import AppleSwitch from "../ui/AppleSwitch";
 import { api, queryClient } from "$lib/api";
 import type { RequirementItem } from "$lib/admin/types";
@@ -53,6 +54,7 @@ export default function RequirementList({
   }
 
   async function submitAdd() {
+    if (addLock.blocked) return;
     if (!newLabel.trim()) {
       setAddError("Enter a requirement label.");
       return;
@@ -70,6 +72,8 @@ export default function RequirementList({
   }
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const editLock = useEditingLock(editingId);
+  const addLock = useEditingLock(adding);
   const presence = useEditTimestamp(
     "requirement",
     editingId,
@@ -83,6 +87,7 @@ export default function RequirementList({
   }
 
   async function commitEdit() {
+    if (editLock.blocked) return;
     if (!editingId) return;
     const label = editLabel.trim();
     const id = editingId;
@@ -182,6 +187,9 @@ export default function RequirementList({
         </div>
       )}
 
+      {editingId && <ActiveEditors resource="requirement" id={editingId} onBlockedChange={editLock.onBlockedChange} />}
+      {adding && <ActiveEditors resource="requirement" onBlockedChange={addLock.onBlockedChange} />}
+
       <div className="overflow-hidden rounded-xl border border-border bg-surface-raised">
         {listQuery.isPending ? (
           <div className="divide-y divide-border" aria-hidden="true">
@@ -261,7 +269,9 @@ export default function RequirementList({
                 </div>
 
                 {editingId === item.id ? (
+                  <>
                   <input
+                    disabled={editLock.blocked}
                     value={editLabel}
                     onChange={(e) => setEditLabel(e.currentTarget.value)}
                     aria-label="Requirement label"
@@ -272,6 +282,8 @@ export default function RequirementList({
                       if (e.key === "Escape") setEditingId(null);
                     }}
                   />
+                  <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => setEditingId(null)} className="text-xs text-muted">Cancel</button>
+                  </>
                 ) : (
                   <button
                     type="button"
@@ -319,6 +331,7 @@ export default function RequirementList({
         {adding && (
           <div className="flex items-center gap-2 border-t border-border bg-surface px-4 py-3">
             <input
+              disabled={addLock.blocked}
               value={newLabel}
               onChange={(e) => setNewLabel(e.currentTarget.value)}
               aria-label="New requirement label"
@@ -335,7 +348,7 @@ export default function RequirementList({
             )}
             <button
               onClick={submitAdd}
-              disabled={addMutation.isPending}
+              disabled={addLock.blocked || addMutation.isPending}
               className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
             >
               Add

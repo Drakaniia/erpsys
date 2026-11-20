@@ -13,6 +13,7 @@ import type {
   TransferRequestItem,
 } from "$lib/instructor/types";
 import ConfirmDialog from "../ConfirmDialog";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import { LAUNCH_STALE_MS } from "$lib/perf/cache-policy";
 import YearLevelModal from "../YearLevelModal";
 import AssignDepartmentModal from "./AssignDepartmentModal";
@@ -210,6 +211,9 @@ export default function DepartmentManager({
     null,
   );
   const [editingId, setEditingId] = useState<string | null>(null);
+  const editLock = useEditingLock(editingId);
+  const createLock = useEditingLock("department-create");
+  const deleteLock = useEditingLock(deletingDept?.id ?? null);
   const presence = useEditTimestamp(
     "department",
     editingId,
@@ -339,6 +343,7 @@ export default function DepartmentManager({
   }
 
   async function handleCreate() {
+    if (createLock.blocked || createDeptMutation.isPending) return;
     setCreateError(null);
     if (!newName.trim()) {
       setCreateError("Name is required.");
@@ -363,7 +368,7 @@ export default function DepartmentManager({
   }
 
   async function confirmDelete() {
-    if (!deletingDept) return;
+    if (!deletingDept || deleteLock.blocked || deleteMutation.isPending) return;
     try {
       await deleteMutation.mutateAsync({ id: deletingDept.id });
       ontoast(`Deleted ${deletingDept.code}`);
@@ -379,7 +384,7 @@ export default function DepartmentManager({
   }
 
   async function handleUpdate() {
-    if (!editingId) return;
+    if (!editingId || editLock.blocked || updateMutation.isPending) return;
     setEditError(null);
     if (!editName.trim()) {
       setEditError("Name is required.");
@@ -453,6 +458,7 @@ export default function DepartmentManager({
                 return (
                   <li key={item.id} className="px-4 py-3">
                     <div className="flex flex-col gap-2">
+                      <ActiveEditors resource="department" id={item.id} onBlockedChange={editLock.onBlockedChange}>
                       <div className="flex flex-wrap items-center gap-2">
                         <label className="flex items-center gap-1.5 text-xs text-muted">
                           Name
@@ -470,11 +476,12 @@ export default function DepartmentManager({
                       {editError && (
                         <p className="text-xs text-error">{editError}</p>
                       )}
+                      </ActiveEditors>
                       <div className="flex gap-2">
                         <button
                           onClick={handleUpdate}
                           disabled={
-                            updateMutation.isPending ||
+                            editLock.blocked || updateMutation.isPending ||
                             !editName.trim() ||
                             editName.trim() === item.name
                           }
@@ -658,6 +665,7 @@ export default function DepartmentManager({
         </div>
       ) : null}
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-raised px-4 py-3">
+        <ActiveEditors resource="department" onBlockedChange={createLock.onBlockedChange}>
         <div className="flex flex-wrap items-center gap-2">
           <input
             value={newName}
@@ -669,13 +677,14 @@ export default function DepartmentManager({
           />
           <button
             onClick={handleCreate}
-            disabled={createDeptMutation.isPending || !newName.trim()}
+            disabled={createLock.blocked || createDeptMutation.isPending || !newName.trim()}
             className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
           >
             Create department
           </button>
         </div>
         {createError && <p className="text-xs text-error">{createError}</p>}
+        </ActiveEditors>
       </div>
       <AssignDepartmentModal
         open={assigningFor !== null && assignmentConfirm === null}
@@ -726,12 +735,16 @@ export default function DepartmentManager({
         title="Delete department"
         body={
           deletingDept
-            ? `Delete ${deletingDept.name} (${deletingDept.code})? This cannot be undone.`
+            ? <>
+                <p>Delete {deletingDept.name} ({deletingDept.code})? This cannot be undone.</p>
+                <ActiveEditors resource="department" id={deletingDept.id} enabled={deletingDept !== null} onBlockedChange={deleteLock.onBlockedChange} />
+              </>
             : ""
         }
         confirmLabel="Delete"
         destructive
         busy={deleteMutation.isPending}
+        confirmDisabled={deleteLock.blocked}
         onconfirm={confirmDelete}
         onclose={() => setDeletingDept(null)}
       />

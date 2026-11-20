@@ -7,6 +7,11 @@ import { queryClient } from "$lib/api";
 import IntegrationsPanel from "./IntegrationsPanel";
 import type { AdminIntegrationRow } from "$lib/integrations/use-integrations";
 
+vi.mock("../ActiveEditors", () => ({
+  default: ({ children }: { children?: import("react").ReactNode }) => children ?? null,
+  useEditingLock: () => ({ blocked: false, onBlockedChange: () => {} }),
+}));
+
 beforeAll(() => {
   // The disclosure measures its content and jsdom ships no observer.
   vi.stubGlobal(

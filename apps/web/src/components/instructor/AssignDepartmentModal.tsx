@@ -8,6 +8,7 @@ import {
 import { dialogTrap } from "$lib/ui/dialog-trap";
 import { usePresence } from "$lib/ui/use-presence";
 import YearLevelChips from "../YearLevelChips";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import {
   resolveAssignScope,
   takenYearLevels,
@@ -40,6 +41,7 @@ export default function AssignDepartmentModal({
   onsubmit: (scope: YearLevel[]) => void | Promise<void>;
   onclose: () => void;
 }) {
+  const lock = useEditingLock(open ? `${mode}:${department?.id}:${myAdviserId}` : null);
   const [selected, setSelected] = useState<YearLevel[]>([]);
   const seededFor = useRef<string | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -141,6 +143,14 @@ export default function AssignDepartmentModal({
             ? "Choose levels held by one enrollment officer. They can accept or decline; unanswered requests transfer automatically."
             : "Switching departments closes your previous queue. Changing levels returns any student you are serving to the line."}
         </p>
+        <ActiveEditors
+          resource={mode === "transfer" ? "transfer" : "adviser"}
+          id={mode === "transfer" ? undefined : (myAdviserId ?? undefined)}
+          scope={mode === "transfer" ? department.id : undefined}
+          enabled={open && (mode === "transfer" || Boolean(myAdviserId))}
+          className="mt-3"
+          onBlockedChange={lock.onBlockedChange}
+        >
         <div className="mt-4">
           <YearLevelChips
             selected={selected}
@@ -152,6 +162,7 @@ export default function AssignDepartmentModal({
             onchange={(levels) => setSelected(levels)}
           />
         </div>
+        </ActiveEditors>
         <div className="mt-5 flex justify-end gap-2">
           <button
             type="button"
@@ -165,7 +176,7 @@ export default function AssignDepartmentModal({
             type="button"
             onClick={() => onsubmit(selected)}
             disabled={
-              busy ||
+              lock.blocked || busy ||
               selected.length === 0 ||
               (mode === "edit" &&
                 JSON.stringify(normalizeYearLevels(selected)) ===

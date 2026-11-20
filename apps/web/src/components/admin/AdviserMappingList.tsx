@@ -1,4 +1,5 @@
 import ConfirmDialog from "../ConfirmDialog";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 
 import YearLevelChips from "../YearLevelChips";
 import { initials } from "$lib/officer/format";
@@ -32,6 +33,7 @@ export default function AdviserMappingList({
     confirmClear,
     savePending,
   } = useAdviserMapping({ ontoast, registerrefresh });
+  const lock = useEditingLock(editingId);
 
   return (
     <div className="flex flex-col gap-4">
@@ -141,6 +143,7 @@ export default function AdviserMappingList({
                 <li key={adviser.id} className="px-4 py-3">
                   {editingId === adviser.id ? (
                     <div className="flex flex-col gap-3">
+                      <ActiveEditors resource="adviser" id={adviser.id} onBlockedChange={lock.onBlockedChange}>
                       <div className="flex items-center gap-3">
                         <span
                           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
@@ -226,10 +229,11 @@ export default function AdviserMappingList({
                           })}
                         </div>
                       )}
+                      </ActiveEditors>
                       <div className="flex gap-2">
                         <button
                           onClick={saveEditor}
-                          disabled={savePending}
+                          disabled={lock.blocked || savePending}
                           className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
                         >
                           Save

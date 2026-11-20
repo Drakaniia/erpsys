@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ConfirmDialog from "../ConfirmDialog";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import {
   useAuthenticators,
   useResetAuthenticator,
@@ -20,6 +21,8 @@ export default function AuthenticatorSection() {
     null,
   );
 
+  const lock = useEditingLock(resetTarget?.userId);
+
   function closeReset() {
     if (reset.isPending) return;
     setResetTarget(null);
@@ -38,7 +41,9 @@ export default function AuthenticatorSection() {
       <p className="text-sm font-medium text-ink">Authenticator</p>
       <p className="mt-1 text-xs text-muted">
         Google or Microsoft Authenticator, asked for at the end of every admin
-        unlock. Reset it when an admin loses their phone.
+        unlock. Reset it when an admin loses their phone. Resetting your own
+        authenticator uses the PIN, your password if set, and an emailed code—not
+        the lost device.
       </p>
 
       {query.error ? (
@@ -86,6 +91,7 @@ export default function AuthenticatorSection() {
           title="Reset authenticator?"
           body={
             <>
+              <ActiveEditors resource="user" id={resetTarget.userId} className="mb-3 block" onBlockedChange={lock.onBlockedChange} />
               Reset the authenticator for{" "}
               {resetTarget.name || resetTarget.email}? They will set up a new
               one at their next unlock.
@@ -99,6 +105,7 @@ export default function AuthenticatorSection() {
           confirmLabel="Reset authenticator"
           destructive
           busy={reset.isPending}
+          confirmDisabled={lock.blocked}
           onconfirm={confirmReset}
           onclose={closeReset}
         />

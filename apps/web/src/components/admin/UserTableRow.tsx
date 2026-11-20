@@ -85,13 +85,23 @@ export default function UserTableRow({
           <span className="inline-flex items-center justify-end gap-2">
             <button
               type="button"
+              onClick={() => admin.setReactivateTarget(item)}
+              disabled={admin.busy}
+              className="rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Reactivate account
+            </button>
+            <button
+              type="button"
               onClick={() => admin.setPurgeTarget(item)}
+              disabled={item.id === myId}
+              title={item.id === myId ? "You cannot delete yourself." : undefined}
               className="rounded-md px-2 py-1 text-xs font-medium text-error transition-[transform,background-color] duration-100 ease-out hover:bg-error/10 active:scale-[0.97]"
             >
               Delete permanently
             </button>
           </span>
-        ) : item.role !== "ADMIN" ? (
+        ) : (
           <span className="inline-flex items-center justify-end gap-2">
             {lever &&
               (item.role === "STUDENT" ? (
@@ -115,7 +125,7 @@ export default function UserTableRow({
                   Demote
                 </button>
               ))}
-            <button
+            {item.role !== "ADMIN" && <button
               type="button"
               onClick={() => admin.askSingle(item, "ADMIN")}
               disabled={!item.emailVerified}
@@ -123,16 +133,18 @@ export default function UserTableRow({
               className="rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Promote to admin
-            </button>
+            </button>}
             <button
               type="button"
               onClick={() => admin.askDelete(item)}
+              disabled={item.id === myId}
+              title={item.id === myId ? "You cannot delete yourself." : undefined}
               className="rounded-md px-2 py-1 text-xs font-medium text-error/80 transition-[transform,background-color] duration-100 ease-out hover:bg-error/10 hover:text-error active:scale-[0.97]"
             >
               Delete
             </button>
           </span>
-        ) : null}
+        )}
       </td>
     </tr>
   );

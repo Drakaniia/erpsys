@@ -17,6 +17,7 @@ export default function FormPreviewFullscreen({
   src,
   reloadKey,
   onedit,
+  editDisabled = false,
   onclose,
 }: {
   open: boolean;
@@ -24,6 +25,7 @@ export default function FormPreviewFullscreen({
   src: string;
   reloadKey: number;
   onedit: () => void;
+  editDisabled?: boolean;
   onclose: () => void;
 }) {
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -60,6 +62,7 @@ export default function FormPreviewFullscreen({
         <button
           type="button"
           onClick={onedit}
+          disabled={editDisabled}
           className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/90"
         >
           Edit questions

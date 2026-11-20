@@ -5,6 +5,7 @@ import { dialogTrap } from "$lib/ui/dialog-trap";
 import { api } from "$lib/api";
 import type { AcademicYearItem } from "$lib/admin/types";
 import SkeletonText from "../ui/SkeletonText";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 
 export default function ActivateYearDialog({
   year,
@@ -17,6 +18,7 @@ export default function ActivateYearDialog({
   onactivated: () => void;
   onclose: () => void;
 }) {
+  const lock = useEditingLock(year?.id);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const presence = useEditTimestamp("academic-year", year?.id, year);
 
@@ -88,6 +90,8 @@ export default function ActivateYearDialog({
           Activate {year.label} · {year.semesterLabel}?
         </h2>
 
+        <ActiveEditors resource="academic-year" id={year.id} className="mt-3" onBlockedChange={lock.onBlockedChange} />
+
         <div className="mt-3 space-y-2 rounded-xl border border-border bg-surface p-4">
           {previewQuery.isPending ? (
             <SkeletonText lines={3} />
@@ -137,7 +141,7 @@ export default function ActivateYearDialog({
             type="button"
             onClick={confirmActivate}
             disabled={
-              activateMutation.isPending ||
+              lock.blocked || activateMutation.isPending ||
               previewQuery.isPending ||
               activationBlocked
             }

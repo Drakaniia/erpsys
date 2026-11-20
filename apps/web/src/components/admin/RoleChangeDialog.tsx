@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { dialogTrap } from "$lib/ui/dialog-trap";
 
 export default function RoleChangeDialog({
@@ -7,6 +7,8 @@ export default function RoleChangeDialog({
   names,
   excludedCount = 0,
   busy = false,
+  confirmDisabled = false,
+  children,
   onconfirm,
   onclose,
 }: {
@@ -15,6 +17,8 @@ export default function RoleChangeDialog({
   names: string[];
   excludedCount?: number;
   busy?: boolean;
+  confirmDisabled?: boolean;
+  children?: ReactNode;
   onconfirm: () => void;
   onclose: () => void;
 }) {
@@ -80,6 +84,7 @@ export default function RoleChangeDialog({
             non-lever roles).
           </p>
         )}
+        {children}
         <div className="mt-4 flex justify-end gap-2">
           <button
             type="button"
@@ -92,7 +97,7 @@ export default function RoleChangeDialog({
           <button
             type="button"
             onClick={onconfirm}
-            disabled={busy}
+            disabled={busy || confirmDisabled}
             className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
           >
             {busy ? "Working…" : role === "ADMIN" ? "Promote to admin" : role === "SBO_OFFICER" ? "Promote" : "Demote"}

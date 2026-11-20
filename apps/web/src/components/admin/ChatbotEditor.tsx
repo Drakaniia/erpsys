@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ConfirmDialog from "../ConfirmDialog";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import { renderMarkdown } from "$lib/chat/markdown";
 import { api, queryClient } from "$lib/api";
 import { relativeTime } from "$lib/officer/format";
@@ -32,6 +33,7 @@ export default function ChatbotEditor({
   // ---- Editor state ----
   const [draft, setDraft] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const lock = useEditingLock(loaded);
   const [savedContent, setSavedContent] = useState("");
 
   useEffect(() => {
@@ -133,7 +135,7 @@ export default function ChatbotEditor({
         </div>
         <button
           onClick={save}
-          disabled={!loaded || !dirty || saveMutation.isPending}
+          disabled={lock.blocked || !loaded || !dirty || saveMutation.isPending}
           className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-40"
         >
           {saveMutation.isPending
@@ -158,7 +160,9 @@ export default function ChatbotEditor({
         </div>
       )}
 
-      <KnowledgeEditor value={draft} onChange={setDraft} disabled={!loaded} />
+      <ActiveEditors resource="chatbot-knowledge" enabled={loaded} onBlockedChange={lock.onBlockedChange}>
+        <KnowledgeEditor value={draft} onChange={setDraft} disabled={lock.blocked || !loaded} />
+      </ActiveEditors>
 
       <ConfirmDialog
         open={leaving}

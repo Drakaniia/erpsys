@@ -9,6 +9,7 @@ import { ROUTES, type ClientRoute } from "./api-routes";
 import { CACHE_MAX_AGE_MS } from "./perf/cache-policy";
 import { requestStepUp, STEP_UP_REQUIRED } from "./auth/step-up";
 import { notify } from "./notifications";
+import { editLeaseHeader } from "./edit-leases";
 
 export const TS_ABORTED = "TS_ABORTED";
 
@@ -165,7 +166,10 @@ async function request(route: ClientRoute, input: unknown): Promise<unknown> {
       error.status === 403 &&
       (error.data as { code?: string } | undefined)?.code === STEP_UP_REQUIRED;
     if (!locked) throw error;
-    await requestStepUp();
+    await requestStepUp(
+      (error.data as { authenticatorReset?: boolean } | undefined)
+        ?.authenticatorReset === true,
+    );
     return send(route, input);
   }
 }
@@ -190,7 +194,11 @@ async function send(route: ClientRoute, input: unknown): Promise<unknown> {
   const response = await fetch(url, {
     method: def.method,
     credentials: "include",
-    headers: hasBody ? { "content-type": "application/json" } : undefined,
+    headers: def.method === "GET" ? undefined : {
+      ...(hasBody ? { "content-type": "application/json" } : {}),
+      ...(!path.startsWith("/api/v1/presence")
+        ? { "x-edit-leases": editLeaseHeader() } : {}),
+    },
     body: hasBody ? JSON.stringify(rest) : undefined,
   });
 

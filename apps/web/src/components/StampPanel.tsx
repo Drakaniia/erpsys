@@ -9,6 +9,7 @@ import {
 import { useStorageUpload } from "$lib/storage/use-storage-upload";
 import { useIntegrations } from "$lib/integrations/use-integrations";
 import { notify } from "$lib/notifications";
+import ActiveEditors, { useEditingLock } from "./ActiveEditors";
 
 export default function StampPanel({
   open,
@@ -30,6 +31,7 @@ export default function StampPanel({
     stampQuery.data,
   );
 
+  const { blocked, onBlockedChange } = useEditingLock(open && isOfficerSurface);
   const initialized = useRef(false);
   const [stampName, setStampName] = useState("");
   const [stampSignatureUrl, setStampSignatureUrl] = useState<string | null>(
@@ -59,7 +61,7 @@ export default function StampPanel({
   }, [open, stampQuery.data]);
 
   async function onFileSelected(file?: File) {
-    if (!file) return;
+    if (!file || blocked) return;
     const invalid = validateStorageFile(file, "stampImage");
     if (invalid) {
       setErrorMsg(invalid);
@@ -76,6 +78,7 @@ export default function StampPanel({
   }
 
   async function saveStamp() {
+    if (blocked || saving) return;
     setSaving(true);
     setErrorMsg("");
     try {
@@ -116,6 +119,7 @@ export default function StampPanel({
   return (
     <>
       <div className="space-y-3 px-3 py-2">
+
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-ink">My stamp</p>
           <button
@@ -126,6 +130,7 @@ export default function StampPanel({
           </button>
         </div>
 
+        <ActiveEditors resource="stamp" enabled={open && isOfficerSurface} onBlockedChange={onBlockedChange}>
         <div>
           <label
             htmlFor="stamp-name"
@@ -174,6 +179,8 @@ export default function StampPanel({
           ) : null}
         </div>
 
+        </ActiveEditors>
+
         {errorMsg ? (
           <p className="text-xs text-error" role="alert">
             {errorMsg}
@@ -190,7 +197,7 @@ export default function StampPanel({
           <button
             className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-transform duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
             onClick={() => void saveStamp()}
-            disabled={saving}
+            disabled={saving || blocked}
           >
             {saving ? "Saving…" : "Save"}
           </button>

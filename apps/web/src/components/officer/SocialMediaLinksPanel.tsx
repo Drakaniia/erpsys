@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useEditTimestamp } from "$lib/edit-timestamp";
 import type { SocialMediaLinkData } from "$lib/officer/types";
 import ConfirmDialog from "../ConfirmDialog";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import EmptyState from "../ui/EmptyState";
 import { SocialLinksSkeleton } from "./SkeletonRows";
 
@@ -32,6 +33,8 @@ export default function SocialMediaLinksPanel({
   const [urlError, setUrlError] = useState("");
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
+  const lockTarget = editingId ?? confirmRemoveId;
+  const { blocked, onBlockedChange } = useEditingLock(lockTarget);
   const items = data ?? [];
   const presence = useEditTimestamp(
     "social-link",
@@ -78,7 +81,7 @@ export default function SocialMediaLinksPanel({
   }
 
   async function submit() {
-    if (!validate(nameInput, urlInput)) return;
+    if (blocked || busy || !validate(nameInput, urlInput)) return;
     const saved = await onsave(
       nameInput.trim(),
       urlInput.trim(),
@@ -121,6 +124,11 @@ export default function SocialMediaLinksPanel({
         </div>
       ) : editingId !== null ? (
         <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface-raised p-6">
+          <ActiveEditors
+            resource="social-link"
+            id={editingId === "new" ? undefined : editingId}
+            onBlockedChange={onBlockedChange}
+          >
           <div className="flex flex-col gap-1">
             <label htmlFor="link-name" className="text-sm font-medium text-ink">
               Page name
@@ -178,10 +186,11 @@ export default function SocialMediaLinksPanel({
               </p>
             )}
           </div>
+          </ActiveEditors>
           <div className="flex gap-2">
             <button
               onClick={submit}
-              disabled={busy}
+              disabled={busy || blocked}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               {busy ? "Saving…" : "Save"}
@@ -293,6 +302,9 @@ export default function SocialMediaLinksPanel({
           </ul>
         </div>
       )}
+      {confirmRemoveId !== null && (
+        <ActiveEditors resource="social-link" id={confirmRemoveId} onBlockedChange={onBlockedChange} />
+      )}
       <ConfirmDialog
         open={confirmRemoveId !== null}
         title={
@@ -302,7 +314,9 @@ export default function SocialMediaLinksPanel({
         confirmLabel="Remove"
         destructive
         busy={busy}
+        confirmDisabled={blocked}
         onconfirm={() => {
+          if (blocked || busy) return;
           const id = confirmRemoveId;
           setConfirmRemoveId(null);
           if (id) onremove(id);

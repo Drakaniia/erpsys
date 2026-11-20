@@ -307,9 +307,10 @@ describe("backend operation budgets", () => {
       );
       expect(response.status).toBe(200);
       const budgets = {
-        assign: 13,
-        unassign: 10,
-        unchanged: 4,
+        // Editing ownership adds one marker lookup before a department assignment write.
+        assign: 14,
+        unassign: 11,
+        unchanged: 5,
         open: 9,
         close: 10,
       };

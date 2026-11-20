@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useEditTimestamp } from "$lib/edit-timestamp";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import ConfirmDialog from "../ConfirmDialog";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import YearLevelModal from "../YearLevelModal";
 import { api, queryClient } from "$lib/api";
 import {
@@ -82,6 +83,7 @@ export default function DepartmentTable({
   }
 
   async function submitAdd() {
+    if (addLock.blocked) return;
     if (!newName.trim()) {
       setAddError("Name is required.");
       return;
@@ -98,6 +100,8 @@ export default function DepartmentTable({
 
   // ---- Inline edit ----
   const [editingId, setEditingId] = useState<string | null>(null);
+  const editLock = useEditingLock(editingId);
+  const addLock = useEditingLock(adding);
   const presence = useEditTimestamp(
     "department",
     editingId,
@@ -118,6 +122,7 @@ export default function DepartmentTable({
   }
 
   async function submitEdit() {
+    if (editLock.blocked) return;
     if (!editingId) return;
     if (!editName.trim()) {
       setEditError("Name is required.");
@@ -207,6 +212,9 @@ export default function DepartmentTable({
         </div>
       )}
 
+      {editingId && <ActiveEditors resource="department" id={editingId} onBlockedChange={editLock.onBlockedChange} />}
+      {adding && <ActiveEditors resource="department" onBlockedChange={addLock.onBlockedChange} />}
+
       <div className="apple-scrollbar overflow-x-auto rounded-xl border border-border bg-surface-raised">
         <table className="w-full min-w-[640px] border-collapse text-sm">
           <thead>
@@ -263,6 +271,7 @@ export default function DepartmentTable({
                   <tr key={d.id} className="bg-surface">
                     <td className="px-4 py-2">
                       <input
+                        disabled={editLock.blocked}
                         value={editName}
                         onChange={(e) => setEditName(e.currentTarget.value)}
                         aria-label="Department name"
@@ -278,7 +287,7 @@ export default function DepartmentTable({
                         )}
                         <button
                           onClick={submitEdit}
-                          disabled={updateMutation.isPending}
+                          disabled={editLock.blocked || updateMutation.isPending}
                           className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
                         >
                           Save
@@ -355,6 +364,7 @@ export default function DepartmentTable({
         {adding && (
           <div className="flex flex-wrap items-center gap-2 border-t border-border bg-surface px-4 py-3">
             <input
+              disabled={addLock.blocked}
               value={newName}
               onChange={(e) => setNewName(e.currentTarget.value)}
               aria-label="New department name"
@@ -371,7 +381,7 @@ export default function DepartmentTable({
             )}
             <button
               onClick={submitAdd}
-              disabled={addMutation.isPending}
+              disabled={addLock.blocked || addMutation.isPending}
               className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-[transform,background-color] duration-100 ease-out active:scale-[0.97] disabled:opacity-50"
             >
               Add

@@ -37,6 +37,7 @@ function domainBadge(url: string): string {
 
 export default function DetailSheetBody({
   data,
+  editingBlocked = false,
   status,
   reply,
   stamp,
@@ -54,6 +55,7 @@ export default function DetailSheetBody({
   onreplysend,
 }: {
   data: StepDetailData;
+  editingBlocked?: boolean;
   status: StepStatus;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   reply: any;
@@ -324,6 +326,7 @@ export default function DetailSheetBody({
             {cameraOpen ? (
               <WebcamCapture
                 busy={captureBusy}
+                editingBlocked={editingBlocked}
                 onsave={oncapturesave}
                 oncancel={oncapturecancel}
               />
@@ -333,6 +336,7 @@ export default function DetailSheetBody({
                 className="press rounded-lg border border-border bg-surface px-3 py-2 text-sm text-ink hover:bg-surface-raised"
                 data-onboarding-tip="mugshot"
                 onClick={onshowcamera}
+                disabled={editingBlocked}
               >
                 Open camera
               </button>
@@ -346,6 +350,7 @@ export default function DetailSheetBody({
               open={true}
               chips={replyChips}
               busy={replyBusy}
+              editingBlocked={editingBlocked}
               onsend={onreplysend}
               oncancel={onreplyclose}
             />

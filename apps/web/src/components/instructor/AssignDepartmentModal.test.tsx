@@ -7,6 +7,11 @@ import {
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import AssignDepartmentModal from "./AssignDepartmentModal";
+const activeEditors = vi.hoisted(() => vi.fn(({ children }: { children?: import("react").ReactNode }) => children ?? null));
+vi.mock("../ActiveEditors", () => ({
+  default: activeEditors,
+  useEditingLock: () => ({ blocked: false, onBlockedChange: () => {} }),
+}));
 const department = {
   id: "d1",
   name: "Department",
@@ -37,6 +42,12 @@ it("disables unchanged level edits and blocks held levels", async () => {
         .getAttribute("aria-checked"),
     ).toBe("true"),
   );
+  expect(activeEditors.mock.lastCall?.[0]).toMatchObject({
+    resource: "adviser",
+    id: "me",
+    scope: undefined,
+    enabled: true,
+  });
   expect(
     (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
       .disabled,
@@ -65,4 +76,10 @@ it("requests only another instructor's levels without changing my own assignment
   fireEvent.click(screen.getByRole("checkbox", { name: "2nd Year" }));
   fireEvent.click(screen.getByRole("button", { name: "Request transfer" }));
   expect(submit).toHaveBeenCalledWith(["SECOND"]);
+  expect(activeEditors.mock.lastCall?.[0]).toMatchObject({
+    resource: "transfer",
+    scope: "d1",
+    id: undefined,
+    enabled: true,
+  });
 });

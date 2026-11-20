@@ -101,8 +101,12 @@ export default function UserTable({
     (i) => i.role === "SBO_OFFICER",
   );
 
+  const sessionQuery = authClient.useSession();
+  const myId =
+    (sessionQuery.data?.user as { id?: string } | undefined)?.id ?? "";
+
   const selectedDeletable = selectedItems.filter(
-    (i) => !i.blocked && i.role !== "ADMIN",
+    (i) => !i.blocked && i.id !== myId,
   );
 
   const admin = useUserAdmin({
@@ -119,10 +123,6 @@ export default function UserTable({
       }),
     ontoast,
   });
-
-  const sessionQuery = authClient.useSession();
-  const myId =
-    (sessionQuery.data?.user as { id?: string } | undefined)?.id ?? "";
 
   return (
     <div className="flex flex-col gap-4">
@@ -230,6 +230,9 @@ export default function UserTable({
         roleDialog={admin.roleDialog}
         deleteDialog={admin.deleteDialog}
         purgeTarget={admin.purgeTarget}
+        reactivateTarget={admin.reactivateTarget}
+        onConfirmReactivate={admin.confirmReactivate}
+        onCloseReactivate={admin.closeReactivate}
         busy={admin.busy}
         selectedPromotableCount={admin.selectedPromotableCount}
         selectedDemotableCount={admin.selectedDemotableCount}

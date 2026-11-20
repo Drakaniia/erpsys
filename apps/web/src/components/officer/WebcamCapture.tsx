@@ -6,10 +6,12 @@ export default function WebcamCapture({
   onsave,
   oncancel,
   busy,
+  editingBlocked = false,
 }: {
   onsave: (dataUrl: string) => void;
   oncancel: () => void;
   busy: boolean;
+  editingBlocked?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -147,7 +149,7 @@ export default function WebcamCapture({
                   type="button"
                   className="press rounded-lg border border-border bg-surface-raised px-3 py-1.5 text-sm text-ink transition-transform duration-100 ease-out active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={retake}
-                  disabled={busy}
+                  disabled={busy || editingBlocked}
                 >
                   Retake
                 </button>
@@ -155,7 +157,7 @@ export default function WebcamCapture({
                   type="button"
                   className="press rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-transform duration-100 ease-out active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={() => captured && onsave(captured)}
-                  disabled={busy}
+                  disabled={busy || editingBlocked}
                 >
                   {busy ? "Saving…" : "Save & stamp"}
                 </button>
@@ -165,7 +167,7 @@ export default function WebcamCapture({
                 type="button"
                 className="press rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition-transform duration-100 ease-out active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={capture}
-                disabled={busy || starting}
+                disabled={busy || editingBlocked || starting}
               >
                 Capture
               </button>

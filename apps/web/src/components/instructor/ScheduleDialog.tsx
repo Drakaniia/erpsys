@@ -18,6 +18,7 @@ import {
   type ScheduleRow,
 } from "$lib/instructor/schedule";
 import ModalShell from "../ui/ModalShell";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 import FilterDropdown from "../ui/FilterDropdown";
 
 const FIELD =
@@ -124,6 +125,7 @@ function ScheduleEditor({
   department: { id: string; name: string };
   onclose: () => void;
 }) {
+  const lock = useEditingLock(open ? department.id : null);
   const schedule = useSchedule(department.id, open);
   const save = useSaveSchedule();
   const presence = useEditTimestamp(
@@ -230,7 +232,7 @@ function ScheduleEditor({
             <button
               type="button"
               onClick={() => void submit()}
-              disabled={save.isPending || !ready || !dirty || conflict}
+              disabled={lock.blocked || save.isPending || !ready || !dirty || conflict}
               className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               {save.isPending ? "Saving…" : "Save schedule"}
@@ -240,6 +242,7 @@ function ScheduleEditor({
       }
     >
       <div className="max-h-[60dvh] space-y-3 overflow-y-auto px-5">
+        <ActiveEditors resource="schedule" scope={department.id} enabled={open} onBlockedChange={lock.onBlockedChange}>
         <p className="text-sm text-muted">
           Students see these hours on the queue card. They never open or close
           the queue — the “Accepting students” switch still does that.
@@ -385,6 +388,7 @@ function ScheduleEditor({
             {error}
           </p>
         ) : null}
+        </ActiveEditors>
         <CalendarSection departmentSync={sync} />
       </div>
     </ModalShell>

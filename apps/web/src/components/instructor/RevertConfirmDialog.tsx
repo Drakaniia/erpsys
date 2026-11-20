@@ -1,7 +1,24 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { relativeTime } from "$lib/officer/format";
 import { dialogTrap } from "$lib/ui/dialog-trap";
 import { usePresence } from "$lib/ui/use-presence";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
+
+function EnrollmentLocks({ ids, open, children }: {
+  ids: string[];
+  open: boolean;
+  children: (blocked: boolean) => ReactNode;
+}) {
+  const id = ids[0];
+  const lock = useEditingLock(open ? id : null);
+  if (!id) return children(true);
+  return <>
+    <ActiveEditors resource="enrollment" id={id} enabled={open} className="mt-3" onBlockedChange={lock.onBlockedChange} />
+    {ids.length > 1
+      ? <EnrollmentLocks key={ids[1]} ids={ids.slice(1)} open={open}>{(blocked) => children(lock.blocked || blocked)}</EnrollmentLocks>
+      : children(lock.blocked)}
+  </>;
+}
 
 const REASON_CHIPS = [
   "Wrong student",
@@ -15,6 +32,7 @@ const REASON_MAX = 500;
 
 export default function RevertConfirmDialog({
   open,
+  enrollmentIds,
   count = 1,
   student = null,
   departmentName,
@@ -23,6 +41,7 @@ export default function RevertConfirmDialog({
   onclose,
 }: {
   open: boolean;
+  enrollmentIds: string[];
   count?: number;
   student?: {
     name: string;
@@ -124,6 +143,7 @@ export default function RevertConfirmDialog({
             </svg>
           </button>
         </div>
+        <EnrollmentLocks ids={[...new Set(enrollmentIds)]} open={open}>{(blocked) => <>
         <div className="mt-4 rounded-xl bg-surface px-4 py-3 text-sm space-y-1">
           {bulk ? (
             <>
@@ -159,7 +179,9 @@ export default function RevertConfirmDialog({
               <button
                 key={chip}
                 type="button"
+                disabled={busy || blocked}
                 onClick={() => {
+                  if (blocked) return;
                   setSelectedChip(chip);
                   setReason(chip);
                 }}
@@ -181,7 +203,7 @@ export default function RevertConfirmDialog({
                 ? "Describe the reason for reverting these enrollments…"
                 : "Describe the reason for reverting this enrollment…"
             }
-            disabled={busy}
+            disabled={busy || blocked}
             aria-label={
               bulk ? "Reason for bulk revert" : "Reason for reverting"
             }
@@ -211,9 +233,9 @@ export default function RevertConfirmDialog({
           </button>
           <button
             type="button"
-            onClick={() => canSubmit && onconfirm(reason.trim())}
-            disabled={!canSubmit}
-            aria-disabled={!canSubmit}
+            onClick={() => !blocked && canSubmit && onconfirm(reason.trim())}
+            disabled={blocked || !canSubmit}
+            aria-disabled={blocked || !canSubmit}
             className="press rounded-lg bg-error px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
           >
             {busy
@@ -223,6 +245,7 @@ export default function RevertConfirmDialog({
                 : "Revert enrollment"}
           </button>
         </div>
+        </>}</EnrollmentLocks>
       </div>
     </div>
   );

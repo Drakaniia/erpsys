@@ -139,7 +139,7 @@ function setupGuides(origin: string): Record<IntegrationKey, SetupGuide> {
     },
     googleForms: {
       enables:
-        "Officers and admins can create and publish a profiling form for an academic year, preview it in ERPSYS, and open Google's editor separately. Students answer in Google; ERPSYS imports their latest response by verified email when they press I've submitted.",
+        "Officers and admins can create and publish a profiling form for an academic year, preview it in ERPSYS, and open Google's editor separately. Students answer in Google; ERPSYS automatically checks their latest response by verified email and shows its status and answers in Step 3. Missing required answers keep the response incomplete.",
       steps: [
         {
           title: "Configure the shared Google OAuth client first",
@@ -242,7 +242,7 @@ function setupGuides(origin: string): Record<IntegrationKey, SetupGuide> {
         },
       ],
       verify:
-        "With an active academic year, open Profiling Form and choose Create Google Form. Check Edit in Google Forms works; if not, check Drive API and drive.file permission. Submit as a test student using their registered Google email, then press I've submitted. Turning this integration off blocks creation and response import but does not delete linked Google forms.",
+        "With an active academic year, open Profiling Form and choose Create Google Form. Check Edit in Google Forms works; if not, check Drive API and drive.file permission. Submit as a test student using their registered Google email, then return to Step 3 and check that the status and response preview update automatically. Missing required answers should remain incomplete. Turning this integration off blocks creation and response import but does not delete linked Google forms.",
     },
     googleCalendar: {
       enables:

@@ -7,6 +7,7 @@ import type { StepStatus } from "$lib/officer/types";
 
 export default function DetailSheetMain({
   data,
+  editingBlocked = false,
   status,
   reply,
   stamp,
@@ -46,6 +47,7 @@ export default function DetailSheetMain({
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
+  editingBlocked?: boolean;
   status: StepStatus;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   reply: any;
@@ -90,6 +92,7 @@ export default function DetailSheetMain({
     <>
       <DetailSheetBody
         data={data}
+        editingBlocked={editingBlocked}
         status={status}
         reply={reply}
         stamp={stamp}
@@ -106,6 +109,7 @@ export default function DetailSheetMain({
         onreplyclose={onreplyclose}
         onreplysend={onreplysend}
       />
+      <fieldset disabled={editingBlocked} className="min-w-0 border-0 p-0">
       <DetailSheetActions
         isVerified={isVerified}
         busyAny={busyAny}
@@ -116,6 +120,7 @@ export default function DetailSheetMain({
         onrevoke={onrevoke}
         ontogglesendback={ontogglesendback}
       />
+      </fieldset>
       {justVerified && (
         <StampLanding
           active={true}
@@ -128,6 +133,7 @@ export default function DetailSheetMain({
       )}
       <StampConfirmDialog
         open={stampOpen}
+        confirmDisabled={editingBlocked}
         stampName={dialogStampName}
         stampGraphicUrl={dialogGraphicUrl}
         stampSignatureUrl={dialogSignatureUrl}
@@ -138,6 +144,7 @@ export default function DetailSheetMain({
       />
       <RevokeConfirmDialog
         open={revokeOpen}
+        confirmDisabled={editingBlocked}
         studentName={studentName}
         onconfirm={onrevokeconfirm}
         oncancel={onrevokecancel}

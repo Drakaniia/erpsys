@@ -12,6 +12,7 @@ export default function StampConfirmDialog({
   onconfirm,
   oncancel,
   busy,
+  confirmDisabled = false,
 }: {
   open: boolean;
   stampName: string;
@@ -21,6 +22,7 @@ export default function StampConfirmDialog({
   onconfirm: () => void;
   oncancel: () => void;
   busy: boolean;
+  confirmDisabled?: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -115,7 +117,7 @@ export default function StampConfirmDialog({
             type="button"
             className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
             onClick={onconfirm}
-            disabled={busy}
+            disabled={busy || confirmDisabled}
           >
             {busy ? "Stamping…" : "Stamp"}
           </button>

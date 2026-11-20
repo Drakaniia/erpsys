@@ -10,6 +10,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AuthenticatorSection from "./AuthenticatorSection";
 import type { AdminAuthenticator } from "$lib/integrations/use-integrations";
 
+vi.mock("../ActiveEditors", () => ({
+  default: ({ children }: { children?: import("react").ReactNode }) => children ?? null,
+  useEditingLock: () => ({ blocked: false, onBlockedChange: () => {} }),
+}));
+
 const ADMIN: AdminAuthenticator = {
   userId: "admin-test-id",
   name: "Test Admin",

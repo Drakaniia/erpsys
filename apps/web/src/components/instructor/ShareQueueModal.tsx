@@ -5,6 +5,7 @@ import { notify } from "$lib/notifications";
 import { copyText } from "$lib/clipboard";
 import type { DepartmentQueue } from "$lib/instructor/types";
 import ModalShell from "../ui/ModalShell";
+import ActiveEditors, { useEditingLock } from "../ActiveEditors";
 
 export default function ShareQueueModal({
   open,
@@ -17,17 +18,36 @@ export default function ShareQueueModal({
   anchorRect?: DOMRect | null;
   onclose: () => void;
 }) {
+  if (!open || !department) return null;
+  return <ShareQueueContent key={department.id} open={open} department={department} anchorRect={anchorRect} onclose={onclose} />;
+}
+
+function ShareQueueContent({ open, department, anchorRect, onclose }: {
+  open: boolean;
+  department: DepartmentQueue;
+  anchorRect: DOMRect | null;
+  onclose: () => void;
+}) {
+  const lock = useEditingLock(department.id);
+  const mintedFor = useRef<string | null>(null);
   const [copied, setCopied] = useState(false);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mint = useMutation(api.instructor.mintQueueShareLink.mutationOptions());
 
   useEffect(() => {
-    if (!open || !department) return;
+    mintedFor.current = null;
+    mint.reset();
     setCopied(false);
     if (copiedTimer.current) clearTimeout(copiedTimer.current);
-    mint.mutate({ departmentId: department.id });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, department?.id]);
+
+  useEffect(() => {
+    if (!open || !department || lock.blocked || mintedFor.current === department.id) return;
+    mintedFor.current = department.id;
+    mint.mutate({ departmentId: department.id });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, department?.id, lock.blocked]);
 
   useEffect(() => {
     return () => {
@@ -56,7 +76,7 @@ export default function ShareQueueModal({
   })();
 
   async function handleCopy() {
-    if (!url) return;
+    if (!url || lock.blocked) return;
     const ok = await copyText(url);
     if (ok) {
       setCopied(true);
@@ -69,7 +89,7 @@ export default function ShareQueueModal({
   }
 
   async function handleNativeShare() {
-    if (!url || !department) return;
+    if (!url || !department || lock.blocked) return;
     const ok = await copyText(url);
     if (ok) notify.success("Link copied");
     const nav = globalThis.navigator as unknown as
@@ -111,7 +131,7 @@ export default function ShareQueueModal({
             <button
               type="button"
               onClick={handleCopy}
-              disabled={!url}
+              disabled={!url || lock.blocked}
               className="press flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-[transform,background-color] duration-100 ease-out hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
             >
               <svg
@@ -132,6 +152,7 @@ export default function ShareQueueModal({
               <button
                 type="button"
                 onClick={handleNativeShare}
+                disabled={lock.blocked}
                 className="press inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-ink shadow-sm transition-[transform,background-color] duration-100 ease-out hover:bg-surface active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 <svg
@@ -175,6 +196,13 @@ export default function ShareQueueModal({
       }
     >
       <div className="px-5">
+        <ActiveEditors
+          resource="queue-share"
+          scope={department.id}
+          enabled={open}
+          className="mb-3"
+          onBlockedChange={lock.onBlockedChange}
+        >
         {mintError ? (
           <div
             className="rounded-xl border border-error/25 bg-error/5 px-3 py-2.5 text-sm text-error"
@@ -256,6 +284,7 @@ export default function ShareQueueModal({
             )}
           </div>
         )}
+        </ActiveEditors>
         <p
           className="mt-2 text-xs leading-relaxed text-muted"
           id="share-modal-desc"
