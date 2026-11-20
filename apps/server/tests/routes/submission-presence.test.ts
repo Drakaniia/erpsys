@@ -87,6 +87,15 @@ it("deduplicates two active editors without changing review timestamp ordering",
     expect(stale.status).toBe(409);
     expect(await stale.json()).toMatchObject({ data: { code: "TS_ABORTED" } });
     expect(record.status).toBe("PENDING");
+
+    // Legacy heartbeats must not erase a same-account tab's exclusive lease.
+    const leaseId = "11111111-1111-4111-8111-111111111111";
+    record.activeEditors = [{ userId: "Alice", name: "Alice", leaseId, expiresAt: new Date(Date.now() + 30_000) }];
+    expect((await renew("Alice")).status).toBe(200);
+    expect(record.activeEditors).toEqual(expect.arrayContaining([expect.objectContaining({ userId: "Alice", leaseId })]));
+    const blocked = await call("/verification", "Alice", "POST");
+    expect(blocked.status).toBe(409);
+    expect(await blocked.json()).toMatchObject({ data: { code: "EDIT_LOCKED" } });
   } finally {
     await new Promise<void>((resolve) => {
       server.close(() => resolve());

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { editPresence } from "../middleware/edit-presence.js";
 
 import { academicYearsRouter } from "./academic-years/index.js";
 import { advisersRouter } from "./advisers/index.js";
@@ -10,6 +11,7 @@ import { enrollmentsRouter } from "./enrollments/index.js";
 import { evidenceRouter } from "./evidence/index.js";
 import { integrationsRouter } from "./integrations/index.js";
 import { meRouter } from "./me/index.js";
+import { presenceRouter } from "./presence/index.js";
 import { queueSharesRouter } from "./queue-shares/index.js";
 import { queuesRouter } from "./queues/index.js";
 import { reportsRouter } from "./reports/index.js";
@@ -26,11 +28,13 @@ import { usersRouter } from "./users/index.js";
  */
 export const v1Router = Router();
 
+v1Router.use(editPresence);
 v1Router.use(academicYearsRouter);
 v1Router.use(requirementsRouter);
 v1Router.use(reportsRouter);
 v1Router.use(contentRouter);
 v1Router.use(meRouter);
+v1Router.use(presenceRouter);
 v1Router.use(studentsRouter);
 v1Router.use(submissionsRouter);
 v1Router.use(transfersRouter);
