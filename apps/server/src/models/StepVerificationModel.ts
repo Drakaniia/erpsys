@@ -66,12 +66,19 @@ export class StepVerificationModel {
       .toArray();
   }
 
-  static async listEvidenceByProfile(
-    studentProfileId: string,
-  ): Promise<{ evidence?: unknown }[]> {
+  static async listAllEvidence(): Promise<{ evidence?: unknown }[]> {
     return getDbSync()
       .collection<StepVerificationRow>(COLLECTIONS.stepVerification)
-      .find({ studentProfileId } as never, { projection: { evidence: 1 } })
+      .find({ evidence: { $exists: true } } as never, { projection: { evidence: 1 } })
+      .toArray();
+  }
+
+  static async listEvidenceByProfile(
+    studentProfileId: string,
+  ): Promise<Pick<StepVerificationRow, "evidence" | "status">[]> {
+    return getDbSync()
+      .collection<StepVerificationRow>(COLLECTIONS.stepVerification)
+      .find({ studentProfileId } as never, { projection: { evidence: 1, status: 1 } })
       .toArray();
   }
 
@@ -161,7 +168,11 @@ export class StepVerificationModel {
   static async insert(row: StepVerificationRow): Promise<void> {
     await getDbSync()
       .collection(COLLECTIONS.stepVerification)
-      .insertOne(row as never);
+      .updateOne(
+        { studentProfileId: row.studentProfileId, academicYearId: row.academicYearId, stepId: row.stepId } as never,
+        { $setOnInsert: row } as never,
+        { upsert: true },
+      );
   }
 
   static async updateById(

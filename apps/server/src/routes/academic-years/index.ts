@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ApiError } from "../../config/errors.js";
 import { COLLECTIONS, getDbSync } from "../../lib/db/db.js";
 import { genId } from "../../lib/db/ids.js";
+import { atomic, fenceAcademicYears } from "../../lib/db/timestamp-ordering.js";
 import {
   requireSession,
   requireSurface,
@@ -144,7 +145,7 @@ academicYearsRouter.post(
       z.object({ ...labels, activate: z.boolean().default(false) }),
       req,
     );
-    if (input.activate) await assertNoOpenQueues("");
+
     const now = new Date();
     const row: AcademicYearRow = {
       _id: genId("ay"),
@@ -154,8 +155,14 @@ academicYearsRouter.post(
       createdAt: now,
       updatedAt: now,
     };
-    await AcademicYearModel.insert(row);
-    if (input.activate) await AcademicYearModel.deactivateAllExcept(row._id);
+    await atomic(getDbSync(), async () => {
+      await fenceAcademicYears(getDbSync());
+      if (input.activate) {
+        await assertNoOpenQueues("");
+        await AcademicYearModel.deactivateAllExcept(row._id);
+      }
+      await AcademicYearModel.insert(row);
+    });
     await AdminActionLogModel.log(
       sessionUser(req).id,
       "Created academic year",
@@ -215,20 +222,7 @@ academicYearsRouter.delete(
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
     const existing = await findOrThrow(id);
-    const db = getDbSync();
-    const [verifications, queues] = await Promise.all([
-      db
-        .collection(COLLECTIONS.stepVerification)
-        .countDocuments({ academicYearId: id } as never),
-      db
-        .collection(COLLECTIONS.enrollmentQueue)
-        .countDocuments({ academicYearId: id } as never),
-    ]);
-    if (verifications > 0 || queues > 0 || existing.profilingForm) {
-      throw new ApiError("CONFLICT", {
-        message: "Cannot delete — contains records.",
-      });
-    }
+
     await AcademicYearModel.remove(id);
     await AdminActionLogModel.log(
       sessionUser(req).id,
@@ -282,11 +276,16 @@ academicYearsRouter.post(
   admin,
   catchAsync(async (req, res) => {
     const { id } = parseQuery(idParams, req);
-    const year = await findOrThrow(id);
+    const year = await atomic(getDbSync(), async () => {
+      await fenceAcademicYears(getDbSync());
+      const current = await findOrThrow(id);
+      if (!current.isActive) {
+        await assertNoOpenQueues(id);
+        await AcademicYearModel.activate(id);
+      }
+      return current;
+    });
     if (!year.isActive) {
-      await assertNoOpenQueues(id);
-      await AcademicYearModel.deactivateAllExcept(id);
-      await AcademicYearModel.activate(id);
       await AdminActionLogModel.log(
         sessionUser(req).id,
         "Activated academic year",

@@ -12,7 +12,7 @@ import { genId } from "../../lib/db/ids.js";
 import { deleteR2Object } from "../../lib/storage/client.js";
 import { configuredR2Client } from "../../lib/storage/configured-client.js";
 import { addStoredBytes, monthKey } from "../../lib/storage/quota.js";
-import { parseR2FileKey } from "../../lib/storage/storage.js";
+import { isR2FileKey } from "../../lib/storage/storage.js";
 import {
   requireSession,
   requireSurface,
@@ -29,6 +29,7 @@ import {
   draftEvidence,
   sweepDrafts,
 } from "../../services/evidence.js";
+import { deleteUpload } from "../../services/storage.js";
 import { profilingAnswers } from "../../services/content.js";
 import { requireStudentContext } from "../../services/students.js";
 
@@ -68,7 +69,7 @@ const evidenceOf = async (ids: string[]) =>
  * Access: session + student surface.
  * Concurrency: timestamp ordering — optional body `ts`; stale → `409` `TS_ABORTED`.
  * Use: attach an uploaded file to a step — body
- * `{ stepCode, fileKey, fileUrl }`.
+ * `{ stepCode, fileKey, fileUrl }`; R2 files use the storage completion flow.
  * Returns: `201` with `{ data: upload }`.
  */
 evidenceRouter.post(
@@ -83,6 +84,11 @@ evidenceRouter.post(
       }),
       req,
     );
+    if (isR2FileKey(input.fileKey)) {
+      throw new ApiError("BAD_REQUEST", {
+        message: "R2 evidence must be registered through the storage upload flow.",
+      });
+    }
     const { profile, existing } = await stepContext(req, input.stepCode);
     const verified = () =>
       new ApiError("CONFLICT", { message: "This step is already verified." });
@@ -154,24 +160,7 @@ evidenceRouter.delete(
         });
       }
     }
-    await UploadModel.deleteById(id);
-    if (upload.backend !== "r2") {
-      okOne(res, { deleted: true });
-      return;
-    }
-    void (async () => {
-      const client = configuredR2Client();
-      const parsed = parseR2FileKey(upload.fileKey);
-      if (!client || !parsed) return;
-      await deleteR2Object(client, parsed);
-      await addStoredBytes(getDbSync(), monthKey(), -(upload.sizeBytes ?? 0));
-    })().catch((error: unknown) =>
-      console.error(
-        `[evidence] R2 delete failed for upload ${id} — row already deleted`,
-        error,
-      ),
-    );
-    okOne(res, { deleted: true });
+    okOne(res, await deleteUpload(sessionUser(req), id));
   }),
 );
 
@@ -290,6 +279,11 @@ evidenceRouter.post(
       });
     }
     if (code === "PROFILING") {
+      if (sessionUser(req).emailVerified !== true) {
+        throw new ApiError("PRECONDITION_FAILED", {
+          message: "Verify your email before importing your Google Form response.",
+        });
+      }
       const form = await AcademicYearModel.profilingForm(String(year._id));
       if (!form?.formId) {
         throw new ApiError("PRECONDITION_FAILED", {

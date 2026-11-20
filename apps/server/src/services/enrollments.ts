@@ -5,6 +5,8 @@ import {
 } from "../config/constants.js";
 import { ApiError } from "../config/errors.js";
 import { genId } from "../lib/db/ids.js";
+import { getDbSync } from "../lib/db/db.js";
+import { atomic, fenceAcademicYears } from "../lib/db/timestamp-ordering.js";
 import { mailUser, siteOrigin } from "../lib/platform/mailer.js";
 import { AdminActionLogModel } from "../models/AdminActionLogModel.js";
 import { DepartmentModel } from "../models/DepartmentModel.js";
@@ -34,6 +36,8 @@ export async function complete(
   studentName: string;
   outcome: "enrolled" | "already";
 }> {
+  const result = await atomic(getDbSync(), async () => {
+  await fenceAcademicYears(getDbSync());
   const yearId = String((await activeYearOrThrow())._id);
   await assertDepartmentAssigned(adviserId, departmentId);
   const entry = await entryOrThrow(entryId, departmentId, yearId);
@@ -50,7 +54,7 @@ export async function complete(
   );
 
   if (entry.status === "COMPLETED") {
-    return { entryId: String(entry._id), studentName, outcome: "already" };
+    return { entry, profile, studentName, now: new Date(), outcome: "already" as const };
   }
   if (entry.status !== "IN_PROGRESS") {
     throw new ApiError("CONFLICT", {
@@ -107,6 +111,10 @@ export async function complete(
     );
   }
 
+  return { entry, profile, studentName, now, outcome: "enrolled" as const };
+  });
+  const { entry, profile, studentName, now } = result;
+  if (result.outcome === "already") return { entryId: String(entry._id), studentName, outcome: "already" };
   const dept = await DepartmentModel.findById(departmentId);
   if (profile) {
     await NotificationModel.insert({
@@ -168,6 +176,10 @@ async function revertOne(
 ): Promise<string> {
   const studentProfileId = String(entry.studentProfileId);
   const returnedEntryId = String(entry._id);
+  await atomic(getDbSync(), async () => {
+  await fenceAcademicYears(getDbSync());
+  if (String((await activeYearOrThrow())._id) !== yearId) throw new ApiError("CONFLICT", { message: "Academic year changed. Reload and try again." });
+  await assertStudentLevelInScope(adviserId, departmentId, studentProfileId, yearId);
   const reverted = await EnrollmentQueueModel.transition(
     returnedEntryId,
     "COMPLETED",
@@ -194,6 +206,7 @@ async function revertOne(
     );
   }
 
+  });
   const profile = await UserModel.findProfileById(studentProfileId);
   if (profile) {
     const userId = String(profile.userId);
